@@ -7,3 +7,5 @@ moodscript.db
 .git
 .DS_Store
 *.zip
+frontend
+docs

@@ -1,3 +1,4 @@
+import os
 import spacy
 from transformers import pipeline
 from collections import defaultdict
@@ -30,17 +31,21 @@ class TextEmotionModel:
             device=-1,
         )
 
-        print("Loading GoEmotions clinical tone model...")
-        try:
-            self.clinical_classifier = pipeline(
-                "text-classification",
-                model="SamLowe/roberta-base-go_emotions",
-                top_k=3,
-                device=-1,
-            )
-            print("Clinical tone model ready.")
-        except Exception as e:
-            print(f"Clinical tone model skipped: {e}")
+        if os.getenv("ENABLE_CLINICAL_TONE", "true").lower() == "true":
+            print("Loading GoEmotions clinical tone model...")
+            try:
+                self.clinical_classifier = pipeline(
+                    "text-classification",
+                    model="SamLowe/roberta-base-go_emotions",
+                    top_k=3,
+                    device=-1,
+                )
+                print("Clinical tone model ready.")
+            except Exception as e:
+                print(f"Clinical tone model skipped: {e}")
+                self.clinical_classifier = None
+        else:
+            print("Clinical tone model disabled (ENABLE_CLINICAL_TONE=false) — skipping to save memory.")
             self.clinical_classifier = None
 
         print("Text models ready.")
