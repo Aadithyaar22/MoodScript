@@ -1,0 +1,17 @@
+fastapi
+uvicorn
+python-multipart
+transformers
+torch
+groq
+lime
+Pillow
+numpy
+spacy
+hsemotion
+python-dotenv
+scikit-learn
+scipy
+pydantic
+pyjwt
+psycopg2-binary
