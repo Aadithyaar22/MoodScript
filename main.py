@@ -14,6 +14,10 @@ from models.rating import compute_rating, summarize_history
 from xai.explainer import XAIExplainer
 from database.db import MoodDatabase
 from auth import get_current_user_id, hash_password, verify_password, create_token
+from google.oauth2 import id_token as google_id_token
+from google.auth.transport import requests as google_requests
+
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 
 app = FastAPI(title="MoodScript API")
 
@@ -89,6 +93,34 @@ async def login(req: LoginRequest):
     user = db.get_user_by_username(req.username.strip())
     if not user or not verify_password(req.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid username or password")
+
+    token = create_token(user["id"], user["username"])
+    return {"token": token, "user_id": user["id"], "username": user["username"]}
+
+class GoogleAuthRequest(BaseModel):
+    credential: str
+
+@app.post("/auth/google")
+async def auth_google(req: GoogleAuthRequest):
+    if not GOOGLE_CLIENT_ID:
+        raise HTTPException(status_code=503, detail="Google sign-in is not configured yet")
+    try:
+        idinfo = google_id_token.verify_oauth2_token(req.credential, google_requests.Request(), GOOGLE_CLIENT_ID)
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Invalid Google credential")
+
+    google_uid = idinfo["sub"]
+    email = idinfo.get("email")
+
+    user = db.get_user_by_google_id(google_uid)
+    if not user:
+        existing = db.get_user_by_username(email)
+        if existing:
+            db.link_google_id(existing["id"], google_uid)
+            user = existing
+        else:
+            user_id = db.create_user(email, password_hash=None, google_id=google_uid)
+            user = {"id": user_id, "username": email}
 
     token = create_token(user["id"], user["username"])
     return {"token": token, "user_id": user["id"], "username": user["username"]}
@@ -191,6 +223,14 @@ async def chat(req: ChatRequest, user_id: int = Depends(get_current_user_id)):
 @app.get("/conversations")
 async def conversations(user_id: int = Depends(get_current_user_id)):
     return db.list_conversations(user_id)
+
+@app.delete("/conversations/{conversation_id}")
+async def delete_conversation(conversation_id: int, user_id: int = Depends(get_current_user_id)):
+    conversation = db.get_conversation(conversation_id, user_id)
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    db.delete_conversation(conversation_id, user_id)
+    return {"deleted": True}
 
 @app.get("/conversations/{conversation_id}/messages")
 async def conversation_messages(conversation_id: int, user_id: int = Depends(get_current_user_id)):

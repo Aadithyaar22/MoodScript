@@ -2,8 +2,10 @@ import os
 import psycopg2
 import psycopg2.extras
 from datetime import datetime, timezone
+from cryptography.fernet import Fernet
 
 DATABASE_URL = os.getenv("DATABASE_URL")
+_fernet = Fernet(os.getenv("MESSAGE_ENCRYPTION_KEY"))
 
 def _connect():
     conn = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
@@ -11,6 +13,14 @@ def _connect():
 
 def _now():
     return datetime.now(timezone.utc).isoformat()
+
+def _encrypt(text: str) -> str:
+    return _fernet.encrypt(text.encode()).decode()
+
+def _decrypt(token: str):
+    if token is None:
+        return None
+    return _fernet.decrypt(token.encode()).decode()
 
 class MoodDatabase:
     def __init__(self):
@@ -23,10 +33,13 @@ class MoodDatabase:
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
                 username TEXT UNIQUE NOT NULL,
-                password_hash TEXT NOT NULL,
+                password_hash TEXT,
+                google_id TEXT UNIQUE,
                 created_at TEXT NOT NULL
             )
         """)
+        c.execute("ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL")
+        c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id TEXT UNIQUE")
         c.execute("""
             CREATE TABLE IF NOT EXISTS conversations (
                 id SERIAL PRIMARY KEY,
@@ -66,12 +79,12 @@ class MoodDatabase:
         conn.close()
 
     # ---------- users ----------
-    def create_user(self, username: str, password_hash: str) -> int:
+    def create_user(self, username: str, password_hash: str = None, google_id: str = None) -> int:
         conn = _connect()
         c = conn.cursor()
         c.execute(
-            "INSERT INTO users (username, password_hash, created_at) VALUES (%s, %s, %s) RETURNING id",
-            (username, password_hash, _now()),
+            "INSERT INTO users (username, password_hash, google_id, created_at) VALUES (%s, %s, %s, %s) RETURNING id",
+            (username, password_hash, google_id, _now()),
         )
         user_id = c.fetchone()["id"]
         conn.commit()
@@ -85,6 +98,21 @@ class MoodDatabase:
         row = c.fetchone()
         conn.close()
         return dict(row) if row else None
+
+    def get_user_by_google_id(self, google_id: str):
+        conn = _connect()
+        c = conn.cursor()
+        c.execute("SELECT * FROM users WHERE google_id = %s", (google_id,))
+        row = c.fetchone()
+        conn.close()
+        return dict(row) if row else None
+
+    def link_google_id(self, user_id: int, google_id: str):
+        conn = _connect()
+        c = conn.cursor()
+        c.execute("UPDATE users SET google_id = %s WHERE id = %s", (google_id, user_id))
+        conn.commit()
+        conn.close()
 
     def get_user_by_id(self, user_id: int):
         conn = _connect()
@@ -122,6 +150,14 @@ class MoodDatabase:
         conn.commit()
         conn.close()
 
+    def delete_conversation(self, conversation_id: int, user_id: int):
+        conn = _connect()
+        c = conn.cursor()
+        c.execute("DELETE FROM messages WHERE conversation_id = %s AND user_id = %s", (conversation_id, user_id))
+        c.execute("DELETE FROM conversations WHERE id = %s AND user_id = %s", (conversation_id, user_id))
+        conn.commit()
+        conn.close()
+
     def list_conversations(self, user_id: int, limit: int = 50):
         conn = _connect()
         c = conn.cursor()
@@ -137,7 +173,10 @@ class MoodDatabase:
         """, (user_id, limit))
         rows = c.fetchall()
         conn.close()
-        return [dict(r) for r in rows]
+        results = [dict(r) for r in rows]
+        for r in results:
+            r["opening_line"] = _decrypt(r["opening_line"])
+        return results
 
     # ---------- messages ----------
     def add_message(self, conversation_id: int, user_id: int, role: str, content: str,
@@ -150,7 +189,7 @@ class MoodDatabase:
             (conversation_id, user_id, role, content, emotion, confidence, face_emotion,
              clinical_tone, resolution_reason, crisis_flag, created_at)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        """, (conversation_id, user_id, role, content, emotion, confidence, face_emotion,
+        """, (conversation_id, user_id, role, _encrypt(content), emotion, confidence, face_emotion,
               clinical_tone, resolution_reason, int(crisis_flag), _now()))
         conn.commit()
         conn.close()
@@ -163,7 +202,10 @@ class MoodDatabase:
         """, (conversation_id, user_id))
         rows = c.fetchall()
         conn.close()
-        return [dict(r) for r in rows]
+        results = [dict(r) for r in rows]
+        for r in results:
+            r["content"] = _decrypt(r["content"])
+        return results
 
     def get_user_journal_entries(self, user_id: int, exclude_conversation_id=None, limit: int = 200):
         """All logged user-authored, emotion-tagged messages — the person's full mood journal."""
@@ -183,7 +225,10 @@ class MoodDatabase:
             """, (user_id, limit))
         rows = c.fetchall()
         conn.close()
-        return [dict(r) for r in rows]
+        results = [dict(r) for r in rows]
+        for r in results:
+            r["content"] = _decrypt(r["content"])
+        return results
 
     # ---------- reflections ----------
     def get_reflection(self, user_id: int, week_key: str):
@@ -192,7 +237,11 @@ class MoodDatabase:
         c.execute("SELECT * FROM reflections WHERE user_id = %s AND week_key = %s", (user_id, week_key))
         row = c.fetchone()
         conn.close()
-        return dict(row) if row else None
+        if not row:
+            return None
+        result = dict(row)
+        result["content"] = _decrypt(result["content"])
+        return result
 
     def save_reflection(self, user_id: int, week_key: str, content: str, entry_count: int):
         conn = _connect()
@@ -201,7 +250,7 @@ class MoodDatabase:
             INSERT INTO reflections (user_id, week_key, content, entry_count, created_at)
             VALUES (%s, %s, %s, %s, %s)
             ON CONFLICT (user_id, week_key) DO UPDATE SET content=excluded.content, entry_count=excluded.entry_count
-        """, (user_id, week_key, content, entry_count, _now()))
+        """, (user_id, week_key, _encrypt(content), entry_count, _now()))
         conn.commit()
         conn.close()
 

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react"
 const EMOTION_EMOJI  = { happy:"😊", sad:"😔", angry:"😠", fearful:"😨", surprised:"😲", disgusted:"😒", neutral:"😐" }
 const EMOTION_COLOR  = { happy:"#e2b94b", sad:"#4d8de8", angry:"#e06b6b", fearful:"#b39dff", surprised:"#3dd9c8", disgusted:"#6bc8a0", neutral:"#6478a0" }
 
-export default function Sidebar({ tab, setTab, history, conversations = [], activeConversationId, onSelectConversation, onNewConversation, onLogout, onExport, onDeleteAccount }) {
+export default function Sidebar({ tab, setTab, history, conversations = [], activeConversationId, onSelectConversation, onNewConversation, onLogout, onExport, onDeleteAccount, onDeleteConversation }) {
   const [time, setTime] = useState(new Date())
   useEffect(() => { const t = setInterval(() => setTime(new Date()), 1000); return () => clearInterval(t) }, [])
 
@@ -113,19 +113,32 @@ export default function Sidebar({ tab, setTab, history, conversations = [], acti
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5, maxHeight: 180, overflowY: 'auto' }}>
             {conversations.map(c => (
-              <button key={c.id} onClick={() => onSelectConversation(c.id)} style={{
-                textAlign: 'left', borderRadius: 10, padding: '8px 10px', cursor: 'pointer',
+              <div key={c.id} style={{
+                display: 'flex', alignItems: 'center', gap: 4, borderRadius: 10,
                 background: activeConversationId === c.id ? 'rgba(139,111,212,0.15)' : 'rgba(255,255,255,0.02)',
                 border: `1px solid ${activeConversationId === c.id ? 'rgba(139,111,212,0.4)' : 'var(--border)'}`,
               }}>
-                <p style={{
-                  fontSize: 11, color: '#d8d4e8', overflow: 'hidden', textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap', fontWeight: 300,
-                }}>{c.opening_line || "New conversation"}</p>
-                <p className="mono" style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 2 }}>
-                  {new Date(c.started_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })} · {c.message_count} msgs
-                </p>
-              </button>
+                <button onClick={() => onSelectConversation(c.id)} style={{
+                  flex: 1, minWidth: 0, textAlign: 'left', borderRadius: 10, padding: '8px 10px', cursor: 'pointer',
+                  background: 'none', border: 'none',
+                }}>
+                  <p style={{
+                    fontSize: 11, color: '#d8d4e8', overflow: 'hidden', textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap', fontWeight: 300,
+                  }}>{c.opening_line || "New conversation"}</p>
+                  <p className="mono" style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 2 }}>
+                    {new Date(c.started_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })} · {c.message_count} msgs
+                  </p>
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onDeleteConversation(c.id) }}
+                  title="Delete conversation"
+                  style={{
+                    flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer',
+                    color: 'var(--text-muted)', fontSize: 13, padding: '0 10px', lineHeight: 1,
+                  }}
+                >×</button>
+              </div>
             ))}
           </div>
         </div>

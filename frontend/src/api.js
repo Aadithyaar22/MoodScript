@@ -39,6 +39,13 @@ export async function login(username, password) {
   return data
 }
 
+export async function googleLogin(credential) {
+  const { data } = await client.post("/auth/google", { credential })
+  setToken(data.token)
+  localStorage.setItem("moodscript_username", data.username)
+  return data
+}
+
 export async function sendChatMessage(message, imageBase64 = null, conversationId = null) {
   const { data } = await client.post("/chat", {
     message,
@@ -66,6 +73,10 @@ export async function fetchConversations() {
 export async function fetchConversationMessages(conversationId) {
   const { data } = await client.get(`/conversations/${conversationId}/messages`)
   return data
+}
+
+export async function deleteConversation(conversationId) {
+  await client.delete(`/conversations/${conversationId}`)
 }
 
 export async function fetchReflection() {

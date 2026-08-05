@@ -7,7 +7,7 @@ import Dashboard from "./components/Dashboard"
 import Sidebar from "./components/Sidebar"
 import RightPanel from "./components/RightPanel"
 import Login from "./components/Login"
-import { sendChatMessage, fetchHistory, fetchConversations, fetchConversationMessages, getToken, logout, exportJournal, deleteAccount } from "./api"
+import { sendChatMessage, fetchHistory, fetchConversations, fetchConversationMessages, getToken, logout, exportJournal, deleteAccount, deleteConversation } from "./api"
 import "./index.css"
 
 export default function App() {
@@ -70,7 +70,7 @@ export default function App() {
 
   const handleFirstMessage = (text, imageBase64) => runChat(text, imageBase64)
 
-  const handleContinue = (text) => runChat(text, null)
+  const handleContinue = (text, imageBase64) => runChat(text, imageBase64)
 
   const handleNewConversation = () => {
     setMessages([])
@@ -111,6 +111,17 @@ export default function App() {
     setConversationId(null)
     setHistory([])
     setConversations([])
+  }
+
+  const handleDeleteConversation = async (id) => {
+    if (!window.confirm("Delete this conversation? This can't be undone.")) return
+    try {
+      await deleteConversation(id)
+      setConversations(cs => cs.filter(c => c.id !== id))
+      if (conversationId === id) handleNewConversation()
+    } catch {
+      setError("Couldn't delete that conversation — try again")
+    }
   }
 
   const handleExport = async () => {
@@ -192,6 +203,7 @@ export default function App() {
           activeConversationId={conversationId}
           onSelectConversation={handleSelectConversation}
           onNewConversation={handleNewConversation}
+          onDeleteConversation={handleDeleteConversation}
           onLogout={handleLogout}
           onExport={handleExport}
           onDeleteAccount={handleDeleteAccount}

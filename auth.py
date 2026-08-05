@@ -22,6 +22,8 @@ def hash_password(password: str) -> str:
     return f"{salt}${digest.hex()}"
 
 def verify_password(password: str, stored: str) -> bool:
+    if not stored:
+        return False
     try:
         salt, digest_hex = stored.split("$")
     except ValueError:

@@ -1,5 +1,7 @@
-import { useState } from "react"
-import { login, signup } from "../api"
+import { useState, useEffect, useRef } from "react"
+import { login, signup, googleLogin } from "../api"
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
 
 export default function Login({ onAuth }) {
   const [mode, setMode] = useState("login") // "login" | "signup"
@@ -7,6 +9,30 @@ export default function Login({ onAuth }) {
   const [password, setPassword] = useState("")
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
+  const googleBtnRef = useRef(null)
+
+  useEffect(() => {
+    if (!GOOGLE_CLIENT_ID || !window.google || !googleBtnRef.current) return
+
+    window.google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: async (response) => {
+        setError(null)
+        setLoading(true)
+        try {
+          await googleLogin(response.credential)
+          onAuth()
+        } catch (e) {
+          setError(e.response?.data?.detail || e.message || "Google sign-in failed")
+        } finally {
+          setLoading(false)
+        }
+      },
+    })
+    window.google.accounts.id.renderButton(googleBtnRef.current, {
+      theme: "filled_black", size: "large", width: 316, text: "continue_with",
+    })
+  }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -95,6 +121,17 @@ export default function Login({ onAuth }) {
         }}>
           {loading ? "Please wait…" : mode === "login" ? "Log in" : "Sign up"}
         </button>
+
+        {GOOGLE_CLIENT_ID && (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+              <span className="mono" style={{ fontSize: 10, color: 'var(--text-muted)' }}>OR</span>
+              <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+            </div>
+            <div ref={googleBtnRef} style={{ display: 'flex', justifyContent: 'center' }} />
+          </>
+        )}
 
         <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--text-muted)' }}>
           {mode === "login" ? "New here? " : "Already have an account? "}
