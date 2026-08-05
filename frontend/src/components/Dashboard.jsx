@@ -1,11 +1,19 @@
 import { useEffect, useState } from "react"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
 import { fetchHistory, fetchRating, fetchReflection } from "../api"
+import { t } from "../i18n"
 
 const TREND_CONFIG = {
-  improving: { emoji: "📈", color: "#4eb496", label: "Improving" },
-  declining: { emoji: "📉", color: "#cd4e4e", label: "Declining" },
-  steady:    { emoji: "➖", color: "#6478a0", label: "Steady" },
+  improving: { emoji: "📈", color: "#4eb496", key: "improving" },
+  declining: { emoji: "📉", color: "#cd4e4e", key: "declining" },
+  steady:    { emoji: "➖", color: "#6478a0", key: "steady" },
+}
+
+const RATING_LABEL_KEY = {
+  "Doing well": "doingWell",
+  "Holding steady": "holdingSteady",
+  "Struggling a bit": "strugglingBit",
+  "Having a hard time": "havingHardTime",
 }
 
 const EMOTION_SCORE  = { happy:6, surprised:5, neutral:4, fearful:3, disgusted:2, sad:1, angry:0 }
@@ -23,7 +31,7 @@ const CustomTooltip = ({ active, payload }) => {
   )
 }
 
-export default function Dashboard() {
+export default function Dashboard({ lang = "en" }) {
   const [history, setHistory] = useState([])
   const [rating, setRating] = useState(null)
   const [reflection, setReflection] = useState(null)
@@ -44,8 +52,8 @@ export default function Dashboard() {
   if (!history.length) return (
     <div style={{ textAlign: 'center', padding: '80px 0' }}>
       <p className="serif" style={{ fontSize: 48, marginBottom: 16, opacity: 0.3 }}>📓</p>
-      <p className="serif" style={{ fontSize: 22, color: 'var(--text-secondary)', fontWeight: 300, fontStyle: 'italic' }}>No entries yet.</p>
-      <p style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 8 }}>Analyse your first journal entry to see your mood over time.</p>
+      <p className="serif" style={{ fontSize: 22, color: 'var(--text-secondary)', fontWeight: 300, fontStyle: 'italic' }}>{t(lang, "noEntriesYet")}</p>
+      <p style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 8 }}>{t(lang, "analyseFirstEntry")}</p>
     </div>
   )
 
@@ -72,8 +80,8 @@ export default function Dashboard() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }} className="animate-fade-up">
       {/* Heading */}
       <div style={{ paddingBottom: 8 }}>
-        <h2 className="serif" style={{ fontSize: 36, fontWeight: 300, color: 'var(--text-primary)' }}>Mood history</h2>
-        <p className="mono" style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.06em', marginTop: 4 }}>{history.length} entries recorded</p>
+        <h2 className="serif" style={{ fontSize: 36, fontWeight: 300, color: 'var(--text-primary)' }}>{t(lang, "moodHistory")}</h2>
+        <p className="mono" style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.06em', marginTop: 4 }}>{history.length} {t(lang, "entriesRecorded")}</p>
       </div>
 
       {/* Overall rating */}
@@ -91,10 +99,10 @@ export default function Dashboard() {
             </div>
           </div>
           <div style={{ flex: 1 }}>
-            <p className="mono" style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: 6 }}>OVERALL RATING</p>
-            <p className="serif" style={{ fontSize: 22, fontWeight: 300, color: 'var(--text-primary)', marginBottom: 6 }}>{rating.label}</p>
+            <p className="mono" style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: 6 }}>{t(lang, "overallRating")}</p>
+            <p className="serif" style={{ fontSize: 22, fontWeight: 300, color: 'var(--text-primary)', marginBottom: 6 }}>{t(lang, RATING_LABEL_KEY[rating.label]) || rating.label}</p>
             <p style={{ fontSize: 12, color: TREND_CONFIG[rating.trend]?.color || 'var(--text-muted)' }}>
-              {TREND_CONFIG[rating.trend]?.emoji} {TREND_CONFIG[rating.trend]?.label} · based on {rating.entry_count} entries
+              {TREND_CONFIG[rating.trend]?.emoji} {t(lang, TREND_CONFIG[rating.trend]?.key)} · {rating.entry_count} {t(lang, "entries")}
             </p>
           </div>
         </div>
@@ -108,7 +116,7 @@ export default function Dashboard() {
           border: '1px solid rgba(139,111,212,0.25)',
         }}>
           <p className="mono" style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: 12 }}>
-            ✦ YOUR WEEKLY REFLECTION · {reflection.entry_count} {reflection.entry_count === 1 ? 'entry' : 'entries'}
+            ✦ {t(lang, "weeklyReflection")} · {reflection.entry_count} {t(lang, "entries")}
           </p>
           <p className="serif" style={{ fontSize: 16, fontWeight: 300, fontStyle: 'italic', color: '#d8d4e8', lineHeight: 1.8 }}>
             {reflection.content}
@@ -118,14 +126,14 @@ export default function Dashboard() {
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
-        <StatCard label="TOTAL ENTRIES" value={history.length} />
-        <StatCard label="MOST COMMON" value={`${EMOTION_EMOJI[dominant?.[0]]} ${dominant?.[0]}`} sub={`${dominant?.[1]} times`} />
-        <StatCard label="LATEST" value={`${EMOTION_EMOJI[latest?.emotion]} ${latest?.emotion}`} sub={new Date(latest?.timestamp).toLocaleDateString("en-IN", { month:'short', day:'numeric' })} />
+        <StatCard label={t(lang, "totalEntries")} value={history.length} />
+        <StatCard label={t(lang, "mostCommon")} value={`${EMOTION_EMOJI[dominant?.[0]]} ${t(lang, dominant?.[0])}`} sub={`${dominant?.[1]} ×`} />
+        <StatCard label={t(lang, "latest")} value={`${EMOTION_EMOJI[latest?.emotion]} ${t(lang, latest?.emotion)}`} sub={new Date(latest?.timestamp).toLocaleDateString("en-IN", { month:'short', day:'numeric' })} />
       </div>
 
       {/* Line chart */}
       <div className="glass" style={{ borderRadius: 16, padding: '24px' }}>
-        <p className="mono" style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: 20 }}>MOOD OVER TIME</p>
+        <p className="mono" style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: 20 }}>{t(lang, "moodOverTime")}</p>
         <ResponsiveContainer width="100%" height={200}>
           <LineChart data={lineData}>
             <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.04)" />
@@ -141,7 +149,7 @@ export default function Dashboard() {
 
       {/* Pie chart */}
       <div className="glass" style={{ borderRadius: 16, padding: '24px' }}>
-        <p className="mono" style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: 20 }}>EMOTION DISTRIBUTION</p>
+        <p className="mono" style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: 20 }}>{t(lang, "emotionDistribution")}</p>
         <ResponsiveContainer width="100%" height={180}>
           <PieChart>
             <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} innerRadius={30}
@@ -156,7 +164,7 @@ export default function Dashboard() {
 
       {/* Recent list */}
       <div className="glass" style={{ borderRadius: 16, padding: '24px' }}>
-        <p className="mono" style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: 20 }}>RECENT ENTRIES</p>
+        <p className="mono" style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: 20 }}>{t(lang, "recentEntries")}</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
           {[...history].reverse().slice(0,8).map((h, i) => (
             <div key={h.id} style={{
@@ -173,7 +181,7 @@ export default function Dashboard() {
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-                  <span style={{ fontSize: 14, color: 'var(--text-primary)', textTransform: 'capitalize', fontWeight: 400 }}>{h.emotion}</span>
+                  <span style={{ fontSize: 14, color: 'var(--text-primary)', textTransform: 'capitalize', fontWeight: 400 }}>{t(lang, h.emotion)}</span>
                   {h.face_emotion && h.face_emotion !== h.text_emotion && (
                     <span className="mono" style={{ fontSize: 10, color: 'var(--text-muted)' }}>face: {h.face_emotion}</span>
                   )}

@@ -1,13 +1,20 @@
-import { useState, useRef } from "react"
+import { useState, useRef, useCallback } from "react"
 import Webcam from "react-webcam"
+import { t } from "../i18n"
+import { useSpeechRecognition } from "../useSpeechRecognition"
 
-export default function InputPanel({ onAnalyze, loading }) {
+export default function InputPanel({ onAnalyze, loading, lang = "en" }) {
   const [text, setText] = useState("")
   const [imageBase64, setImageBase64] = useState(null)
   const [preview, setPreview] = useState(null)
   const [showWebcam, setShowWebcam] = useState(false)
   const webcamRef = useRef(null)
   const fileRef = useRef(null)
+
+  const handleVoiceResult = useCallback((transcript) => {
+    setText(prev => (prev ? prev.trim() + " " : "") + transcript)
+  }, [])
+  const { isListening, toggle: toggleMic, supported: micSupported } = useSpeechRecognition(lang, handleVoiceResult)
 
   const handleFileUpload = (e) => {
     const file = e.target.files[0]
@@ -29,38 +36,55 @@ export default function InputPanel({ onAnalyze, loading }) {
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
           <label className="mono" style={{ fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
-            Journal entry
+            {t(lang, "journalEntry")}
           </label>
           <span className="mono" style={{ fontSize: 11, color: wordCount > 20 ? 'var(--cyan)' : 'var(--text-muted)' }}>
-            {wordCount} words
+            {wordCount} {t(lang, "words")}
           </span>
         </div>
-        <textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Write freely about how you feel today. The more you share, the deeper the analysis..."
-          rows={6}
-          style={{ width: '100%', borderRadius: 12, padding: '14px 16px', fontSize: 15, lineHeight: 1.8, fontFamily: 'DM Sans, sans-serif', fontWeight: 300 }}
-        />
+        <div style={{ position: 'relative' }}>
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder={t(lang, "journalPlaceholder")}
+            rows={6}
+            style={{ width: '100%', borderRadius: 12, padding: '14px 16px', paddingRight: micSupported ? 48 : 16, fontSize: 15, lineHeight: 1.8, fontFamily: 'DM Sans, sans-serif', fontWeight: 300 }}
+          />
+          {micSupported && (
+            <button
+              type="button"
+              onClick={toggleMic}
+              title="Voice input"
+              style={{
+                position: 'absolute', top: 12, right: 12, width: 32, height: 32, borderRadius: '50%',
+                border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: isListening ? 'rgba(224,107,107,0.3)' : 'rgba(139,111,212,0.2)',
+                color: isListening ? '#e06b6b' : '#c4a8f0', fontSize: 15,
+                boxShadow: isListening ? '0 0 0 4px rgba(224,107,107,0.15)' : 'none',
+                transition: 'all 0.2s ease',
+              }}
+            >🎙</button>
+          )}
+        </div>
         {wordCount > 0 && wordCount < 20 && (
           <p style={{ fontSize: 12, color: 'var(--gold)', marginTop: 6, fontWeight: 300 }}>
-            ↑ Longer entries produce richer emotional analysis
+            {t(lang, "longerEntries")}
           </p>
         )}
       </div>
 
       <div>
         <label className="mono" style={{ fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: 10 }}>
-          Face image <span style={{ color: 'var(--text-muted)', fontWeight: 300 }}>— optional</span>
+          {t(lang, "faceImage")} <span style={{ color: 'var(--text-muted)', fontWeight: 300 }}>— {t(lang, "optional")}</span>
         </label>
         {preview ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <img src={preview} alt="preview" style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 10, border: '1px solid var(--border)' }} />
             <div>
-              <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Image captured</p>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{t(lang, "imageCaptured")}</p>
               <button onClick={() => { setImageBase64(null); setPreview(null) }}
                 style={{ fontSize: 12, color: '#f4a0a0', background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginTop: 2 }}>
-                Remove
+                {t(lang, "remove")}
               </button>
             </div>
           </div>
@@ -70,14 +94,14 @@ export default function InputPanel({ onAnalyze, loading }) {
               style={{ width: '100%', borderRadius: 12, border: '1px solid var(--border)' }}
               videoConstraints={{ width: 640, height: 360, facingMode: "user" }} />
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={captureWebcam} style={btnPrimary}>Capture</button>
-              <button onClick={() => setShowWebcam(false)} style={btnGhost}>Cancel</button>
+              <button onClick={captureWebcam} style={btnPrimary}>{t(lang, "capture")}</button>
+              <button onClick={() => setShowWebcam(false)} style={btnGhost}>{t(lang, "cancel")}</button>
             </div>
           </div>
         ) : (
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => fileRef.current.click()} style={btnGhost}>↑ Upload photo</button>
-            <button onClick={() => setShowWebcam(true)} style={btnGhost}>⬤ Use webcam</button>
+            <button onClick={() => fileRef.current.click()} style={btnGhost}>↑ {t(lang, "uploadPhoto")}</button>
+            <button onClick={() => setShowWebcam(true)} style={btnGhost}>⬤ {t(lang, "useWebcam")}</button>
             <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileUpload} />
           </div>
         )}
@@ -102,7 +126,7 @@ export default function InputPanel({ onAnalyze, loading }) {
           boxShadow: text.trim() && !loading ? '0 0 32px rgba(123,94,167,0.4)' : 'none',
         }}
       >
-        {loading ? '— analysing —' : 'Analyse Mood →'}
+        {loading ? `— ${t(lang, "analysing")} —` : `${t(lang, "analyseMood")} →`}
       </button>
     </div>
   )

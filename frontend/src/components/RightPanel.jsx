@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react"
 import MoodGame from "./MoodGame"
+import { t } from "../i18n"
 
 const EMOTION_COLORS = {
   happy:"#e2b94b", sad:"#4d8de8", angry:"#e06b6b",
@@ -166,7 +167,7 @@ function RadarRing({ emotion, score, color, size=88 }) {
   )
 }
 
-export default function RightPanel({ result, loading, history }) {
+export default function RightPanel({ result, loading, history, lang = "en" }) {
   const [openTip, setOpenTip] = useState(null)
   const [showGame, setShowGame] = useState(false)
 
@@ -204,7 +205,7 @@ export default function RightPanel({ result, loading, history }) {
         {/* Emotion radar */}
         <div className="glass" style={{ borderRadius:18, padding:'18px 16px', display:'flex', flexDirection:'column', alignItems:'center', gap:14, border: result ? `1px solid ${color}35` : undefined }}>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', width:'100%' }}>
-            <p className="mono" style={{ fontSize:9, color:'var(--text-muted)', letterSpacing:'0.12em' }}>EMOTION RADAR</p>
+            <p className="mono" style={{ fontSize:9, color:'var(--text-muted)', letterSpacing:'0.12em' }}>{t(lang, "emotionRadar")}</p>
             {result && <span className="mono" style={{ fontSize:10, color, letterSpacing:'0.06em' }}>{(confidence*100).toFixed(0)}%</span>}
           </div>
 
@@ -214,7 +215,7 @@ export default function RightPanel({ result, loading, history }) {
               <div style={{ width:'100%', display:'flex', flexDirection:'column', gap:8 }}>
                 {topThree.map(([e,s]) => (
                   <div key={e} style={{ display:'flex', alignItems:'center', gap:8 }}>
-                    <span style={{ fontSize:10, color:'var(--text-muted)', width:56, textTransform:'capitalize', fontFamily:'DM Mono' }}>{e}</span>
+                    <span style={{ fontSize:10, color:'var(--text-muted)', width:56, textTransform:'capitalize', fontFamily:'DM Mono' }}>{t(lang, e)}</span>
                     <div style={{ flex:1, height:3, background:'rgba(255,255,255,0.06)', borderRadius:2, overflow:'hidden' }}>
                       <div style={{
                         height:'100%', borderRadius:2, width:`${s*100}%`,
@@ -231,7 +232,7 @@ export default function RightPanel({ result, loading, history }) {
           ) : (
             <div style={{ padding:'16px 0', textAlign:'center', width:'100%' }}>
               <div style={{ width:72, height:72, borderRadius:'50%', margin:'0 auto 10px', background:'rgba(255,255,255,0.03)', border:'2px dashed rgba(255,255,255,0.08)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:24, opacity:0.4 }}>○</div>
-              <p style={{ fontSize:11, color:'var(--text-muted)', fontStyle:'italic' }}>Analyse an entry to see your emotion radar</p>
+              <p style={{ fontSize:11, color:'var(--text-muted)', fontStyle:'italic' }}>{t(lang, "analyseFirstEntry")}</p>
             </div>
           )}
         </div>
@@ -241,12 +242,12 @@ export default function RightPanel({ result, loading, history }) {
           <div className="glass" style={{ borderRadius:14, padding:'13px 12px', borderLeft:'2px solid #e2b94b' }}>
             <div style={{ fontSize:18, marginBottom:4 }}>🔥</div>
             <p className="serif" style={{ fontSize:22, fontWeight:700, color:'#e2b94b', lineHeight:1 }}>{streak}</p>
-            <p className="mono" style={{ fontSize:9, color:'var(--text-muted)', marginTop:3, letterSpacing:'0.08em' }}>DAY STREAK</p>
+            <p className="mono" style={{ fontSize:9, color:'var(--text-muted)', marginTop:3, letterSpacing:'0.08em' }}>{t(lang, "dayStreak")}</p>
           </div>
           <div className="glass" style={{ borderRadius:14, padding:'13px 12px', borderLeft:'2px solid #b39dff' }}>
             <div style={{ fontSize:18, marginBottom:4 }}>📓</div>
             <p className="serif" style={{ fontSize:22, fontWeight:700, color:'#b39dff', lineHeight:1 }}>{history.length}</p>
-            <p className="mono" style={{ fontSize:9, color:'var(--text-muted)', marginTop:3, letterSpacing:'0.08em' }}>TOTAL</p>
+            <p className="mono" style={{ fontSize:9, color:'var(--text-muted)', marginTop:3, letterSpacing:'0.08em' }}>{t(lang, "total")}</p>
           </div>
         </div>
 
@@ -254,7 +255,7 @@ export default function RightPanel({ result, loading, history }) {
         <div className="glass" style={{ borderRadius:18, padding:'16px 14px', border:`1px solid ${color}25` }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
             <p className="mono" style={{ fontSize:9, color:'var(--text-muted)', letterSpacing:'0.12em' }}>
-              {result ? `FOR ${emotion.toUpperCase()}` : 'WELLNESS TIPS'}
+              {result ? t(lang, emotion).toUpperCase() : t(lang, "wellnessTips")}
             </p>
             <span style={{ fontSize:9, color, fontFamily:'DM Mono', opacity:0.8 }}>tap ↓</span>
           </div>
@@ -271,7 +272,7 @@ export default function RightPanel({ result, loading, history }) {
           background:'linear-gradient(135deg, rgba(179,157,255,0.1), rgba(61,217,200,0.07))',
           border:'1px solid rgba(179,157,255,0.25)',
         }}>
-          <p className="mono" style={{ fontSize:9, color:'var(--text-muted)', letterSpacing:'0.12em', marginBottom:10 }}>✦ QUOTE OF THE DAY</p>
+          <p className="mono" style={{ fontSize:9, color:'var(--text-muted)', letterSpacing:'0.12em', marginBottom:10 }}>✦ {t(lang, "quoteOfTheDay")}</p>
           <p className="serif" style={{ fontSize:14, fontStyle:'italic', color:'#d4cef0', lineHeight:1.75, fontWeight:300 }}>
             "{quote.text}"
           </p>
@@ -292,7 +293,7 @@ export default function RightPanel({ result, loading, history }) {
         onMouseLeave={e => e.currentTarget.style.background='linear-gradient(135deg, rgba(139,111,212,0.2), rgba(61,217,200,0.15))'}
         >
           <span style={{ fontSize:16 }}>🎮</span>
-          MOOD MATCH · PLAY A GAME
+          {t(lang, "moodMatch")}
         </button>
       </aside>
     </>

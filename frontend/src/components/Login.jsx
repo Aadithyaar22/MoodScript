@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from "react"
 import { login, signup, googleLogin } from "../api"
+import { t } from "../i18n"
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
 
-export default function Login({ onAuth }) {
+export default function Login({ onAuth, lang = "en" }) {
   const [mode, setMode] = useState("login") // "login" | "signup"
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
@@ -38,7 +39,7 @@ export default function Login({ onAuth }) {
     e.preventDefault()
     setError(null)
     if (!username.trim() || !password) {
-      setError("Please enter a username and password")
+      setError(lang === "hi" ? "कृपया उपयोगकर्ता नाम और पासवर्ड दर्ज करें" : lang === "kn" ? "ದಯವಿಟ್ಟು ಬಳಕೆದಾರಹೆಸರು ಮತ್ತು ಪಾಸ್‌ವರ್ಡ್ ನಮೂದಿಸಿ" : "Please enter a username and password")
       return
     }
     setLoading(true)
@@ -71,15 +72,15 @@ export default function Login({ onAuth }) {
             boxShadow: '0 0 24px rgba(139,111,212,0.5)',
           }}>M</div>
           <h1 className="serif" style={{ fontSize: 26, fontWeight: 300, color: '#f0ece6' }}>
-            {mode === "login" ? "Welcome back" : "Create your space"}
+            {mode === "login" ? t(lang, "welcomeBack") : t(lang, "createYourSpace")}
           </h1>
           <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 6, fontWeight: 300 }}>
-            {mode === "login" ? "Sign in to continue your journal with Aria." : "Aria remembers you — every conversation builds on the last."}
+            {mode === "login" ? t(lang, "signInSubtitle") : t(lang, "signUpSubtitle")}
           </p>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <label className="mono" style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.08em' }}>USERNAME</label>
+          <label className="mono" style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.08em' }}>{t(lang, "username")}</label>
           <input
             value={username}
             onChange={e => setUsername(e.target.value)}
@@ -93,7 +94,7 @@ export default function Login({ onAuth }) {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <label className="mono" style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.08em' }}>PASSWORD</label>
+          <label className="mono" style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.08em' }}>{t(lang, "password")}</label>
           <input
             type="password"
             value={password}
@@ -119,14 +120,14 @@ export default function Login({ onAuth }) {
           background: 'linear-gradient(135deg, #8b6fd4, #3dd9c8)', color: '#0a0d16',
           fontSize: 14, fontWeight: 600, opacity: loading ? 0.6 : 1,
         }}>
-          {loading ? "Please wait…" : mode === "login" ? "Log in" : "Sign up"}
+          {loading ? t(lang, "pleaseWait") : mode === "login" ? t(lang, "logIn") : t(lang, "signUp")}
         </button>
 
         {GOOGLE_CLIENT_ID && (
           <>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-              <span className="mono" style={{ fontSize: 10, color: 'var(--text-muted)' }}>OR</span>
+              <span className="mono" style={{ fontSize: 10, color: 'var(--text-muted)' }}>{t(lang, "or")}</span>
               <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
             </div>
             <div ref={googleBtnRef} style={{ display: 'flex', justifyContent: 'center' }} />
@@ -134,12 +135,12 @@ export default function Login({ onAuth }) {
         )}
 
         <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--text-muted)' }}>
-          {mode === "login" ? "New here? " : "Already have an account? "}
+          {mode === "login" ? `${t(lang, "newHere")} ` : `${t(lang, "alreadyHaveAccount")} `}
           <button type="button" onClick={() => { setMode(mode === "login" ? "signup" : "login"); setError(null) }} style={{
             background: 'none', border: 'none', color: 'var(--violet-bright)', cursor: 'pointer',
             fontSize: 13, textDecoration: 'underline', padding: 0,
           }}>
-            {mode === "login" ? "Sign up" : "Log in"}
+            {mode === "login" ? t(lang, "signUp") : t(lang, "logIn")}
           </button>
         </p>
       </form>

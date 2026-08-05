@@ -7,11 +7,14 @@ import Dashboard from "./components/Dashboard"
 import Sidebar from "./components/Sidebar"
 import RightPanel from "./components/RightPanel"
 import Login from "./components/Login"
+import LanguageSwitcher from "./components/LanguageSwitcher"
 import { sendChatMessage, fetchHistory, fetchConversations, fetchConversationMessages, getToken, logout, exportJournal, deleteAccount, deleteConversation } from "./api"
+import { t } from "./i18n"
 import "./index.css"
 
 export default function App() {
   const [authed, setAuthed] = useState(!!getToken())
+  const [lang, setLang] = useState(() => localStorage.getItem("moodscript_lang") || "en")
   const [messages, setMessages] = useState([])   // [{id, role:'user'|'assistant', text, imageBase64?, analysis?}]
   const [conversationId, setConversationId] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -50,13 +53,18 @@ export default function App() {
     fetchConversations().then(setConversations).catch(() => {})
   }, [authed, lastAssistant?.id])
 
+  const handleLangChange = (newLang) => {
+    setLang(newLang)
+    localStorage.setItem("moodscript_lang", newLang)
+  }
+
   const runChat = async (text, imageBase64) => {
     setLoading(true)
     setError(null)
     const userMsg = { id: crypto.randomUUID(), role: "user", text, imageBase64 }
     setMessages(m => [...m, userMsg])
     try {
-      const data = await sendChatMessage(text, imageBase64, conversationId)
+      const data = await sendChatMessage(text, imageBase64, conversationId, lang)
       setConversationId(data.conversation_id)
       const assistantMsg = { id: crypto.randomUUID(), role: "assistant", text: data.response, analysis: data }
       setMessages(m => [...m, assistantMsg])
@@ -167,7 +175,8 @@ export default function App() {
           <div className="orb orb-4"/>
         </div>
         <div className="grid-pattern"/>
-        <Login onAuth={() => setAuthed(true)} />
+        <LanguageSwitcher lang={lang} onLangChange={handleLangChange} style={{ position:'fixed', top:20, right:20, zIndex:20 }}/>
+        <Login onAuth={() => setAuthed(true)} lang={lang}/>
       </>
     )
   }
@@ -207,6 +216,8 @@ export default function App() {
           onLogout={handleLogout}
           onExport={handleExport}
           onDeleteAccount={handleDeleteAccount}
+          lang={lang}
+          onLangChange={handleLangChange}
         />
 
         <main style={{
@@ -220,11 +231,11 @@ export default function App() {
               {messages.length === 0 && !loading && (
                 <div className="animate-fade-up" style={{ marginBottom:8 }}>
                   <h1 className="serif" style={{ fontSize:42, fontWeight:300, lineHeight:1.2, color:'#f0ece6', marginBottom:10 }}>
-                    How are you<br/>
-                    <em style={{ color:'var(--violet-bright)', fontStyle:'italic' }}>feeling today?</em>
+                    {t(lang, "howAreYou")}<br/>
+                    <em style={{ color:'var(--violet-bright)', fontStyle:'italic' }}>{t(lang, "feelingToday")}</em>
                   </h1>
                   <p style={{ fontSize:14, color:'var(--text-muted)', fontWeight:300, lineHeight:1.8 }}>
-                    Write freely. MoodScript reads your emotional state through language and facial expression, then Aria responds like a therapist who remembers your patterns over time.
+                    {t(lang, "introText")}
                   </p>
                 </div>
               )}
@@ -237,8 +248,8 @@ export default function App() {
                   <span style={{ fontSize: 16 }}>🔥</span>
                   <p style={{ fontSize: 13, color: '#d8d0c0', fontWeight: 300 }}>
                     {streakBeforeToday > 0
-                      ? `You're on a ${streakBeforeToday}-day streak — write today's entry to keep it going.`
-                      : "You haven't checked in today. A quick entry helps Aria notice patterns over time."}
+                      ? t(lang, "streakBanner", streakBeforeToday)
+                      : t(lang, "noEntryToday")}
                   </p>
                 </div>
               )}
@@ -249,7 +260,7 @@ export default function App() {
                     fontSize:12, color:'var(--text-muted)', background:'none',
                     border:'1px solid var(--border)', borderRadius:8, padding:'6px 12px',
                     cursor:'pointer', fontFamily:'DM Mono, monospace',
-                  }}>+ New conversation</button>
+                  }}>{t(lang, "newConversation")}</button>
                 </div>
               )}
 
@@ -269,13 +280,13 @@ export default function App() {
                       </div>
                     </div>
                   ) : (
-                    <ChatReply result={m.analysis} onShowXAI={() => setXaiTargetId(m.id)}/>
+                    <ChatReply result={m.analysis} onShowXAI={() => setXaiTargetId(m.id)} lang={lang}/>
                   )}
                 </div>
               ))}
 
               {messages.length === 0 && (
-                <InputPanel onAnalyze={handleFirstMessage} loading={loading}/>
+                <InputPanel onAnalyze={handleFirstMessage} loading={loading} lang={lang}/>
               )}
 
               {error && (
@@ -294,17 +305,17 @@ export default function App() {
               )}
 
               {messages.length > 0 && (
-                <ChatInput onSend={handleContinue} loading={loading}/>
+                <ChatInput onSend={handleContinue} loading={loading} lang={lang}/>
               )}
             </div>
           ) : (
             <div className="animate-fade-up" style={{ maxWidth:640, margin:'0 auto' }}>
-              <Dashboard/>
+              <Dashboard lang={lang}/>
             </div>
           )}
         </main>
 
-        <RightPanel result={conversationMood} loading={loading} history={history}/>
+        <RightPanel result={conversationMood} loading={loading} history={history} lang={lang}/>
       </div>
     </>
   )

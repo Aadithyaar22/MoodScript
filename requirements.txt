@@ -8,5 +8,6 @@ pyjwt
 psycopg2-binary
 cryptography
 google-auth
+google-cloud-translate
 requests
 httpx

@@ -46,11 +46,12 @@ export async function googleLogin(credential) {
   return data
 }
 
-export async function sendChatMessage(message, imageBase64 = null, conversationId = null) {
+export async function sendChatMessage(message, imageBase64 = null, conversationId = null, lang = "en") {
   const { data } = await client.post("/chat", {
     message,
     image_base64: imageBase64,
     conversation_id: conversationId,
+    lang,
   })
   return data
 }

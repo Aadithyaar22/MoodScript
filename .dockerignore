@@ -10,3 +10,4 @@ moodscript.db
 frontend
 docs
 services
+.secrets

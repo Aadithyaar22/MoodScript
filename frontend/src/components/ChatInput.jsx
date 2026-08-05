@@ -1,13 +1,20 @@
-import { useState, useRef } from "react"
+import { useState, useRef, useCallback } from "react"
 import Webcam from "react-webcam"
+import { t } from "../i18n"
+import { useSpeechRecognition } from "../useSpeechRecognition"
 
-export default function ChatInput({ onSend, loading }) {
+export default function ChatInput({ onSend, loading, lang = "en" }) {
   const [text, setText] = useState("")
   const [imageBase64, setImageBase64] = useState(null)
   const [preview, setPreview] = useState(null)
   const [showWebcam, setShowWebcam] = useState(false)
   const webcamRef = useRef(null)
   const fileRef = useRef(null)
+
+  const handleVoiceResult = useCallback((transcript) => {
+    setText(prev => (prev ? prev.trim() + " " : "") + transcript)
+  }, [])
+  const { isListening, toggle: toggleMic, supported: micSupported } = useSpeechRecognition(lang, handleVoiceResult)
 
   const handleFileUpload = (e) => {
     const file = e.target.files[0]
@@ -38,8 +45,8 @@ export default function ChatInput({ onSend, loading }) {
             style={{ width: '100%', borderRadius: 12, border: '1px solid var(--border)' }}
             videoConstraints={{ width: 640, height: 360, facingMode: "user" }} />
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={captureWebcam} style={btnPrimary}>Capture</button>
-            <button onClick={() => setShowWebcam(false)} style={btnGhost}>Cancel</button>
+            <button onClick={captureWebcam} style={btnPrimary}>{t(lang, "capture")}</button>
+            <button onClick={() => setShowWebcam(false)} style={btnGhost}>{t(lang, "cancel")}</button>
           </div>
         </div>
       )}
@@ -47,10 +54,10 @@ export default function ChatInput({ onSend, loading }) {
       {preview && (
         <div className="glass" style={{ borderRadius: 14, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
           <img src={preview} alt="attached" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border)' }} />
-          <p style={{ fontSize: 12, color: 'var(--text-secondary)', flex: 1 }}>Image attached</p>
+          <p style={{ fontSize: 12, color: 'var(--text-secondary)', flex: 1 }}>{t(lang, "imageAttached")}</p>
           <button onClick={() => { setImageBase64(null); setPreview(null) }}
             style={{ fontSize: 12, color: '#f4a0a0', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-            Remove
+            {t(lang, "remove")}
           </button>
         </div>
       )}
@@ -66,6 +73,18 @@ export default function ChatInput({ onSend, loading }) {
           title="Use webcam"
           style={iconBtn}
         >⬤</button>
+        {micSupported && (
+          <button
+            onClick={toggleMic}
+            title="Voice input"
+            style={{
+              ...iconBtn,
+              background: isListening ? 'rgba(224,107,107,0.3)' : iconBtn.background,
+              color: isListening ? '#e06b6b' : iconBtn.color,
+              boxShadow: isListening ? '0 0 0 4px rgba(224,107,107,0.15)' : 'none',
+            }}
+          >🎙</button>
+        )}
         <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileUpload} />
 
         <textarea
@@ -77,7 +96,7 @@ export default function ChatInput({ onSend, loading }) {
               submit()
             }
           }}
-          placeholder="Reply to Aria..."
+          placeholder={t(lang, "replyPlaceholder")}
           rows={1}
           style={{
             flex: 1, resize: 'none', borderRadius: 12, padding: '12px 14px',
@@ -102,7 +121,7 @@ export default function ChatInput({ onSend, loading }) {
             transition: 'all 0.2s ease',
           }}
         >
-          {loading ? '···' : 'Send →'}
+          {loading ? '···' : `${t(lang, "send")} →`}
         </button>
       </div>
     </div>

@@ -10,6 +10,7 @@ from models.fusion import FusionLayer
 from models.response import ResponseEngine
 from models.crisis import assess_crisis
 from models.rating import compute_rating, summarize_history
+from models.translate import translate_text
 from database.db import MoodDatabase
 from auth import get_current_user_id, hash_password, verify_password, create_token
 from google.oauth2 import id_token as google_id_token
@@ -148,11 +149,15 @@ class ChatRequest(BaseModel):
     message: str
     image_base64: Optional[str] = None
     conversation_id: Optional[int] = None
+    lang: Optional[str] = "en"
 
 @app.post("/chat")
 async def chat(req: ChatRequest, user_id: int = Depends(get_current_user_id)):
     if not req.message.strip():
         raise HTTPException(status_code=400, detail="Message cannot be empty")
+
+    lang = req.lang or "en"
+    message_en = translate_text(req.message, "en") if lang != "en" else req.message
 
     if req.conversation_id is None:
         conversation_id = db.create_conversation(user_id, persona_id=None)
@@ -164,17 +169,17 @@ async def chat(req: ChatRequest, user_id: int = Depends(get_current_user_id)):
         conversation_id = conversation["id"]
         prior_messages = db.get_conversation_messages(conversation_id, user_id)
 
-    text_result, face_result, fusion_result, xai_result = await _analyze_message(req.message, req.image_base64)
+    text_result, face_result, fusion_result, xai_result = await _analyze_message(message_en, req.image_base64)
     emotion = fusion_result["unified_emotion"]
     confidence = fusion_result["unified_confidence"]
     clinical_tone = text_result.get("clinical_tone")
     resolution_reason = fusion_result.get("resolution_reason", "text_only")
 
     journal_entries = db.get_user_journal_entries(user_id, exclude_conversation_id=conversation_id)
-    crisis = assess_crisis(req.message, journal_entries)
+    crisis = assess_crisis(message_en, journal_entries)
 
     db.add_message(
-        conversation_id, user_id, role="user", content=req.message,
+        conversation_id, user_id, role="user", content=message_en,
         emotion=emotion, confidence=confidence,
         face_emotion=face_result["emotion"] if face_result else None,
         clinical_tone=clinical_tone, resolution_reason=resolution_reason,
@@ -190,19 +195,19 @@ async def chat(req: ChatRequest, user_id: int = Depends(get_current_user_id)):
         if persona_id is None:
             persona_id = 0
         response = await response_engine.generate_crisis_reply(
-            reason=crisis["reason"], user_text=req.message,
+            reason=crisis["reason"], user_text=message_en,
             history=history_for_llm, persona_id=persona_id,
         )
     elif not prior_messages:
         response, persona_id = await response_engine.generate(
-            emotion=emotion, confidence=confidence, user_text=req.message,
+            emotion=emotion, confidence=confidence, user_text=message_en,
             clinical_tone=clinical_tone, conflict_note=resolution_reason,
             persona_id=persona_id, long_term_context=long_term_context,
         )
     else:
         response = await response_engine.generate_reply(
             history=history_for_llm, emotion=emotion, confidence=confidence,
-            user_text=req.message, clinical_tone=clinical_tone,
+            user_text=message_en, clinical_tone=clinical_tone,
             persona_id=persona_id, long_term_context=long_term_context,
         )
 
@@ -210,6 +215,8 @@ async def chat(req: ChatRequest, user_id: int = Depends(get_current_user_id)):
         db.set_conversation_persona(conversation_id, persona_id)
 
     db.add_message(conversation_id, user_id, role="assistant", content=response, crisis_flag=crisis["is_crisis"])
+
+    display_response = translate_text(response, lang) if lang != "en" else response
 
     overall_rating = compute_rating(db.get_user_journal_entries(user_id))
 
@@ -221,7 +228,7 @@ async def chat(req: ChatRequest, user_id: int = Depends(get_current_user_id)):
         "face_result": face_result,
         "fusion_result": fusion_result,
         "xai": xai_result,
-        "response": response,
+        "response": display_response,
         "emotion_arc": text_result.get("emotion_arc", []),
         "persona_id": persona_id,
         "crisis": crisis,
