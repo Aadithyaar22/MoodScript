@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+transformers
+lime
+spacy
+scikit-learn
+scipy
+numpy

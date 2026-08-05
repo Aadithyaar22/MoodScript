@@ -1,23 +1,27 @@
 import os
+import httpx
 from datetime import datetime, timedelta, timezone
 from fastapi import FastAPI, HTTPException, Depends, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
 
-from models.face_model import FaceEmotionModel
-from models.text_model import TextEmotionModel
 from models.fusion import FusionLayer
 from models.response import ResponseEngine
 from models.crisis import assess_crisis
 from models.rating import compute_rating, summarize_history
-from xai.explainer import XAIExplainer
 from database.db import MoodDatabase
 from auth import get_current_user_id, hash_password, verify_password, create_token
 from google.oauth2 import id_token as google_id_token
 from google.auth.transport import requests as google_requests
 
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+FACE_SERVICE_URL = os.getenv("FACE_SERVICE_URL", "http://localhost:8001")
+TEXT_SERVICE_URL = os.getenv("TEXT_SERVICE_URL", "http://localhost:8002")
+INTERNAL_API_KEY = os.getenv("INTERNAL_API_KEY")
+
+def _internal_headers():
+    return {"X-Internal-Key": INTERNAL_API_KEY} if INTERNAL_API_KEY else {}
 
 app = FastAPI(title="MoodScript API")
 
@@ -32,37 +36,43 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-face_model = None
-text_model = None
 fusion = None
 response_engine = None
-xai = None
 db = None
 
 @app.on_event("startup")
 async def startup_event():
-    global face_model, text_model, fusion, response_engine, xai, db
-    print("Loading models — first run takes ~60s...")
-    face_model = FaceEmotionModel()
-    text_model = TextEmotionModel()
+    global fusion, response_engine, db
     fusion = FusionLayer()
     response_engine = ResponseEngine()
-    xai = XAIExplainer(text_model)
     db = MoodDatabase()
-    print("All models loaded. Ready.")
+    print("Orchestrator ready. Face service:", FACE_SERVICE_URL, "| Text service:", TEXT_SERVICE_URL)
 
-def _analyze_message(text: str, image_base64: Optional[str]):
-    text_result = text_model.predict(text)
-
-    face_result = None
-    if image_base64:
+async def _analyze_message(text: str, image_base64: Optional[str]):
+    async with httpx.AsyncClient(timeout=30.0) as client:
         try:
-            face_result = face_model.predict(image_base64)
-        except Exception as e:
-            import traceback; print(f"[FACE ERROR] {type(e).__name__}: {e}"); traceback.print_exc()
+            text_resp = await client.post(
+                f"{TEXT_SERVICE_URL}/analyze", json={"text": text}, headers=_internal_headers(),
+            )
+            text_resp.raise_for_status()
+        except httpx.HTTPError as e:
+            raise HTTPException(status_code=502, detail=f"Text analysis service unavailable: {e}")
+        text_data = text_resp.json()
+        text_result = text_data["text_result"]
+        xai_result = text_data["xai_result"]
+
+        face_result = None
+        if image_base64:
+            try:
+                face_resp = await client.post(
+                    f"{FACE_SERVICE_URL}/predict", json={"image_base64": image_base64}, headers=_internal_headers(),
+                )
+                face_resp.raise_for_status()
+                face_result = face_resp.json()
+            except Exception as e:
+                print(f"[FACE ERROR] {type(e).__name__}: {e}")
 
     fusion_result = fusion.fuse(text_result, face_result)
-    xai_result = xai.explain(text, text_result)
 
     return text_result, face_result, fusion_result, xai_result
 
@@ -154,7 +164,7 @@ async def chat(req: ChatRequest, user_id: int = Depends(get_current_user_id)):
         conversation_id = conversation["id"]
         prior_messages = db.get_conversation_messages(conversation_id, user_id)
 
-    text_result, face_result, fusion_result, xai_result = _analyze_message(req.message, req.image_base64)
+    text_result, face_result, fusion_result, xai_result = await _analyze_message(req.message, req.image_base64)
     emotion = fusion_result["unified_emotion"]
     confidence = fusion_result["unified_confidence"]
     clinical_tone = text_result.get("clinical_tone")

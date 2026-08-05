@@ -66,12 +66,14 @@ It's not a chatbot wrapper. Every emotional read is a real model inference (text
 
 ## Architecture
 
+The backend is split into three independently deployable services, so each piece can be sized, scaled, and hosted on its own — the orchestrator carries no ML dependencies at all and runs in under 100MB of RAM.
+
 ```mermaid
 flowchart TD
     U[User] -->|message + optional image| FE[React Frontend]
-    FE -->|POST /chat| API[FastAPI Backend]
-    API --> TXT[Text Emotion Model<br/>j-hartmann distilroberta]
-    API --> FACE[Face Emotion Model<br/>ViT face-expression]
+    FE -->|POST /chat| API[Orchestrator<br/>auth · chat · DB · Groq · crisis]
+    API -->|POST /analyze| TXT[Text Service<br/>j-hartmann distilroberta + LIME]
+    API -->|POST /predict| FACE[Face Service<br/>ViT face-expression]
     TXT --> FUSE[Fusion Layer<br/>55% text / 45% face]
     FACE --> FUSE
     FUSE --> CRISIS[Crisis Detector<br/>regex + sustained-distress window]
@@ -82,6 +84,16 @@ flowchart TD
     DB -->|long-term summary| LLM
     LLM -->|reply + emotion + rating| FE
 ```
+
+Each service has its own `requirements.txt` and `Dockerfile`:
+
+| Service | Path | What it holds | Approx. RAM |
+|---|---|---|---|
+| Orchestrator | `main.py` (repo root) | Auth, chat routing, Postgres, Groq calls, crisis/rating logic — zero ML deps | ~95 MB |
+| Text service | `services/text_service/` | Text emotion model, spaCy, LIME explainability | ~440 MB |
+| Face service | `services/face_service/` | Face-image emotion model | ~400 MB |
+
+The orchestrator talks to the other two over plain HTTP (`FACE_SERVICE_URL`, `TEXT_SERVICE_URL`), optionally authenticated with a shared `INTERNAL_API_KEY` header if they're deployed publicly. All three can run on the same host or on entirely separate ones.
 
 ## Tech stack
 
@@ -101,19 +113,21 @@ flowchart TD
 
 ```
 .
-├── main.py                  # FastAPI app — all routes
+├── main.py                  # Orchestrator — auth, chat routing, no ML deps
 ├── auth.py                  # JWT + password hashing
-├── database/db.py           # Postgres access layer
+├── database/db.py           # Postgres access layer (encrypted message content)
 ├── models/
-│   ├── text_model.py        # Sentence-level text emotion classification
-│   ├── face_model.py        # Face-image emotion classification
 │   ├── fusion.py             # Combines text + face into one signal
 │   ├── response.py           # Aria persona + Groq prompt construction
 │   ├── crisis.py              # Crisis detection + helpline resources
 │   └── rating.py              # Wellbeing score, trend, weekly reflection
-├── xai/explainer.py          # LIME-based "why this emotion" explanations
-├── Dockerfile
-└── frontend/                 # React app (Vite)
+├── services/
+│   ├── text_service/          # Standalone: text emotion model + LIME
+│   │   ├── main.py, text_model.py, explainer.py, requirements.txt, Dockerfile
+│   └── face_service/          # Standalone: face emotion model
+│       ├── main.py, face_model.py, requirements.txt, Dockerfile
+├── Dockerfile                 # Orchestrator's own Dockerfile
+└── frontend/                  # React app (Vite)
     └── src/
         ├── App.jsx
         ├── api.js
@@ -122,12 +136,30 @@ flowchart TD
 
 ## Running it locally
 
-**Backend**
+Three separate processes — orchestrator, text service, face service:
+
 ```bash
+# Text service
+cd backend/services/text_service
+python3 -m venv venv && source venv/bin/activate
+pip install torch --index-url https://download.pytorch.org/whl/cpu
+pip install -r requirements.txt && python -m spacy download en_core_web_sm
+uvicorn main:app --reload --port 8002
+
+# Face service (separate venv/shell)
+cd backend/services/face_service
+python3 -m venv venv && source venv/bin/activate
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8001
+
+# Orchestrator (separate venv/shell)
 cd backend
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
-# .env: GROQ_API_KEY=..., JWT_SECRET=..., DATABASE_URL=postgresql://...
+# .env: GROQ_API_KEY=..., JWT_SECRET=..., DATABASE_URL=postgresql://...,
+#       MESSAGE_ENCRYPTION_KEY=..., FACE_SERVICE_URL=http://localhost:8001,
+#       TEXT_SERVICE_URL=http://localhost:8002
 uvicorn main:app --reload --port 8000
 ```
 
