@@ -8,4 +8,5 @@ pyjwt
 psycopg2-binary
 cryptography
 google-auth
+requests
 httpx
