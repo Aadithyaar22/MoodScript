@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from typing import Optional, List
 
 from models.fusion import FusionLayer
+from models.arbiter import Arbiter
 from models.response import ResponseEngine
 from models.crisis import assess_crisis
 from models.rating import compute_rating, summarize_history
@@ -39,13 +40,15 @@ app.add_middleware(
 )
 
 fusion = None
+arbiter = None
 response_engine = None
 db = None
 
 @app.on_event("startup")
 async def startup_event():
-    global fusion, response_engine, db
+    global fusion, arbiter, response_engine, db
     fusion = FusionLayer()
+    arbiter = Arbiter()
     response_engine = ResponseEngine()
     db = MoodDatabase()
     print("Orchestrator ready. Face service:", FACE_SERVICE_URL, "| Text service:", TEXT_SERVICE_URL)
@@ -77,6 +80,13 @@ async def _analyze_message(text: str, image_base64: Optional[str]):
                 print(f"[FACE ERROR] {type(e).__name__}: {e}")
 
     fusion_result = fusion.fuse(text_result, face_result)
+    if face_result is not None:
+        # Numeric fusion already resolves the easy cases (agreement, one modality
+        # clearly stronger, one reading neutral). Only genuine unresolved conflicts —
+        # both modalities disagree with comparable confidence — escalate to an LLM call
+        # that can read the actual text and catch things a pure score blend can't, like
+        # sarcasm or context. See models/arbiter.py.
+        fusion_result = await arbiter.arbitrate(text, text_result, face_result, fusion_result)
 
     return text_result, face_result, fusion_result, xai_result
 
