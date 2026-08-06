@@ -1,0 +1,25 @@
+Loading GoEmotions test split...
+4590 single-label test examples after Ekman mapping.
+Loading model: SamLowe/roberta-base-go_emotions
+Loading weights:   0%|          | 0/201 [00:00<?, ?it/s]Loading weights: 100%|██████████| 201/201 [00:00<00:00, 18821.98it/s]
+  500/4590 — 24.1 ex/s — ETA 2.8 min
+  1000/4590 — 23.9 ex/s — ETA 2.5 min
+  1500/4590 — 24.0 ex/s — ETA 2.1 min
+  2000/4590 — 24.0 ex/s — ETA 1.8 min
+  2500/4590 — 24.0 ex/s — ETA 1.5 min
+  3000/4590 — 23.9 ex/s — ETA 1.1 min
+  3500/4590 — 23.8 ex/s — ETA 0.8 min
+  4000/4590 — 23.7 ex/s — ETA 0.4 min
+  4500/4590 — 23.3 ex/s — ETA 0.1 min
+
+Overall accuracy: 69.65%
+CLASS       PRECISION   RECALL      F1          
+angry       58.1        50.4        54.0        
+disgusted   57.4        51.3        54.2        
+fearful     71.4        71.4        71.4        
+happy       80.6        81.4        81.0        
+neutral     66.7        69.7        68.1        
+sad         63.8        66.0        64.9        
+surprised   57.5        54.8        56.1        
+
+Saved to results/candidate_samlowe.json

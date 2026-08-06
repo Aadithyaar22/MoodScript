@@ -1,0 +1,25 @@
+Loading GoEmotions test split...
+4590 single-label test examples after Ekman mapping.
+Loading model: j-hartmann/emotion-english-roberta-large
+Loading weights:   0%|          | 0/393 [00:00<?, ?it/s]Loading weights: 100%|██████████| 393/393 [00:00<00:00, 59855.53it/s]
+  500/4590 — 14.0 ex/s — ETA 4.9 min
+  1000/4590 — 12.0 ex/s — ETA 5.0 min
+  1500/4590 — 11.4 ex/s — ETA 4.5 min
+  2000/4590 — 11.1 ex/s — ETA 3.9 min
+  2500/4590 — 10.8 ex/s — ETA 3.2 min
+  3000/4590 — 11.2 ex/s — ETA 2.4 min
+  3500/4590 — 11.6 ex/s — ETA 1.6 min
+  4000/4590 — 11.9 ex/s — ETA 0.8 min
+  4500/4590 — 12.1 ex/s — ETA 0.1 min
+
+Overall accuracy: 47.34%
+CLASS       PRECISION   RECALL      F1          
+angry       40.4        38.1        39.2        
+disgusted   13.9        81.6        23.8        
+fearful     33.3        72.7        45.7        
+happy       84.9        37.3        51.8        
+neutral     48.6        57.3        52.6        
+sad         45.8        54.4        49.7        
+surprised   34.1        44.1        38.5        
+
+Saved to results/candidate_roberta_large.json

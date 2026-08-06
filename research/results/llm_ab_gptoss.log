@@ -1,0 +1,58 @@
+
+================================================================================
+CASE: My manager Sarah pulled me into a meeting today and told me the Q3 pro...
+================================================================================
+
+--- llama-3.3-70b-versatile (0.9s) ---
+I can imagine how devastating it must feel to have something you've invested so much time and effort into suddenly taken away, especially when you've been leading the charge. It's completely understandable that you're feeling sad right now, and it's okay to sit with that feeling for a bit - it's a huge loss, and it's not something you can just brush off. This project was eight months of your life, and it's natural to grieve the end of it, even if it's not what you had hoped for. Remember that this feeling, as overwhelming as it is, won't last forever - you've navigated tough spots before, and you can do it again.
+[{'banned_opener': False, 'sentence_count': 4, 'within_length_limit': True, 'has_bullets': False, 'entity_hits': 1, 'entity_hit_rate': 0.2}]
+
+--- openai/gpt-oss-120b (1.6s) ---
+I hear how heavy this news feels for you. After eight months of effort, it’s natural to feel a deep sting when the project ends so suddenly. Give yourself permission to sit with that sadness; it won’t last forever, even though it’s loud right now. When you speak with your team tomorrow, sharing the reality and what you’ve learned can honor the work you all put in and open space for the next steps together.
+[{'banned_opener': False, 'sentence_count': 4, 'within_length_limit': True, 'has_bullets': False, 'entity_hits': 2, 'entity_hit_rate': 0.4}]
+
+================================================================================
+CASE: My little brother Max got into the college he's wanted since he was tw...
+================================================================================
+
+--- llama-3.3-70b-versatile (0.6s) ---
+I'm beaming just thinking about Max's face when he opened that letter - four hours in the car was totally worth it for that moment, wasn't it? The fact that he's wanted this for so long and you got to be there to share in his joy must be incredibly fulfilling. I can only imagine how proud you must be of him, and I'm sure this is a memory you'll both treasure for a long time.
+[{'banned_opener': False, 'sentence_count': 3, 'within_length_limit': True, 'has_bullets': False, 'entity_hits': 2, 'entity_hit_rate': 0.4}]
+
+--- openai/gpt-oss-120b (1.0s) ---
+I’m thrilled for you and Max—seeing a long‑held dream finally arrive feels like a sunrise. Driving four hours just to be there shows how deeply you’ve been rooting for him, and that moment when his joy broke into tears must have been unforgettable. It’s amazing how a single piece of news can turn a whole road trip into a celebration. I hope you both get to savor this milestone together for a while longer.
+[{'banned_opener': False, 'sentence_count': 4, 'within_length_limit': True, 'has_bullets': False, 'entity_hits': 1, 'entity_hit_rate': 0.2}]
+
+================================================================================
+CASE: I found out my dad has been lying to my mom about the debt for two yea...
+================================================================================
+
+--- llama-3.3-70b-versatile (0.7s) ---
+I've been thinking about family secrets and how they can shake the foundation of everything, and it sounds like you're right in the midst of that right now. Your dad's been carrying this weight alone for two years, and now it's fallen to you, and that's a lot to hold. Sometimes when we're faced with something like this, it can help to focus on just one next step, rather than the whole overwhelming picture - have you thought about what you need to take care of yourself in this moment, before you even consider talking to your parents?
+[{'banned_opener': False, 'sentence_count': 3, 'within_length_limit': True, 'has_bullets': False, 'entity_hits': 2, 'entity_hit_rate': 0.4}]
+
+--- openai/gpt-oss-120b (1.4s) ---
+I can hear how heavy this feels for you. Discovering that secret must have set your heart racing and left you wondering how to move forward. If you need a quiet anchor, try pressing your fingertips together and noticing the pressure change as you breathe in and out. Remember, even in the swirl of uncertainty, you have the steadiness to sit with this moment.
+[{'banned_opener': False, 'sentence_count': 4, 'within_length_limit': True, 'has_bullets': False, 'entity_hits': 1, 'entity_hit_rate': 0.2}]
+
+================================================================================
+CASE: Third time this month my flight got delayed for the same client trip t...
+================================================================================
+
+--- llama-3.3-70b-versatile (1.1s) ---
+I can only imagine how infuriating it must be to have your plans disrupted like this, especially when it means missing something as important as your daughter's recital. That's the third time this month you've had to deal with this, and I'm guessing the frustration is really building up - it's not just about the delay, it's about the feeling of being stuck in this cycle and missing out on precious moments with your daughter. Have you thought about talking to your client about finding alternative travel arrangements or scheduling that might be less prone to delays?
+[{'banned_opener': False, 'sentence_count': 3, 'within_length_limit': True, 'has_bullets': False, 'entity_hits': 2, 'entity_hit_rate': 0.4}]
+
+--- openai/gpt-oss-120b (1.2s) ---
+Your anger is justified—being sidelined by the same flight delay not once but three times, and watching another precious moment with your daughter slip away, feels like a direct insult to what matters most. It’s infuriating when a system you rely on repeatedly lets you down, especially when it costs you family time. One practical step might be to build a buffer into future trips: arrange a later arrival or a flexible ticket that lets you shift to a different flight if the first one shows signs of trouble. That way you have a concrete fallback the next time a delay threatens to steal another important moment.
+[{'banned_opener': False, 'sentence_count': 4, 'within_length_limit': True, 'has_bullets': False, 'entity_hits': 2, 'entity_hit_rate': 0.4}]
+
+
+================================================================================
+SUMMARY
+================================================================================
+MODEL                              AVG_LATENCY   BANNED_OPENER   OVER_LENGTH   BULLETS   AVG_ENTITY_HIT  
+llama-3.3-70b-versatile            0.82          0               0             0         0.35            
+openai/gpt-oss-120b                1.29          0               0             0         0.30            
+
+Full transcripts saved to results/llm_ab_gptoss.json
