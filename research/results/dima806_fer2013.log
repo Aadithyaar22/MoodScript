@@ -1,0 +1,30 @@
+Loading FER2013 test split...
+7178 test images loaded.
+Loading model: dima806/facial_emotions_image_detection
+Loading weights:   0%|          | 0/200 [00:00<?, ?it/s]Loading weights: 100%|██████████| 200/200 [00:00<00:00, 20038.24it/s]
+  500/7178 — 15.6 img/s — ETA 7.1 min
+  1000/7178 — 13.9 img/s — ETA 7.4 min
+  1500/7178 — 13.3 img/s — ETA 7.1 min
+  2000/7178 — 12.5 img/s — ETA 6.9 min
+  2500/7178 — 11.9 img/s — ETA 6.6 min
+  3000/7178 — 11.5 img/s — ETA 6.1 min
+  3500/7178 — 11.1 img/s — ETA 5.5 min
+  4000/7178 — 10.8 img/s — ETA 4.9 min
+  4500/7178 — 10.5 img/s — ETA 4.2 min
+  5000/7178 — 10.6 img/s — ETA 3.4 min
+  5500/7178 — 10.8 img/s — ETA 2.6 min
+  6000/7178 — 11.0 img/s — ETA 1.8 min
+  6500/7178 — 11.2 img/s — ETA 1.0 min
+  7000/7178 — 11.3 img/s — ETA 0.3 min
+
+Overall accuracy: 88.35%
+CLASS       PRECISION   RECALL      F1          
+angry       87.0        87.9        87.4        
+disgusted   90.2        100.0       94.9        
+fearful     84.3        82.6        83.5        
+happy       96.0        93.1        94.5        
+neutral     85.3        86.4        85.9        
+sad         82.8        83.2        83.0        
+surprised   91.4        94.9        93.2        
+
+Saved to results/dima806_fer2013.json

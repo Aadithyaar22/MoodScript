@@ -17,10 +17,10 @@ UNIFIED_EMOTIONS = ["angry", "disgusted", "fearful", "happy", "neutral", "sad", 
 
 class FaceEmotionModel:
     def __init__(self):
-        print("Loading trpakov/vit-face-expression...")
+        print("Loading dima806/facial_emotions_image_detection...")
         self.pipe = pipeline(
             "image-classification",
-            model="trpakov/vit-face-expression",
+            model="dima806/facial_emotions_image_detection",
             top_k=None,
             device=-1,
         )
