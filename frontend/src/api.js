@@ -90,10 +90,10 @@ export async function fetchReflection() {
   return data
 }
 
-export async function exportJournal() {
-  const response = await client.get("/export", { responseType: "blob" })
+async function _downloadFile(endpoint, fallbackFilename) {
+  const response = await client.get(endpoint, { responseType: "blob" })
   const match = response.headers["content-disposition"]?.match(/filename=(.+)$/)
-  const filename = match ? match[1] : "moodscript_journal.txt"
+  const filename = match ? match[1] : fallbackFilename
   const url = URL.createObjectURL(response.data)
   const a = document.createElement("a")
   a.href = url
@@ -102,6 +102,14 @@ export async function exportJournal() {
   a.click()
   a.remove()
   URL.revokeObjectURL(url)
+}
+
+export async function exportJournal() {
+  await _downloadFile("/export", "moodscript_journal.txt")
+}
+
+export async function exportDoctorReport() {
+  await _downloadFile("/export/doctor-report", "moodscript_doctor_report.txt")
 }
 
 export async function deleteAccount() {

@@ -6,7 +6,7 @@ import ThemeSwitcher from "./ThemeSwitcher"
 const EMOTION_EMOJI  = { happy:"😊", sad:"😔", angry:"😠", fearful:"😨", surprised:"😲", disgusted:"😒", neutral:"😐" }
 const EMOTION_COLOR  = { happy:"#e2b94b", sad:"#4d8de8", angry:"#e06b6b", fearful:"#b39dff", surprised:"#3dd9c8", disgusted:"#6bc8a0", neutral:"#6478a0" }
 
-export default function Sidebar({ tab, setTab, history, conversations = [], activeConversationId, onSelectConversation, onNewConversation, onLogout, onExport, onDeleteAccount, onDeleteConversation, lang, onLangChange, theme, onThemeChange }) {
+export default function Sidebar({ tab, setTab, history, conversations = [], activeConversationId, onSelectConversation, onNewConversation, onLogout, onExport, onExportDoctorReport, onDeleteAccount, onDeleteConversation, lang, onLangChange, theme, onThemeChange }) {
   const [time, setTime] = useState(new Date())
   useEffect(() => { const timer = setInterval(() => setTime(new Date()), 1000); return () => clearInterval(timer) }, [])
 
@@ -56,11 +56,15 @@ export default function Sidebar({ tab, setTab, history, conversations = [], acti
 
       {/* Account actions */}
       {username && (
-        <div style={{ display: 'flex', gap: 14 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 14px' }}>
           <button onClick={onExport} style={{
             fontSize: 10, color: 'var(--text-muted)', background: 'none', border: 'none',
             cursor: 'pointer', fontFamily: 'DM Mono, monospace', textDecoration: 'underline', padding: 0,
           }}>{t(lang, "exportJournal")}</button>
+          <button onClick={onExportDoctorReport} style={{
+            fontSize: 10, color: 'var(--violet-bright)', background: 'none', border: 'none',
+            cursor: 'pointer', fontFamily: 'DM Mono, monospace', textDecoration: 'underline', padding: 0,
+          }}>{t(lang, "exportDoctorReport")}</button>
           <button onClick={onDeleteAccount} style={{
             fontSize: 10, color: '#e06b6b', background: 'none', border: 'none',
             cursor: 'pointer', fontFamily: 'DM Mono, monospace', textDecoration: 'underline', padding: 0,

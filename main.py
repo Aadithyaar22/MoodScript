@@ -10,6 +10,7 @@ from models.fusion import FusionLayer
 from models.response import ResponseEngine
 from models.crisis import assess_crisis
 from models.rating import compute_rating, summarize_history
+from models.report import build_doctor_report
 from models.translate import translate_text, translate_texts
 from database.db import MoodDatabase
 from auth import get_current_user_id, hash_password, verify_password, create_token
@@ -330,6 +331,18 @@ async def export_journal(user_id: int = Depends(get_current_user_id)):
         content=body,
         media_type="text/plain",
         headers={"Content-Disposition": f"attachment; filename=moodscript_journal_{user['username']}.txt"},
+    )
+
+@app.get("/export/doctor-report")
+async def export_doctor_report(user_id: int = Depends(get_current_user_id)):
+    user = db.get_user_by_id(user_id)
+    entries = db.get_user_journal_entries(user_id, limit=1000)
+
+    body = build_doctor_report(user["username"], entries)
+    return Response(
+        content=body,
+        media_type="text/plain",
+        headers={"Content-Disposition": f"attachment; filename=moodscript_doctor_report_{user['username']}.txt"},
     )
 
 @app.delete("/account")

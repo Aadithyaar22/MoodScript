@@ -9,7 +9,7 @@ import RightPanel from "./components/RightPanel"
 import Login from "./components/Login"
 import LanguageSwitcher from "./components/LanguageSwitcher"
 import ThemeSwitcher from "./components/ThemeSwitcher"
-import { sendChatMessage, fetchHistory, fetchConversations, fetchConversationMessages, getToken, logout, exportJournal, deleteAccount, deleteConversation } from "./api"
+import { sendChatMessage, fetchHistory, fetchConversations, fetchConversationMessages, getToken, logout, exportJournal, exportDoctorReport, deleteAccount, deleteConversation } from "./api"
 import { t } from "./i18n"
 import "./index.css"
 
@@ -155,6 +155,14 @@ export default function App() {
     }
   }
 
+  const handleExportDoctorReport = async () => {
+    try {
+      await exportDoctorReport()
+    } catch {
+      setError("Couldn't export the doctor report — try again")
+    }
+  }
+
   const handleDeleteAccount = async () => {
     if (!window.confirm("Delete your account and everything in it? This can't be undone.")) return
     try {
@@ -233,6 +241,7 @@ export default function App() {
           onDeleteConversation={handleDeleteConversation}
           onLogout={handleLogout}
           onExport={handleExport}
+          onExportDoctorReport={handleExportDoctorReport}
           onDeleteAccount={handleDeleteAccount}
           lang={lang}
           onLangChange={handleLangChange}
