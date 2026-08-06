@@ -152,11 +152,15 @@ def _pdf_styles():
         textColor=colors.HexColor("#555555"), spaceAfter=14,
     ))
     styles.add(ParagraphStyle(
-        "MSSection", parent=styles["Heading2"], fontSize=12.5, textColor=BRAND_PURPLE,
-        spaceBefore=16, spaceAfter=6, fontName="Helvetica-Bold",
+        "MSBody", parent=styles["Normal"], fontSize=10, leading=15,
     ))
     styles.add(ParagraphStyle(
-        "MSBody", parent=styles["Normal"], fontSize=10, leading=15,
+        "MSCellLabel", parent=styles["Normal"], fontSize=9.5, leading=12,
+        textColor=BRAND_PURPLE, fontName="Helvetica-Bold",
+    ))
+    styles.add(ParagraphStyle(
+        "MSCellValue", parent=styles["Normal"], fontSize=9.5, leading=12,
+        textColor=colors.HexColor("#222222"),
     ))
     styles.add(ParagraphStyle(
         "MSDisclaimer", parent=styles["Normal"], fontSize=8.5, leading=12,
@@ -171,6 +175,35 @@ def _pdf_styles():
         textColor=colors.HexColor("#222222"), leftIndent=10, spaceAfter=4,
     ))
     return styles
+
+
+CONTENT_WIDTH = letter[0] - 1.5 * inch  # page width minus left+right margins
+
+
+def _section(story, styles, title, color=BRAND_PURPLE, top_gap=18):
+    """A full-width colored banner section header with clear space + a light rule above
+    it, so each section reads as a distinct block — like a real hospital report's boxed
+    section headers — instead of just a differently-colored line of text."""
+    story.append(Spacer(1, top_gap))
+    story.append(HRFlowable(width="100%", thickness=0.6, color=colors.HexColor("#e2ddef")))
+    story.append(Spacer(1, 10))
+    banner = Table([[title]], colWidths=[CONTENT_WIDTH])
+    banner.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), color),
+        ("TEXTCOLOR", (0, 0), (-1, -1), colors.white),
+        ("FONTNAME", (0, 0), (-1, -1), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 10.5),
+        ("TOPPADDING", (0, 0), (-1, -1), 7),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+        ("LEFTPADDING", (0, 0), (-1, -1), 10),
+    ]))
+    story.append(banner)
+    story.append(Spacer(1, 8))
+
+
+def _cell(text, styles, label=False):
+    style = styles["MSCellLabel"] if label else styles["MSCellValue"]
+    return Paragraph(str(text), style)
 
 
 def _footer(canvas, doc):
@@ -212,22 +245,21 @@ def build_doctor_report_pdf(username: str, entries: list, clinical_summary: str)
     rating, total = d["rating"], d["total"]
 
     # ---- Patient information ----
-    story.append(Paragraph("PATIENT INFORMATION", styles["MSSection"]))
+    _section(story, styles, "PATIENT INFORMATION", top_gap=4)
+    label_w, val_w = 1.5 * inch, CONTENT_WIDTH / 2 - 1.5 * inch
     info_table = Table([
-        ["Patient Name", username, "Report Generated", generated],
-        ["Reporting Period", f"{d['period_start']} to {d['period_end']}", "Total Entries", str(total)],
-    ], colWidths=[1.3 * inch, 2.1 * inch, 1.5 * inch, 1.5 * inch])
+        [_cell("Patient Name", styles, True), _cell(username, styles),
+         _cell("Report Generated", styles, True), _cell(generated, styles)],
+        [_cell("Reporting Period", styles, True), _cell(f"{d['period_start']} to {d['period_end']}", styles),
+         _cell("Total Entries", styles, True), _cell(str(total), styles)],
+    ], colWidths=[label_w, val_w, label_w, val_w])
     info_table.setStyle(TableStyle([
-        ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
-        ("FONTNAME", (2, 0), (2, -1), "Helvetica-Bold"),
-        ("FONTSIZE", (0, 0), (-1, -1), 9.5),
-        ("TEXTCOLOR", (0, 0), (0, -1), BRAND_PURPLE),
-        ("TEXTCOLOR", (2, 0), (2, -1), BRAND_PURPLE),
         ("BACKGROUND", (0, 0), (-1, -1), LIGHT_GREY),
         ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#d8d0e8")),
         ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#d8d0e8")),
-        ("TOPPADDING", (0, 0), (-1, -1), 7),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("TOPPADDING", (0, 0), (-1, -1), 8),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
         ("LEFTPADDING", (0, 0), (-1, -1), 8),
     ]))
     story.append(info_table)
@@ -235,75 +267,76 @@ def build_doctor_report_pdf(username: str, entries: list, clinical_summary: str)
     story.append(Paragraph(DISCLAIMER, styles["MSDisclaimer"]))
 
     # ---- Clinical overview (AI-generated narrative) ----
-    story.append(Paragraph("CLINICAL OVERVIEW", styles["MSSection"]))
+    _section(story, styles, "CLINICAL OVERVIEW")
     story.append(Paragraph(clinical_summary, styles["MSBody"]))
 
     # ---- Overall mood ----
-    story.append(Paragraph("OVERALL MOOD ASSESSMENT", styles["MSSection"]))
+    _section(story, styles, "OVERALL MOOD ASSESSMENT")
     mood_table = Table([
-        ["Mood Score", f"{rating['score']}/100", "Assessment", rating["label"]],
-        ["Recent Trend", rating["trend"].capitalize(), "", ""],
-    ], colWidths=[1.3 * inch, 1.3 * inch, 1.3 * inch, 2.5 * inch])
+        [_cell("Mood Score", styles, True), _cell(f"{rating['score']}/100", styles),
+         _cell("Assessment", styles, True), _cell(rating["label"], styles)],
+        [_cell("Recent Trend", styles, True), _cell(rating["trend"].capitalize(), styles), "", ""],
+    ], colWidths=[label_w, val_w, label_w, val_w])
     mood_table.setStyle(TableStyle([
-        ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
-        ("FONTNAME", (2, 0), (2, -1), "Helvetica-Bold"),
-        ("FONTSIZE", (0, 0), (-1, -1), 9.5),
         ("SPAN", (1, 1), (3, 1)),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
         ("LINEBELOW", (0, 0), (-1, 0), 0.4, colors.HexColor("#dddddd")),
-        ("TOPPADDING", (0, 0), (-1, -1), 5),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ("TOPPADDING", (0, 0), (-1, -1), 6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
     ]))
     story.append(mood_table)
 
     # ---- Emotion distribution ----
-    story.append(Paragraph("EMOTION DISTRIBUTION", styles["MSSection"]))
-    emo_rows = [["Emotion", "Count", "Share"]]
+    _section(story, styles, "EMOTION DISTRIBUTION")
+    emo_rows = [[_cell("Emotion", styles), _cell("Count", styles), _cell("Share", styles)]]
     ordered_emotions = [e for e in EMOTION_ORDER if e in d["emotion_counts"]]
     ordered_emotions += [e for e in d["emotion_counts"] if e not in EMOTION_ORDER]
     for emo in ordered_emotions:
         n = d["emotion_counts"][emo]
-        emo_rows.append([emo.capitalize(), str(n), f"{n/total*100:.0f}%"])
-    emo_table = Table(emo_rows, colWidths=[2.2 * inch, 1.2 * inch, 1.2 * inch])
+        emo_rows.append([_cell(emo.capitalize(), styles), _cell(n, styles), _cell(f"{n/total*100:.0f}%", styles)])
+    emo_table = Table(emo_rows, colWidths=[CONTENT_WIDTH * 0.5, CONTENT_WIDTH * 0.25, CONTENT_WIDTH * 0.25])
     emo_table.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), BRAND_PURPLE),
         ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
         ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("FONTSIZE", (0, 0), (-1, -1), 9.5),
+        ("FONTSIZE", (0, 0), (-1, 0), 9.5),
         ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, LIGHT_GREY]),
         ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#dddddd")),
-        ("TOPPADDING", (0, 0), (-1, -1), 5),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("TOPPADDING", (0, 0), (-1, -1), 6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
     ]))
     story.append(emo_table)
 
     # ---- Language pattern signals ----
     if d["tone_counts"]:
-        story.append(Paragraph("LANGUAGE PATTERN SIGNALS", styles["MSSection"]))
+        _section(story, styles, "LANGUAGE PATTERN SIGNALS", color=BRAND_TEAL)
         story.append(Paragraph(
             "Secondary signal derived from language patterns — not a diagnosis.",
             styles["MSDisclaimer"],
         ))
-        story.append(Spacer(1, 4))
-        tone_rows = [["Signal", "Entries"]]
+        story.append(Spacer(1, 6))
+        tone_rows = [[_cell("Signal", styles), _cell("Entries", styles)]]
         ordered_tones = [t for t in CLINICAL_TONE_ORDER if t in d["tone_counts"]]
         ordered_tones += [t for t in d["tone_counts"] if t not in CLINICAL_TONE_ORDER]
         for tone in ordered_tones:
-            tone_rows.append([tone.capitalize(), str(d["tone_counts"][tone])])
-        tone_table = Table(tone_rows, colWidths=[2.2 * inch, 1.2 * inch])
+            tone_rows.append([_cell(tone.capitalize(), styles), _cell(d["tone_counts"][tone], styles)])
+        tone_table = Table(tone_rows, colWidths=[CONTENT_WIDTH * 0.7, CONTENT_WIDTH * 0.3])
         tone_table.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, 0), BRAND_TEAL),
             ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
             ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-            ("FONTSIZE", (0, 0), (-1, -1), 9.5),
+            ("FONTSIZE", (0, 0), (-1, 0), 9.5),
             ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, LIGHT_GREY]),
             ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#dddddd")),
-            ("TOPPADDING", (0, 0), (-1, -1), 5),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("TOPPADDING", (0, 0), (-1, -1), 6),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
         ]))
         story.append(tone_table)
 
     # ---- Safety flags ----
-    story.append(Paragraph("SAFETY FLAGS", styles["MSSection"]))
+    _section(story, styles, "SAFETY FLAGS", color=BRAND_RED)
     if d["crisis_dates"]:
         n = len(d["crisis_dates"])
         flag_style = ParagraphStyle("MSFlag", parent=styles["MSBody"], textColor=BRAND_RED, fontName="Helvetica-Bold")
@@ -315,7 +348,7 @@ def build_doctor_report_pdf(username: str, entries: list, clinical_summary: str)
         story.append(Paragraph("No safety flags recorded in this period.", styles["MSBody"]))
 
     # ---- Journal entry log ----
-    story.append(Paragraph("JOURNAL ENTRY LOG (CHRONOLOGICAL)", styles["MSSection"]))
+    _section(story, styles, "JOURNAL ENTRY LOG (CHRONOLOGICAL)")
     for e in d["chrono"]:
         date = _fmt_date(e["created_at"])
         emo = e.get("emotion") or "unrated"
