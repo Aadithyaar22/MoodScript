@@ -19,7 +19,12 @@ pinned: false
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
 ![PostgreSQL](https://img.shields.io/badge/Postgres-Neon-4169E1?logo=postgresql&logoColor=white)
 ![Groq](https://img.shields.io/badge/LLM-Groq%20Llama%203.3-F55036?logo=meta&logoColor=white)
+![HuggingFace](https://img.shields.io/badge/Models-HuggingFace-FFD21E?logo=huggingface&logoColor=black)
+![Cloud Run](https://img.shields.io/badge/Deploy-Cloud%20Run%20%2B%20Render-4285F4?logo=googlecloud&logoColor=white)
+![CI](https://img.shields.io/badge/CI-GitHub%20Actions-2088FF?logo=githubactions&logoColor=white)
 ![License](https://img.shields.io/badge/status-active--development-brightgreen)
+
+**[Live app →](https://moodscript-frontend-2wr445ogxq-uc.a.run.app)**
 
 </div>
 
@@ -30,37 +35,48 @@ pinned: false
 MoodScript is a full-stack emotional journaling app. You write (or speak, or show your face) how you're feeling, and it:
 
 1. **Detects your emotion** — from your words, sentence by sentence, and optionally from a photo/webcam frame
-2. **Fuses both signals** into one confidence-weighted emotional read
-3. **Responds as Aria** — a therapist-persona LLM companion that remembers your last conversation, your last week, and your long-term patterns, not just your last message
+2. **Fuses both signals**, weighted by how confident each one actually is — and escalates to an LLM arbiter when they genuinely disagree
+3. **Responds as Aria** — a therapist-persona LLM companion that extracts the specific things you actually said before replying, and remembers your last conversation, your last week, and your long-term patterns
 4. **Watches for real crisis signals** — and only surfaces helpline resources when something is genuinely serious, never as a reflex
-5. **Tracks your wellbeing over time** — a recency-weighted score, trend direction, and a weekly reflection letter written just for you
+5. **Tracks your wellbeing over time** — a recency-weighted score, trend direction, a weekly reflection letter, and a doctor-ready clinical summary you can export and bring to an appointment
+6. **Works in Hindi and Kannada**, and lets you talk to it instead of typing
 
-It's not a chatbot wrapper. Every emotional read is a real model inference (text + vision), fused deterministically, with LIME-based explainability behind a "why?" button on every response.
+It's not a chatbot wrapper. Every emotional read is a real model inference (text + vision), fused with confidence-aware logic, with LIME-based explainability behind a "why?" button on every response — and every model and architecture decision in this project was independently benchmarked before shipping, not taken on a vendor's word. See [Research & evaluation](#research--evaluation) below.
 
 ## Features
 
 **Emotion intelligence**
-- Sentence-level text emotion classification (position/length/confidence-weighted aggregation)
+- Sentence-level text emotion classification (position/length/confidence-weighted aggregation), with negation-aware dampening so "I'm not scared, I've got this" doesn't get read as fear
 - Optional face-image emotion detection (photo upload or webcam)
-- Deterministic fusion layer combining both signals into one unified read
-- LIME explainability — see exactly which words drove the detected emotion
+- Confidence-weighted fusion — a modality that isn't sure about anything doesn't get to pull the blended result as hard as one that's genuinely confident
+- LLM arbitration for the cases numeric fusion can't resolve cleanly — when text and face disagree with comparable confidence, a fast LLM call reads the actual text (catching things like sarcasm a pure score blend can't) instead of just averaging two numbers
+- LIME explainability — see exactly which words drove the detected emotion, and a full text/face/fused confidence breakdown on every message
 
 **Conversation & memory**
+- Two-pass response generation: a fact-extraction pass pulls out the specific names, events, and details you mentioned first, so Aria's reply is required to engage with what actually happened — not just react to an emotion label
 - Multi-turn chat with a consistent persona per conversation (4 distinct therapist voices)
 - Long-term pattern summarization injected into every reply — Aria references your actual history, not just the current message
 - Full conversation history, browsable per-thread from the sidebar
+
+**Multilingual & voice**
+- Full UI and conversation support in English, Hindi, and Kannada — the backend pipeline (emotion detection, crisis checks, storage) always runs in English; your message is translated in and the reply translated back out, so nothing about the underlying analysis changes with language
+- Voice input via the Web Speech API — continuous listening with a live recording timer, so it doesn't cut off after one sentence
+- Voice output — have Aria's replies read back to you, language-aware
 
 **Insight & reflection**
 - Recency-weighted wellbeing score (0–100) with trend detection (improving / steady / declining)
 - Auto-generated weekly reflection letter, cached per ISO week
 - Mood-over-time and emotion-distribution charts on the dashboard
+- Two export options: a full raw journal transcript, or a structured **doctor report** — mood score/trend, emotion distribution, language-pattern signals, safety flags with dates, and a chronological entry list, explicitly framed as a self-reported summary to bring to a healthcare provider, not a diagnosis
 
 **Safety, built deliberately conservative**
 - Two-tier crisis detection: explicit-language patterns vs. a 5-entry sustained-distress window
 - Crisis resources (India-specific helplines) are hard-coded, never LLM-generated, and only shown when actually triggered — not on every sad message
+- Response generation hedges toward neutral instead of committing to a confident narrative when the emotional signal is weak or conflicting — a low-confidence read produces a lighter, more tentative reply, not a fully-committed psychoanalysis of a two-word message
 
 **Account & data**
-- JWT auth with PBKDF2-hashed passwords, no third-party auth dependency
+- JWT auth with PBKDF2-hashed passwords, plus optional Google OAuth
+- Light and dark theme, full UI parity in both
 - Full journal export (plain text) and one-click account deletion, cascading through all tables
 - Per-user, persistent Postgres storage — not a demo toy that forgets you on restart
 
@@ -70,15 +86,18 @@ The backend is split into three independently deployable services, so each piece
 
 ```mermaid
 flowchart TD
-    U[User] -->|message + optional image| FE[React Frontend]
-    FE -->|POST /chat| API[Orchestrator<br/>auth · chat · DB · Groq · crisis]
-    API -->|POST /analyze| TXT[Text Service<br/>j-hartmann distilroberta + LIME]
-    API -->|POST /predict| FACE[Face Service<br/>ViT face-expression]
-    TXT --> FUSE[Fusion Layer<br/>55% text / 45% face]
+    U[User] -->|message + optional image, any of 3 languages| FE[React Frontend]
+    FE -->|POST /chat| API[Orchestrator<br/>auth · chat · DB · crisis · translation]
+    API -->|POST /analyze| TXT[Text Service<br/>j-hartmann distilroberta + negation dampening + LIME]
+    API -->|POST /predict| FACE[Face Service<br/>dima806 ViT face-expression]
+    TXT --> FUSE[Fusion Layer<br/>confidence-weighted text/face blend]
     FACE --> FUSE
-    FUSE --> CRISIS[Crisis Detector<br/>regex + sustained-distress window]
-    FUSE --> LLM[Response Engine<br/>Groq · Llama 3.3 70B]
-    CRISIS -->|if triggered| LLM
+    FUSE -->|genuine unresolved conflict| ARB[LLM Arbiter<br/>Groq · Llama 3.1 8B Instant]
+    ARB --> CRISIS
+    FUSE -->|agreement / clear signal| CRISIS[Crisis Detector<br/>regex + sustained-distress window]
+    CRISIS -->|if triggered| LLM[Response Engine<br/>Groq · Llama 3.3 70B]
+    CRISIS -->|extract facts, then respond| EXTRACT[Fact Extraction<br/>Groq · Llama 3.1 8B Instant]
+    EXTRACT --> LLM
     LLM --> DB[(Postgres · Neon)]
     FUSE --> DB
     DB -->|long-term summary| LLM
@@ -89,49 +108,60 @@ Each service has its own `requirements.txt` and `Dockerfile`:
 
 | Service | Path | What it holds | Approx. RAM |
 |---|---|---|---|
-| Orchestrator | `main.py` (repo root) | Auth, chat routing, Postgres, Groq calls, crisis/rating logic — zero ML deps | ~95 MB |
+| Orchestrator | `main.py` (repo root) | Auth, chat routing, Postgres, Groq calls, crisis/rating logic, translation — zero ML deps | ~95 MB |
 | Text service | `services/text_service/` | Text emotion model, spaCy, LIME explainability | ~440 MB |
 | Face service | `services/face_service/` | Face-image emotion model | ~400 MB |
 
-The orchestrator talks to the other two over plain HTTP (`FACE_SERVICE_URL`, `TEXT_SERVICE_URL`), optionally authenticated with a shared `INTERNAL_API_KEY` header if they're deployed publicly. All three can run on the same host or on entirely separate ones.
+The orchestrator talks to the other two over plain HTTP (`FACE_SERVICE_URL`, `TEXT_SERVICE_URL`), authenticated with a shared `INTERNAL_API_KEY` header. All three are deployed independently on Google Cloud Run; the orchestrator runs on Render. See [Deployment](#deployment) below.
 
 ## Tech stack
 
 | Layer | Choice |
 |---|---|
-| Frontend | React 19, Vite, Tailwind, Recharts, `react-webcam` |
+| Frontend | React 19, Vite, Tailwind, Recharts, `react-webcam`, Web Speech API |
 | Backend | FastAPI, Uvicorn |
-| Text emotion | `j-hartmann/emotion-english-distilroberta-base` (HF Transformers) |
-| Face emotion | `trpakov/vit-face-expression` (HF Transformers) |
+| Text emotion | `j-hartmann/emotion-english-distilroberta-base` (HF Transformers) + custom negation dampening |
+| Face emotion | `dima806/facial_emotions_image_detection` (HF Transformers) — see [Research & evaluation](#research--evaluation) for why this model, not the more obvious first pick |
+| Fusion arbitration & fact extraction | Groq — Llama 3.1 8B Instant (fast/cheap, one-word or short-list outputs only) |
+| Conversational LLM | Groq — Llama 3.3 70B Versatile |
+| Translation | Google Cloud Translation API |
 | Explainability | LIME |
-| LLM | Groq — Llama 3.3 70B Versatile |
-| Auth | PyJWT + PBKDF2-HMAC-SHA256 |
-| Storage | PostgreSQL (Neon, serverless) |
+| Auth | PyJWT + PBKDF2-HMAC-SHA256, optional Google OAuth |
+| Storage | PostgreSQL (Neon, serverless), Fernet-encrypted message content |
 | Sentence segmentation | spaCy (`en_core_web_sm`) |
+| CI/CD | GitHub Actions (path-filtered auto-deploy to Cloud Run) + Render's native GitHub integration |
 
 ## Project structure
 
 ```
-.
-├── main.py                  # Orchestrator — auth, chat routing, no ML deps
-├── auth.py                  # JWT + password hashing
-├── database/db.py           # Postgres access layer (encrypted message content)
+.                               # repo root = backend
+├── main.py                     # Orchestrator — auth, chat routing, translation, no ML deps
+├── auth.py                     # JWT + password hashing + Google OAuth
+├── database/db.py              # Postgres access layer (encrypted message content)
 ├── models/
-│   ├── fusion.py             # Combines text + face into one signal
-│   ├── response.py           # Aria persona + Groq prompt construction
-│   ├── crisis.py              # Crisis detection + helpline resources
-│   └── rating.py              # Wellbeing score, trend, weekly reflection
+│   ├── fusion.py                # Confidence-weighted text + face blending
+│   ├── arbiter.py                # LLM arbitration for unresolved fusion conflicts
+│   ├── response.py               # Aria persona + two-pass fact-extraction/response prompting
+│   ├── crisis.py                  # Crisis detection + helpline resources
+│   ├── rating.py                   # Wellbeing score, trend, weekly reflection
+│   ├── report.py                    # Doctor-report export builder
+│   └── translate.py                  # Google Cloud Translation wrapper (single + batch)
 ├── services/
-│   ├── text_service/          # Standalone: text emotion model + LIME
-│   │   ├── main.py, text_model.py, explainer.py, requirements.txt, Dockerfile
-│   └── face_service/          # Standalone: face emotion model
-│       ├── main.py, face_model.py, requirements.txt, Dockerfile
-├── Dockerfile                 # Orchestrator's own Dockerfile
-└── frontend/                  # React app (Vite)
+│   ├── text_service/             # Standalone: text emotion model + LIME
+│   │   └── main.py, text_model.py, explainer.py, requirements.txt, Dockerfile
+│   └── face_service/             # Standalone: face emotion model
+│       └── main.py, face_model.py, requirements.txt, Dockerfile
+├── research/                    # Benchmarking & evaluation harnesses (see below)
+│   ├── eval_face_models.py, eval_text_model.py, eval_text_candidates.py
+│   ├── eval_fusion.py, eval_arbiter.py, eval_two_pass.py, eval_llm_ab.py
+│   ├── compare_models.py         # Paired McNemar's significance testing
+│   └── results/                   # Raw predictions, confusion matrices, JSON reports
+├── .github/workflows/            # Path-filtered auto-deploy to Cloud Run
+├── Dockerfile                    # Orchestrator's own Dockerfile
+└── frontend/                     # React app (Vite) — the only frontend directory
     └── src/
-        ├── App.jsx
-        ├── api.js
-        └── components/
+        ├── App.jsx, api.js, i18n.js, useSpeechRecognition.js
+        └── components/            # Sidebar, Dashboard, ChatInput, XAIDrawer, ThemeSwitcher, LanguageSwitcher, ...
 ```
 
 ## Running it locally
@@ -140,26 +170,27 @@ Three separate processes — orchestrator, text service, face service:
 
 ```bash
 # Text service
-cd backend/services/text_service
+cd services/text_service
 python3 -m venv venv && source venv/bin/activate
 pip install torch --index-url https://download.pytorch.org/whl/cpu
 pip install -r requirements.txt && python -m spacy download en_core_web_sm
 uvicorn main:app --reload --port 8002
 
 # Face service (separate venv/shell)
-cd backend/services/face_service
+cd services/face_service
 python3 -m venv venv && source venv/bin/activate
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 pip install -r requirements.txt
 uvicorn main:app --reload --port 8001
 
-# Orchestrator (separate venv/shell)
-cd backend
+# Orchestrator (separate venv/shell, from repo root)
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 # .env: GROQ_API_KEY=..., JWT_SECRET=..., DATABASE_URL=postgresql://...,
 #       MESSAGE_ENCRYPTION_KEY=..., FACE_SERVICE_URL=http://localhost:8001,
-#       TEXT_SERVICE_URL=http://localhost:8002
+#       TEXT_SERVICE_URL=http://localhost:8002, INTERNAL_API_KEY=...,
+#       GOOGLE_TRANSLATE_CREDENTIALS=... (optional, for multilingual),
+#       GOOGLE_CLIENT_ID=... (optional, for Google sign-in)
 uvicorn main:app --reload --port 8000
 ```
 
@@ -174,13 +205,58 @@ npm run dev
 
 | Endpoint | Description |
 |---|---|
-| `POST /auth/signup`, `POST /auth/login` | Account auth, returns a JWT |
-| `POST /chat` | Send a message (+ optional image), get emotion + Aria's reply |
+| `POST /auth/signup`, `POST /auth/login`, `POST /auth/google` | Account auth, returns a JWT |
+| `POST /chat` | Send a message (+ optional image, + `lang`), get emotion + Aria's reply |
+| `POST /translate` | Batch-translate arbitrary UI/dynamic content (used for wellness tips, quotes) |
 | `GET /conversations`, `GET /conversations/{id}/messages` | Past conversations |
 | `GET /history`, `GET /rating` | Mood log, wellbeing score + trend |
 | `GET /reflection` | This week's auto-generated reflection letter |
 | `GET /export` | Download your full journal as text |
+| `GET /export/doctor-report` | Download a structured clinical-style summary for a healthcare provider |
 | `DELETE /account` | Delete your account and all associated data |
+
+## Deployment
+
+Every part of the app deploys automatically on push to `main` — no manual `gcloud` or `render` commands required day-to-day:
+
+- **Frontend, face service, text service** (Cloud Run) — each has its own path-filtered GitHub Actions workflow (`.github/workflows/deploy-*.yml`) that only fires when that service's own directory changes, using a dedicated `github-actions-deployer` service account with least-privilege IAM roles. Credentials live only as GitHub secrets, never in the repo.
+- **Orchestrator** (Render) — deploys via Render's native GitHub integration, no workflow needed.
+
+| Service | Live URL |
+|---|---|
+| Frontend | https://moodscript-frontend-2wr445ogxq-uc.a.run.app |
+| Orchestrator | https://moodscript-backend.onrender.com |
+| Face service | https://moodscript-face-service-2wr445ogxq-uc.a.run.app |
+| Text service | https://moodscript-text-service-2wr445ogxq-uc.a.run.app |
+
+## Research & evaluation
+
+Every model swap and architecture change in this project was independently benchmarked before shipping — self-reported model-card numbers and vendor pricing claims are treated as claims to verify, not facts to build on. Full methodology, raw predictions, and confusion matrices are in `research/`.
+
+**Face model: `dima806/facial_emotions_image_detection`, not the more obvious first pick.** Both candidates were evaluated on the real FER2013 test split (7,178 images, not either card's self-reported number):
+
+| Model | Accuracy | Angry precision/recall |
+|---|---|---|
+| `trpakov/vit-face-expression` (original) | 71.15% (independently reproduced — matches its claimed 71.16%) | 62.7% / 64.3% |
+| `dima806/facial_emotions_image_detection` (current) | **88.35%** | **87.0% / 87.9%** |
+
+Paired McNemar's test: p = 8.5×10⁻²⁰⁶ — not remotely due to chance. The angry-class gap directly explains a real failure caught during manual testing (an exaggerated angry expression scoring 0% angry on the old model, split between happy and fearful instead).
+
+**Text model: kept, not swapped.** Two candidates were tested on GoEmotions *and* cross-checked against a 49-case journal-style benchmark, since a model's benchmark win doesn't necessarily generalize to the product's actual input distribution:
+
+| Model | GoEmotions | Journal-style (49 cases) |
+|---|---|---|
+| Current (`j-hartmann` distilroberta + negation fix) | 43.75% | **78%** |
+| `SamLowe/roberta-base-go_emotions` (native GoEmotions model) | 69.65% | 71% |
+| `j-hartmann/emotion-english-roberta-large` | 47.34% | — |
+
+SamLowe wins big on GoEmotions (expected — it's trained directly on it) but loses on the benchmark that resembles real usage. Kept the current model.
+
+**LLM choice: kept Llama 3.3 70B, not `gpt-oss-120b`.** A/B tested on the real production prompt: `gpt-oss-120b`'s cheaper headline per-token price was misleading once measured — it's a reasoning model that burns hidden tokens before answering, making it ~2.8x more expensive per response in practice (415.75 avg completion tokens vs. 113.5) and ~57% slower.
+
+**Fusion & response-generation improvements, both shipped:**
+- Confidence-weighted fusion improves calibration over the original fixed 55/45 split without hurting top-1 accuracy on constructed conflict cases — but doesn't fix a confidently-wrong prediction from a weak model class, which is why the face-model swap above still mattered separately.
+- The two-pass fact-extraction response split measurably improves content-specificity: entity-hit-rate (does the reply reference concrete details from the input) went from 0.35 to 0.60 on the same test cases.
 
 ## Team
 
