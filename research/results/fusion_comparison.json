@@ -1,0 +1,86 @@
+[
+  {
+    "case": "both confident, agree",
+    "expected": "happy",
+    "naive": {
+      "emotion": "happy",
+      "confidence": 0.936
+    },
+    "confidence_weighted": {
+      "emotion": "happy",
+      "confidence": 0.937
+    }
+  },
+  {
+    "case": "both confident, disagree (text should win \u2014 text is the more reliable modality per benchmark)",
+    "expected": "sad",
+    "naive": {
+      "emotion": "sad",
+      "confidence": 0.504
+    },
+    "confidence_weighted": {
+      "emotion": "sad",
+      "confidence": 0.509
+    }
+  },
+  {
+    "case": "confident text, flat/uncertain face \u2014 face shouldn't drag the result off text",
+    "expected": "sad",
+    "naive": {
+      "emotion": "sad",
+      "confidence": 0.548
+    },
+    "confidence_weighted": {
+      "emotion": "sad",
+      "confidence": 0.732
+    }
+  },
+  {
+    "case": "flat/uncertain text, confident face \u2014 face should be allowed to dominate here",
+    "expected": "fearful",
+    "naive": {
+      "emotion": "fearful",
+      "confidence": 0.474
+    },
+    "confidence_weighted": {
+      "emotion": "fearful",
+      "confidence": 0.704
+    }
+  },
+  {
+    "case": "both flat/uncertain \u2014 should land near neutral/low-confidence, not commit hard",
+    "expected": null,
+    "naive": {
+      "emotion": "angry",
+      "confidence": 0.219
+    },
+    "confidence_weighted": {
+      "emotion": "angry",
+      "confidence": 0.222
+    }
+  },
+  {
+    "case": "mild disagreement, both moderate confidence",
+    "expected": "surprised",
+    "naive": {
+      "emotion": "surprised",
+      "confidence": 0.364
+    },
+    "confidence_weighted": {
+      "emotion": "surprised",
+      "confidence": 0.375
+    }
+  },
+  {
+    "case": "real case: user's exaggerated-angry face test \u2014 face gave Happy 42% / Fearful 41% / Angry 0%",
+    "expected": "angry",
+    "naive": {
+      "emotion": "neutral",
+      "confidence": 0.302
+    },
+    "confidence_weighted": {
+      "emotion": "neutral",
+      "confidence": 0.321
+    }
+  }
+]

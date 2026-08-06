@@ -16,7 +16,22 @@ class FusionLayer:
             }
         text_scores = text_result["all_scores"]
         face_scores = face_result["all_scores"]
-        fused = {e: TEXT_WEIGHT * text_scores.get(e, 0.0) + FACE_WEIGHT * face_scores.get(e, 0.0)
+
+        # Confidence-weighted fusion: a modality that isn't sure about anything (a flat,
+        # near-uniform distribution) shouldn't get to pull the blend as hard as one that's
+        # genuinely confident. Each modality's own top-score confidence rescales its prior
+        # weight, then both are renormalized back to sum to 1 — recovering the original
+        # 55/45 prior when both are equally confident, but shrinking a modality's influence
+        # when it's uncertain rather than always applying it at full fixed strength.
+        text_w_raw = TEXT_WEIGHT * text_result["confidence"]
+        face_w_raw = FACE_WEIGHT * face_result["confidence"]
+        total_w = text_w_raw + face_w_raw
+        if total_w > 0:
+            text_w, face_w = text_w_raw / total_w, face_w_raw / total_w
+        else:
+            text_w, face_w = TEXT_WEIGHT, FACE_WEIGHT
+
+        fused = {e: text_w * text_scores.get(e, 0.0) + face_w * face_scores.get(e, 0.0)
                  for e in UNIFIED_EMOTIONS}
         unified_emotion = max(fused, key=fused.get)
         resolution_reason = self._resolve(
@@ -29,8 +44,8 @@ class FusionLayer:
             "all_scores": {k: float(v) for k, v in fused.items()},
             "resolution_reason": resolution_reason,
             "modalities_used": ["text", "face"],
-            "text_weight": TEXT_WEIGHT,
-            "face_weight": FACE_WEIGHT,
+            "text_weight": float(text_w),
+            "face_weight": float(face_w),
         }
 
     def _resolve(self, text_em, face_em, text_conf, face_conf, final_em):

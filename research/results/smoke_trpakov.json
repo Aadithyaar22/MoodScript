@@ -1,0 +1,248 @@
+{
+  "model": "trpakov/vit-face-expression",
+  "n_images": 20,
+  "elapsed_seconds": 1.1,
+  "overall_accuracy": 0.55,
+  "per_class": {
+    "angry": {
+      "precision": 1.0,
+      "recall": 0.55,
+      "f1-score": 0.7096774193548387,
+      "support": 20.0
+    },
+    "disgusted": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 0.0
+    },
+    "fearful": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 0.0
+    },
+    "happy": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 0.0
+    },
+    "sad": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 0.0
+    },
+    "surprised": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 0.0
+    },
+    "neutral": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 0.0
+    }
+  },
+  "confusion_matrix": {
+    "labels": [
+      "angry",
+      "disgusted",
+      "fearful",
+      "happy",
+      "sad",
+      "surprised",
+      "neutral"
+    ],
+    "matrix": [
+      [
+        11,
+        0,
+        4,
+        0,
+        5,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    ]
+  },
+  "raw_predictions": [
+    {
+      "idx": 0,
+      "true": "angry",
+      "pred": "angry",
+      "confidence": 0.882
+    },
+    {
+      "idx": 1,
+      "true": "angry",
+      "pred": "angry",
+      "confidence": 0.9867
+    },
+    {
+      "idx": 2,
+      "true": "angry",
+      "pred": "sad",
+      "confidence": 0.9895
+    },
+    {
+      "idx": 3,
+      "true": "angry",
+      "pred": "angry",
+      "confidence": 0.9352
+    },
+    {
+      "idx": 4,
+      "true": "angry",
+      "pred": "angry",
+      "confidence": 0.9866
+    },
+    {
+      "idx": 5,
+      "true": "angry",
+      "pred": "angry",
+      "confidence": 0.9167
+    },
+    {
+      "idx": 6,
+      "true": "angry",
+      "pred": "fearful",
+      "confidence": 0.9097
+    },
+    {
+      "idx": 7,
+      "true": "angry",
+      "pred": "angry",
+      "confidence": 0.992
+    },
+    {
+      "idx": 8,
+      "true": "angry",
+      "pred": "angry",
+      "confidence": 0.9442
+    },
+    {
+      "idx": 9,
+      "true": "angry",
+      "pred": "angry",
+      "confidence": 0.992
+    },
+    {
+      "idx": 10,
+      "true": "angry",
+      "pred": "fearful",
+      "confidence": 0.8266
+    },
+    {
+      "idx": 11,
+      "true": "angry",
+      "pred": "fearful",
+      "confidence": 0.7409
+    },
+    {
+      "idx": 12,
+      "true": "angry",
+      "pred": "angry",
+      "confidence": 0.9812
+    },
+    {
+      "idx": 13,
+      "true": "angry",
+      "pred": "sad",
+      "confidence": 0.9549
+    },
+    {
+      "idx": 14,
+      "true": "angry",
+      "pred": "sad",
+      "confidence": 0.9076
+    },
+    {
+      "idx": 15,
+      "true": "angry",
+      "pred": "sad",
+      "confidence": 0.5393
+    },
+    {
+      "idx": 16,
+      "true": "angry",
+      "pred": "angry",
+      "confidence": 0.9914
+    },
+    {
+      "idx": 17,
+      "true": "angry",
+      "pred": "fearful",
+      "confidence": 0.9621
+    },
+    {
+      "idx": 18,
+      "true": "angry",
+      "pred": "sad",
+      "confidence": 0.8265
+    },
+    {
+      "idx": 19,
+      "true": "angry",
+      "pred": "angry",
+      "confidence": 0.9686
+    }
+  ]
+}

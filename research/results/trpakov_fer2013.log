@@ -1,0 +1,30 @@
+Loading FER2013 test split...
+7178 test images loaded.
+Loading model: trpakov/vit-face-expression
+Loading weights:   0%|          | 0/200 [00:00<?, ?it/s]Loading weights: 100%|██████████| 200/200 [00:00<00:00, 17893.79it/s]
+  500/7178 — 17.7 img/s — ETA 6.3 min
+  1000/7178 — 17.5 img/s — ETA 5.9 min
+  1500/7178 — 17.3 img/s — ETA 5.5 min
+  2000/7178 — 17.2 img/s — ETA 5.0 min
+  2500/7178 — 17.1 img/s — ETA 4.6 min
+  3000/7178 — 16.9 img/s — ETA 4.1 min
+  3500/7178 — 16.7 img/s — ETA 3.7 min
+  4000/7178 — 16.5 img/s — ETA 3.2 min
+  4500/7178 — 16.3 img/s — ETA 2.7 min
+  5000/7178 — 16.1 img/s — ETA 2.2 min
+  5500/7178 — 16.0 img/s — ETA 1.7 min
+  6000/7178 — 15.9 img/s — ETA 1.2 min
+  6500/7178 — 15.8 img/s — ETA 0.7 min
+  7000/7178 — 15.7 img/s — ETA 0.2 min
+
+Overall accuracy: 42.28%
+CLASS       PRECISION   RECALL      F1          
+angry       62.7        64.3        63.5        
+disgusted   74.0        66.7        70.1        
+fearful     59.6        54.4        56.9        
+happy       90.3        88.1        89.2        
+sad         14.1        16.1        15.1        
+surprised   1.9         1.2         1.5         
+neutral     0.9         1.3         1.1         
+
+Saved to results/trpakov_fer2013.json
