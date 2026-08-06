@@ -131,7 +131,12 @@ export default function Login({ onAuth, lang = "en", theme = "dark" }) {
               <span className="mono" style={{ fontSize: 10, color: 'var(--text-muted)' }}>{t(lang, "or")}</span>
               <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
             </div>
-            <div ref={googleBtnRef} style={{ display: 'flex', justifyContent: 'center' }} />
+            <div style={{
+              display: 'flex', justifyContent: 'center', overflow: 'hidden',
+              borderRadius: 10, width: 316, height: 44, margin: '0 auto',
+            }}>
+              <div ref={googleBtnRef} />
+            </div>
           </>
         )}
 
