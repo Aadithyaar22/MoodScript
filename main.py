@@ -310,6 +310,8 @@ async def reflection(user_id: int = Depends(get_current_user_id)):
 @app.get("/export")
 async def export_journal(user_id: int = Depends(get_current_user_id)):
     user = db.get_user_by_id(user_id)
+    if not user:
+        raise HTTPException(status_code=401, detail="Session expired — please log in again")
     conversations = db.list_conversations(user_id, limit=1000)
 
     lines = [f"MoodScript journal export — {user['username']}", f"Generated: {datetime.now(timezone.utc).isoformat()}", ""]
@@ -336,6 +338,8 @@ async def export_journal(user_id: int = Depends(get_current_user_id)):
 @app.get("/export/doctor-report")
 async def export_doctor_report(user_id: int = Depends(get_current_user_id)):
     user = db.get_user_by_id(user_id)
+    if not user:
+        raise HTTPException(status_code=401, detail="Session expired — please log in again")
     entries = db.get_user_journal_entries(user_id, limit=1000)
 
     body = build_doctor_report(user["username"], entries)
