@@ -1,0 +1,33 @@
+name: Deploy Text Service to Cloud Run
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/text_service/**'
+      - '.github/workflows/deploy-text-service.yml'
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy to Cloud Run
+        working-directory: services/text_service
+        run: |
+          gcloud run deploy moodscript-text-service \
+            --source . \
+            --region us-central1 \
+            --project "${{ secrets.GCP_PROJECT_ID }}" \
+            --memory 2Gi \
+            --update-env-vars "INTERNAL_API_KEY=${{ secrets.INTERNAL_API_KEY }},ENABLE_CLINICAL_TONE=false" \
+            --allow-unauthenticated \
+            --quiet
