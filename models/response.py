@@ -101,11 +101,47 @@ def _pick_angle(emotion: str, confidence: float) -> str:
 def _long_term_block(long_term_context: str) -> str:
     return f"\n\n{long_term_context}\n" if long_term_context else ""
 
+EXTRACTION_MODEL = "llama-3.1-8b-instant"  # cheap/fast — a short extraction task, not creative writing
+
 class ResponseEngine:
     def __init__(self):
         api_key = os.getenv("GROQ_API_KEY")
         print(f"[ResponseEngine] Key loaded: {bool(api_key)} — {api_key[:8] if api_key else 'NONE'}")
         self.client = AsyncGroq(api_key=api_key)
+
+    async def _extract_key_facts(self, user_text: str) -> str:
+        """First pass: pull out the concrete, specific things mentioned — a name, an
+        event, a number, a place — as an explicit list the response-generation pass is
+        then required to reference. A soft instruction like "engage with specifics" can
+        get silently crowded out by everything else in the prompt; a separate extraction
+        step can't be skipped the same way, since it's a distinct fact the model has to
+        actually use, not a general vibe to keep in mind."""
+        try:
+            completion = await self.client.chat.completions.create(
+                model=EXTRACTION_MODEL,
+                messages=[
+                    {"role": "system", "content": (
+                        "Extract the specific, concrete facts mentioned in this message — "
+                        "names, events, numbers, places, relationships. Comma-separated, "
+                        "short phrases only, no explanation. If there is truly nothing "
+                        "specific (a vague or generic message), respond with exactly: none"
+                    )},
+                    {"role": "user", "content": user_text[:800]},
+                ],
+                max_tokens=80,
+                temperature=0.3,
+            )
+            facts = (completion.choices[0].message.content or "").strip()
+            return "" if facts.lower().startswith("none") else facts
+        except Exception as e:
+            print(f"[Extract] ERROR: {type(e).__name__}: {e} — continuing without extracted facts")
+            return ""
+
+    def _facts_block(self, key_facts: str) -> str:
+        if not key_facts:
+            return ""
+        return (f"\n\nSpecific things they mentioned — your response must clearly engage "
+                f"with at least one of these, not just react to the emotion label: {key_facts}\n")
 
     async def generate(self, emotion, confidence, user_text, clinical_tone, conflict_note, persona_id=None, long_term_context: str = "") -> tuple:
         """First turn of a conversation. Returns (response_text, persona_id) so the
@@ -116,6 +152,7 @@ class ResponseEngine:
         opening  = random.choice(OPENING_STYLES)
         angle    = _pick_angle(emotion, confidence)
         clinical = f"Secondary signal: {clinical_tone}." if clinical_tone else ""
+        key_facts = await self._extract_key_facts(user_text)
 
         system_prompt = f"{persona}{_long_term_block(long_term_context)}\n\n{RULES}"
 
@@ -130,7 +167,7 @@ Opening instruction (critical — follow this exactly):
 
 They wrote:
 \"\"\"{user_text[:800]}\"\"\"
-
+{self._facts_block(key_facts)}
 Write your response as Aria. One person, one moment, one message. Make it feel completely unrepeatable."""
 
         try:
@@ -192,6 +229,7 @@ Write your response as Aria. One person, one moment, one message. Make it feel c
         persona = PERSONAS[persona_id]
         angle   = _pick_angle(emotion, confidence)
         clinical = f"Secondary signal: {clinical_tone}." if clinical_tone else ""
+        key_facts = await self._extract_key_facts(user_text)
 
         system_prompt = f"""{persona}
 
@@ -202,7 +240,7 @@ the whole conversation.
 {_long_term_block(long_term_context)}
 Their latest message reads as: {emotion} ({confidence:.0%}). {clinical}
 How to approach this reply: {angle}
-
+{self._facts_block(key_facts)}
 {RULES}"""
 
         messages = [{"role": "system", "content": system_prompt}]
