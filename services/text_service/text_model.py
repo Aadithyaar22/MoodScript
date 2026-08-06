@@ -50,8 +50,8 @@ class TextEmotionModel:
 
         print("Text models ready.")
 
-    def _classify_sentence(self, sentence: str):
-        if len(sentence.split()) < 3:
+    def _classify_sentence(self, sentence: str, has_negation: bool = False):
+        if not sentence.strip():
             return None
         try:
             preds = self.emotion_classifier(sentence[:512])
@@ -64,11 +64,37 @@ class TextEmotionModel:
             for e in UNIFIED_EMOTIONS:
                 if e not in conf_dict:
                     conf_dict[e] = 0.0
+            if has_negation:
+                conf_dict = self._dampen_for_negation(conf_dict)
             top = max(conf_dict, key=conf_dict.get)
             return {"emotion": top, "confidence": conf_dict[top], "all_scores": conf_dict}
         except Exception as e:
             print(f"Sentence classify error: {e}")
             return None
+
+    def _dampen_for_negation(self, conf_dict: dict) -> dict:
+        """The base classifier reads emotion words at face value regardless of negation
+        ('not scared' still scores high on fear), so a confidently wrong flip is worse than
+        an honest shrug. Pull the distribution toward neutral instead of trusting the raw
+        word-level cue when a negation particle is present in the sentence."""
+        top_emotion = max(conf_dict, key=conf_dict.get)
+        if top_emotion == "neutral":
+            return conf_dict
+        damped = {e: v * 0.5 for e, v in conf_dict.items()}
+        damped["neutral"] = damped.get("neutral", 0.0) + conf_dict[top_emotion] * 0.5
+        total = sum(damped.values())
+        return {e: v / total for e, v in damped.items()} if total else damped
+
+    def _has_negation(self, sent) -> bool:
+        """Only flags true predicate-adjective negation ('not happy', "isn't scared") —
+        deliberately narrower than 'any neg token', since idiomatic negated verbs like
+        "can't stop crying", "can't believe", "won't listen" are extremely common in
+        emotional text and don't actually invert the sentence's meaning."""
+        for tok in sent:
+            if tok.dep_ == "neg" and tok.head.pos_ == "AUX":
+                if any(child.pos_ == "ADJ" and child.dep_ == "acomp" for child in tok.head.children):
+                    return True
+        return False
 
     def _weighted_aggregate(self, sentence_results: list) -> dict:
         n = len(sentence_results)
@@ -108,12 +134,13 @@ class TextEmotionModel:
 
     def predict(self, text: str) -> dict:
         doc = self.nlp(text)
-        sentences = [s.text.strip() for s in doc.sents if s.text.strip()]
+        sents = [s for s in doc.sents if s.text.strip()]
+        sentences = [s.text.strip() for s in sents]
         sentence_results = []
-        for sent in sentences:
-            r = self._classify_sentence(sent)
+        for sent in sents:
+            r = self._classify_sentence(sent.text.strip(), has_negation=self._has_negation(sent))
             if r:
-                sentence_results.append((sent, r))
+                sentence_results.append((sent.text.strip(), r))
         agg = self._weighted_aggregate(sentence_results)
         emotion_arc = [
             {"sentence": sent[:80], "emotion": r["emotion"], "confidence": round(r["confidence"], 3)}
