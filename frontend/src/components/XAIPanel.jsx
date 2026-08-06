@@ -25,7 +25,7 @@ function AnimatedBar({ emotion, score, maxScore, delay = 0 }) {
       <span className="mono" style={{ fontSize: 11, color: 'var(--text-muted)', width: 72, textTransform: 'capitalize' }}>
         {emotion}
       </span>
-      <div style={{ flex: 1, height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' }}>
+      <div style={{ flex: 1, height: 4, background: 'rgba(var(--surface-tint),0.06)', borderRadius: 2, overflow: 'hidden' }}>
         <div ref={barRef} style={{
           height: '100%', borderRadius: 2,
           background: EMOTION_COLORS[emotion] || '#6478a0',
@@ -102,7 +102,7 @@ export default function XAIPanel({ xai, textResult, faceResult, fusionResult }) 
                 fontSize: 12, padding: '5px 14px', borderRadius: 8,
                 background: w.direction === 'positive' ? 'rgba(123,94,167,0.15)' : 'rgba(205,78,78,0.1)',
                 border: `1px solid ${w.direction === 'positive' ? 'rgba(123,94,167,0.4)' : 'rgba(205,78,78,0.3)'}`,
-                color: w.direction === 'positive' ? '#c4a8f0' : '#f4a0a0',
+                color: w.direction === 'positive' ? 'var(--violet-text)' : 'var(--danger-text)',
                 letterSpacing: '0.04em',
               }}>
                 {w.word} {w.direction === 'positive' ? '↑' : '↓'}

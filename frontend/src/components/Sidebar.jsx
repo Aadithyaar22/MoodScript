@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react"
 import { t } from "../i18n"
 import LanguageSwitcher from "./LanguageSwitcher"
+import ThemeSwitcher from "./ThemeSwitcher"
 
 const EMOTION_EMOJI  = { happy:"😊", sad:"😔", angry:"😠", fearful:"😨", surprised:"😲", disgusted:"😒", neutral:"😐" }
 const EMOTION_COLOR  = { happy:"#e2b94b", sad:"#4d8de8", angry:"#e06b6b", fearful:"#b39dff", surprised:"#3dd9c8", disgusted:"#6bc8a0", neutral:"#6478a0" }
 
-export default function Sidebar({ tab, setTab, history, conversations = [], activeConversationId, onSelectConversation, onNewConversation, onLogout, onExport, onDeleteAccount, onDeleteConversation, lang, onLangChange }) {
+export default function Sidebar({ tab, setTab, history, conversations = [], activeConversationId, onSelectConversation, onNewConversation, onLogout, onExport, onDeleteAccount, onDeleteConversation, lang, onLangChange, theme, onThemeChange }) {
   const [time, setTime] = useState(new Date())
   useEffect(() => { const timer = setInterval(() => setTime(new Date()), 1000); return () => clearInterval(timer) }, [])
 
@@ -16,7 +17,7 @@ export default function Sidebar({ tab, setTab, history, conversations = [], acti
   const topEmotion   = Object.entries(emotionCounts).sort((a,b)=>b[1]-a[1])[0]
 
   return (
-    <aside style={{ padding: '28px 18px', display: 'flex', flexDirection: 'column', gap: 24, overflowY: 'auto', maxHeight: '100vh', background: 'rgba(255,255,255,0.01)' }}>
+    <aside style={{ padding: '28px 18px', display: 'flex', flexDirection: 'column', gap: 24, overflowY: 'auto', maxHeight: '100vh', background: 'rgba(var(--surface-tint),0.01)' }}>
 
       {/* Logo */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -28,13 +29,16 @@ export default function Sidebar({ tab, setTab, history, conversations = [], acti
           boxShadow: '0 0 20px rgba(139,111,212,0.5)',
         }}>M</div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p className="serif" style={{ fontSize: 18, fontWeight: 600, color: '#f0ece6', lineHeight: 1 }}>{t(lang, "appName")}</p>
+          <p className="serif" style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1 }}>{t(lang, "appName")}</p>
           <p className="mono" style={{ fontSize: 9, color: 'var(--text-muted)', letterSpacing: '0.12em' }}>{t(lang, "tagline")}</p>
         </div>
       </div>
 
-      {/* Language switcher */}
-      <LanguageSwitcher lang={lang} onLangChange={onLangChange}/>
+      {/* Language + theme switcher */}
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <LanguageSwitcher lang={lang} onLangChange={onLangChange} style={{ flex: 1 }}/>
+        <ThemeSwitcher theme={theme} onThemeChange={onThemeChange}/>
+      </div>
 
       {/* User + logout */}
       {username && (
@@ -70,7 +74,7 @@ export default function Sidebar({ tab, setTab, history, conversations = [], acti
         background: 'linear-gradient(135deg, rgba(139,111,212,0.15), rgba(61,217,200,0.08))',
         border: '1px solid rgba(139,111,212,0.3)',
       }}>
-        <p className="mono" style={{ fontSize: 26, color: '#f0ece6', letterSpacing: '0.04em', lineHeight: 1 }}>
+        <p className="mono" style={{ fontSize: 26, color: 'var(--text-primary)', letterSpacing: '0.04em', lineHeight: 1 }}>
           {time.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' })}
         </p>
         <p className="mono" style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 6, letterSpacing: '0.08em' }}>
@@ -120,7 +124,7 @@ export default function Sidebar({ tab, setTab, history, conversations = [], acti
             {conversations.map(c => (
               <div key={c.id} style={{
                 display: 'flex', alignItems: 'center', gap: 4, borderRadius: 10,
-                background: activeConversationId === c.id ? 'rgba(139,111,212,0.15)' : 'rgba(255,255,255,0.02)',
+                background: activeConversationId === c.id ? 'rgba(139,111,212,0.15)' : 'rgba(var(--surface-tint),0.02)',
                 border: `1px solid ${activeConversationId === c.id ? 'rgba(139,111,212,0.4)' : 'var(--border)'}`,
               }}>
                 <button onClick={() => onSelectConversation(c.id)} style={{
@@ -128,7 +132,7 @@ export default function Sidebar({ tab, setTab, history, conversations = [], acti
                   background: 'none', border: 'none',
                 }}>
                   <p style={{
-                    fontSize: 11, color: '#d8d4e8', overflow: 'hidden', textOverflow: 'ellipsis',
+                    fontSize: 11, color: 'var(--violet-soft-text)', overflow: 'hidden', textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap', fontWeight: 300,
                   }}>{c.opening_line || t(lang, "newConversationLabel")}</p>
                   <p className="mono" style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 2 }}>
@@ -165,7 +169,7 @@ export default function Sidebar({ tab, setTab, history, conversations = [], acti
                 }}>
                   <span style={{ fontSize: 16 }}>{EMOTION_EMOJI[h.emotion] || '😐'}</span>
                   <div style={{ minWidth: 0, flex: 1 }}>
-                    <p style={{ fontSize: 12, color: '#f0ece6', textTransform: 'capitalize', fontWeight: 400 }}>{t(lang, h.emotion)}</p>
+                    <p style={{ fontSize: 12, color: 'var(--text-primary)', textTransform: 'capitalize', fontWeight: 400 }}>{t(lang, h.emotion)}</p>
                     <p className="mono" style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 1 }}>
                       {new Date(h.timestamp).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' })}
                     </p>
@@ -186,7 +190,7 @@ export default function Sidebar({ tab, setTab, history, conversations = [], acti
         }}>
           <p className="mono" style={{ fontSize: 9, color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: 8 }}>{t(lang, "dominantEmotion")}</p>
           <p style={{ fontSize: 22 }}>{EMOTION_EMOJI[topEmotion[0]]}
-            <span className="serif" style={{ fontSize: 16, color: '#f0ece6', marginLeft: 8, fontStyle: 'italic', textTransform: 'capitalize' }}>{t(lang, topEmotion[0])}</span>
+            <span className="serif" style={{ fontSize: 16, color: 'var(--text-primary)', marginLeft: 8, fontStyle: 'italic', textTransform: 'capitalize' }}>{t(lang, topEmotion[0])}</span>
           </p>
           <p className="mono" style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 6 }}>{topEmotion[1]} {t(lang, "of")} {history.length} {t(lang, "entries")}</p>
         </div>

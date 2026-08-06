@@ -29,3 +29,21 @@ def translate_text(text: str, target_language: str) -> str:
     except Exception as e:
         print(f"[translate] ERROR: {type(e).__name__}: {e}")
         return text
+
+def translate_texts(texts: list[str], target_language: str) -> list[str]:
+    """Batch-translate a list of strings in a single API call. Falls back to originals on error."""
+    non_empty_idx = [i for i, t in enumerate(texts) if t and t.strip()]
+    if not non_empty_idx:
+        return list(texts)
+    try:
+        client = _get_client()
+        results = client.translate(
+            [texts[i] for i in non_empty_idx], target_language=target_language, format_="text",
+        )
+        translated = list(texts)
+        for i, r in zip(non_empty_idx, results):
+            translated[i] = r["translatedText"]
+        return translated
+    except Exception as e:
+        print(f"[translate] batch ERROR: {type(e).__name__}: {e}")
+        return list(texts)

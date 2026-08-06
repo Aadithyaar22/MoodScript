@@ -56,6 +56,11 @@ export async function sendChatMessage(message, imageBase64 = null, conversationI
   return data
 }
 
+export async function translateBatch(texts, target) {
+  const { data } = await client.post("/translate", { texts, target })
+  return data.translated
+}
+
 export async function fetchHistory() {
   const { data } = await client.get("/history")
   return data

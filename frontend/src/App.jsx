@@ -8,6 +8,7 @@ import Sidebar from "./components/Sidebar"
 import RightPanel from "./components/RightPanel"
 import Login from "./components/Login"
 import LanguageSwitcher from "./components/LanguageSwitcher"
+import ThemeSwitcher from "./components/ThemeSwitcher"
 import { sendChatMessage, fetchHistory, fetchConversations, fetchConversationMessages, getToken, logout, exportJournal, deleteAccount, deleteConversation } from "./api"
 import { t } from "./i18n"
 import "./index.css"
@@ -15,6 +16,7 @@ import "./index.css"
 export default function App() {
   const [authed, setAuthed] = useState(!!getToken())
   const [lang, setLang] = useState(() => localStorage.getItem("moodscript_lang") || "en")
+  const [theme, setTheme] = useState(() => localStorage.getItem("moodscript_theme") || "dark")
   const [messages, setMessages] = useState([])   // [{id, role:'user'|'assistant', text, imageBase64?, analysis?}]
   const [conversationId, setConversationId] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -53,9 +55,18 @@ export default function App() {
     fetchConversations().then(setConversations).catch(() => {})
   }, [authed, lastAssistant?.id])
 
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme)
+  }, [theme])
+
   const handleLangChange = (newLang) => {
     setLang(newLang)
     localStorage.setItem("moodscript_lang", newLang)
+  }
+
+  const handleThemeChange = (newTheme) => {
+    setTheme(newTheme)
+    localStorage.setItem("moodscript_theme", newTheme)
   }
 
   const runChat = async (text, imageBase64) => {
@@ -69,7 +80,11 @@ export default function App() {
       const assistantMsg = { id: crypto.randomUUID(), role: "assistant", text: data.response, analysis: data }
       setMessages(m => [...m, assistantMsg])
     } catch (e) {
-      setError(e.response?.data?.detail || e.message || "Analysis failed")
+      if (e.response?.status === 502) {
+        setError(t(lang, "serviceWaking"))
+      } else {
+        setError(e.response?.data?.detail || e.message || t(lang, "analysisFailed"))
+      }
       setMessages(m => m.filter(msg => msg.id !== userMsg.id))
     } finally {
       setLoading(false)
@@ -175,8 +190,11 @@ export default function App() {
           <div className="orb orb-4"/>
         </div>
         <div className="grid-pattern"/>
-        <LanguageSwitcher lang={lang} onLangChange={handleLangChange} style={{ position:'fixed', top:20, right:20, zIndex:20 }}/>
-        <Login onAuth={() => setAuthed(true)} lang={lang}/>
+        <div style={{ position:'fixed', top:20, right:20, zIndex:20, display:'flex', gap:8 }}>
+          <LanguageSwitcher lang={lang} onLangChange={handleLangChange}/>
+          <ThemeSwitcher theme={theme} onThemeChange={handleThemeChange}/>
+        </div>
+        <Login onAuth={() => setAuthed(true)} lang={lang} theme={theme}/>
       </>
     )
   }
@@ -218,11 +236,13 @@ export default function App() {
           onDeleteAccount={handleDeleteAccount}
           lang={lang}
           onLangChange={handleLangChange}
+          theme={theme}
+          onThemeChange={handleThemeChange}
         />
 
         <main style={{
-          borderLeft:'1px solid rgba(255,255,255,0.05)',
-          borderRight:'1px solid rgba(255,255,255,0.05)',
+          borderLeft:'1px solid rgba(var(--surface-tint),0.05)',
+          borderRight:'1px solid rgba(var(--surface-tint),0.05)',
           padding:'40px 32px', overflowY:'auto', maxHeight:'100vh',
         }}>
           {tab === "analyze" ? (
@@ -230,7 +250,7 @@ export default function App() {
 
               {messages.length === 0 && !loading && (
                 <div className="animate-fade-up" style={{ marginBottom:8 }}>
-                  <h1 className="serif" style={{ fontSize:42, fontWeight:300, lineHeight:1.2, color:'#f0ece6', marginBottom:10 }}>
+                  <h1 className="serif" style={{ fontSize:42, fontWeight:300, lineHeight:1.2, color:'var(--text-primary)', marginBottom:10 }}>
                     {t(lang, "howAreYou")}<br/>
                     <em style={{ color:'var(--violet-bright)', fontStyle:'italic' }}>{t(lang, "feelingToday")}</em>
                   </h1>
@@ -246,7 +266,7 @@ export default function App() {
                   border: '1px solid rgba(226,185,75,0.3)', background: 'rgba(226,185,75,0.06)',
                 }}>
                   <span style={{ fontSize: 16 }}>🔥</span>
-                  <p style={{ fontSize: 13, color: '#d8d0c0', fontWeight: 300 }}>
+                  <p style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 300 }}>
                     {streakBeforeToday > 0
                       ? t(lang, "streakBanner", streakBeforeToday)
                       : t(lang, "noEntryToday")}
@@ -276,7 +296,7 @@ export default function App() {
                         {m.imageBase64 && (
                           <img src={m.imageBase64} alt="attached" style={{ width:64, height:64, objectFit:'cover', borderRadius:10 }}/>
                         )}
-                        <p style={{ fontSize:14, color:'#f0ece6', lineHeight:1.6, fontWeight:300 }}>{m.text}</p>
+                        <p style={{ fontSize:14, color:'var(--text-primary)', lineHeight:1.6, fontWeight:300 }}>{m.text}</p>
                       </div>
                     </div>
                   ) : (
@@ -292,7 +312,7 @@ export default function App() {
               {error && (
                 <div style={{
                   background:'rgba(205,78,78,0.1)', border:'1px solid rgba(205,78,78,0.3)',
-                  borderRadius:12, padding:'12px 16px', fontSize:13, color:'#f4a0a0'
+                  borderRadius:12, padding:'12px 16px', fontSize:13, color:'var(--danger-text)'
                 }}>{error}</div>
               )}
 

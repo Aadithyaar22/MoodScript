@@ -24,7 +24,7 @@ const CustomTooltip = ({ active, payload }) => {
   if (!active || !payload?.length) return null
   const d = payload[0]?.payload
   return (
-    <div style={{ background: 'rgba(8,12,20,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '10px 14px' }}>
+    <div style={{ background: 'var(--bg)', border: '1px solid rgba(var(--surface-tint),0.1)', borderRadius: 10, padding: '10px 14px' }}>
       <p className="mono" style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>{d?.name}</p>
       <p style={{ fontSize: 14, color: 'var(--text-primary)', textTransform: 'capitalize' }}>{EMOTION_EMOJI[d?.emotion]} {d?.emotion}</p>
     </div>
@@ -89,13 +89,13 @@ export default function Dashboard({ lang = "en" }) {
         <div className="glass" style={{ borderRadius: 18, padding: '24px 26px', display: 'flex', alignItems: 'center', gap: 24 }}>
           <div style={{ position: 'relative', width: 88, height: 88, flexShrink: 0 }}>
             <svg width={88} height={88} style={{ transform: 'rotate(-90deg)' }}>
-              <circle cx={44} cy={44} r={37} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={7} />
+              <circle cx={44} cy={44} r={37} fill="none" stroke="rgba(var(--surface-tint),0.06)" strokeWidth={7} />
               <circle cx={44} cy={44} r={37} fill="none" stroke="#9d7fd4" strokeWidth={7} strokeLinecap="round"
                 strokeDasharray={`${2 * Math.PI * 37 * (rating.score / 100)} ${2 * Math.PI * 37}`}
                 style={{ filter: 'drop-shadow(0 0 6px #9d7fd4)' }} />
             </svg>
             <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span className="serif" style={{ fontSize: 26, fontWeight: 600, color: '#f0ece6' }}>{rating.score}</span>
+              <span className="serif" style={{ fontSize: 26, fontWeight: 600, color: 'var(--text-primary)' }}>{rating.score}</span>
             </div>
           </div>
           <div style={{ flex: 1 }}>
@@ -118,7 +118,7 @@ export default function Dashboard({ lang = "en" }) {
           <p className="mono" style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: 12 }}>
             ✦ {t(lang, "weeklyReflection")} · {reflection.entry_count} {t(lang, "entries")}
           </p>
-          <p className="serif" style={{ fontSize: 16, fontWeight: 300, fontStyle: 'italic', color: '#d8d4e8', lineHeight: 1.8 }}>
+          <p className="serif" style={{ fontSize: 16, fontWeight: 300, fontStyle: 'italic', color: 'var(--violet-soft-text)', lineHeight: 1.8 }}>
             {reflection.content}
           </p>
         </div>
@@ -136,8 +136,8 @@ export default function Dashboard({ lang = "en" }) {
         <p className="mono" style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: 20 }}>{t(lang, "moodOverTime")}</p>
         <ResponsiveContainer width="100%" height={200}>
           <LineChart data={lineData}>
-            <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.04)" />
-            <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#4a4f66', fontFamily: 'DM Mono' }} axisLine={false} tickLine={false} />
+            <CartesianGrid strokeDasharray="2 4" stroke="rgba(var(--surface-tint),0.04)" />
+            <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--text-muted)', fontFamily: 'DM Mono' }} axisLine={false} tickLine={false} />
             <YAxis domain={[0,6]} hide />
             <Tooltip content={<CustomTooltip />} />
             <Line type="monotone" dataKey="score" stroke="#7b5ea7" strokeWidth={2}
@@ -157,7 +157,7 @@ export default function Dashboard({ lang = "en" }) {
               labelLine={false}>
               {pieData.map(e => <Cell key={e.name} fill={EMOTION_COLORS[e.name]||"#6478a0"} />)}
             </Pie>
-            <Tooltip contentStyle={{ background:'rgba(8,12,20,0.95)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:10, fontFamily:'DM Mono' }} />
+            <Tooltip contentStyle={{ background:'var(--bg)', border:'1px solid rgba(var(--surface-tint),0.1)', borderRadius:10, fontFamily:'DM Mono' }} />
           </PieChart>
         </ResponsiveContainer>
       </div>

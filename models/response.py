@@ -74,6 +74,7 @@ RULES = """What you NEVER do:
 - Write more than 4-5 sentences
 - Use bullet points or lists
 - Diagnose them or use clinical labels
+- Assert hidden feelings, subtext, or tension they didn't actually express — especially for a short, casual, or low-content message like a simple greeting. Don't tell someone there's "something brewing" or a "crack in the door to something more" when all they said was hello. If there's not much to go on, just respond like a normal, warm human would — you don't need to manufacture depth
 - Fall into a rigid rhythm of "validate the feeling, then end with a probing question" every single time — real people don't talk like that on repeat, and it starts to feel like a form
 - Ask a question just to have a question. Only ask one if there's something you're genuinely curious about — otherwise it's fine to end on a real statement, an observation, or a piece of actual, concrete help
 - Stay vague when they've told you something specific — if they name a fear, a person, a situation, engage with that exact thing directly instead of retreating to generic emotional language
@@ -84,6 +85,18 @@ What you DO:
 - Vary your shape — sometimes a short reaction, sometimes a real question, sometimes an observation, sometimes a small suggestion. Match what this specific moment calls for
 
 Format: natural flowing sentences. Like a message from a therapist who actually remembers you, is speaking only to you, and is trying to genuinely help — not run through a script."""
+
+LOW_CONFIDENCE_ANGLE = (
+    "The emotional read here is weak or mixed — don't commit hard to one feeling or build a "
+    "narrative around it. Just respond naturally and warmly to what they actually said, without "
+    "inventing hidden tension, subtext, or 'something deeper' they didn't express."
+)
+
+def _pick_angle(emotion: str, confidence: float) -> str:
+    if confidence < 0.45:
+        return LOW_CONFIDENCE_ANGLE
+    angles = EMOTION_ANGLES.get(emotion, ["Be warm, present, and specific."])
+    return random.choice(angles)
 
 def _long_term_block(long_term_context: str) -> str:
     return f"\n\n{long_term_context}\n" if long_term_context else ""
@@ -101,8 +114,7 @@ class ResponseEngine:
             persona_id = random.randrange(len(PERSONAS))
         persona  = PERSONAS[persona_id]
         opening  = random.choice(OPENING_STYLES)
-        angles   = EMOTION_ANGLES.get(emotion, ["Be warm, present, and specific."])
-        angle    = random.choice(angles)
+        angle    = _pick_angle(emotion, confidence)
         clinical = f"Secondary signal: {clinical_tone}." if clinical_tone else ""
 
         system_prompt = f"{persona}{_long_term_block(long_term_context)}\n\n{RULES}"
@@ -178,8 +190,7 @@ Write your response as Aria. One person, one moment, one message. Make it feel c
         if persona_id is None or not (0 <= persona_id < len(PERSONAS)):
             persona_id = 0
         persona = PERSONAS[persona_id]
-        angles  = EMOTION_ANGLES.get(emotion, ["Be warm, present, and specific."])
-        angle   = random.choice(angles)
+        angle   = _pick_angle(emotion, confidence)
         clinical = f"Secondary signal: {clinical_tone}." if clinical_tone else ""
 
         system_prompt = f"""{persona}

@@ -4,13 +4,13 @@ from datetime import datetime, timedelta, timezone
 from fastapi import FastAPI, HTTPException, Depends, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 
 from models.fusion import FusionLayer
 from models.response import ResponseEngine
 from models.crisis import assess_crisis
 from models.rating import compute_rating, summarize_history
-from models.translate import translate_text
+from models.translate import translate_text, translate_texts
 from database.db import MoodDatabase
 from auth import get_current_user_id, hash_password, verify_password, create_token
 from google.oauth2 import id_token as google_id_token
@@ -49,8 +49,10 @@ async def startup_event():
     db = MoodDatabase()
     print("Orchestrator ready. Face service:", FACE_SERVICE_URL, "| Text service:", TEXT_SERVICE_URL)
 
+_SERVICE_TIMEOUT = httpx.Timeout(75.0, connect=15.0)
+
 async def _analyze_message(text: str, image_base64: Optional[str]):
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(timeout=_SERVICE_TIMEOUT) as client:
         try:
             text_resp = await client.post(
                 f"{TEXT_SERVICE_URL}/analyze", json={"text": text}, headers=_internal_headers(),
@@ -234,6 +236,16 @@ async def chat(req: ChatRequest, user_id: int = Depends(get_current_user_id)):
         "crisis": crisis,
         "rating": overall_rating,
     }
+
+class TranslateBatchRequest(BaseModel):
+    texts: List[str]
+    target: str
+
+@app.post("/translate")
+async def translate_batch(req: TranslateBatchRequest, user_id: int = Depends(get_current_user_id)):
+    if req.target == "en" or not req.texts:
+        return {"translated": req.texts}
+    return {"translated": translate_texts(req.texts, req.target)}
 
 # ---------- conversations ----------
 

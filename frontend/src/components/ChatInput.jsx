@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from "react"
 import Webcam from "react-webcam"
 import { t } from "../i18n"
-import { useSpeechRecognition } from "../useSpeechRecognition"
+import { useSpeechRecognition, formatElapsed } from "../useSpeechRecognition"
 
 export default function ChatInput({ onSend, loading, lang = "en" }) {
   const [text, setText] = useState("")
@@ -14,7 +14,7 @@ export default function ChatInput({ onSend, loading, lang = "en" }) {
   const handleVoiceResult = useCallback((transcript) => {
     setText(prev => (prev ? prev.trim() + " " : "") + transcript)
   }, [])
-  const { isListening, toggle: toggleMic, supported: micSupported } = useSpeechRecognition(lang, handleVoiceResult)
+  const { isListening, elapsedSeconds, toggle: toggleMic, supported: micSupported } = useSpeechRecognition(lang, handleVoiceResult)
 
   const handleFileUpload = (e) => {
     const file = e.target.files[0]
@@ -56,9 +56,22 @@ export default function ChatInput({ onSend, loading, lang = "en" }) {
           <img src={preview} alt="attached" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border)' }} />
           <p style={{ fontSize: 12, color: 'var(--text-secondary)', flex: 1 }}>{t(lang, "imageAttached")}</p>
           <button onClick={() => { setImageBase64(null); setPreview(null) }}
-            style={{ fontSize: 12, color: '#f4a0a0', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+            style={{ fontSize: 12, color: 'var(--danger-text)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
             {t(lang, "remove")}
           </button>
+        </div>
+      )}
+
+      {isListening && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px',
+          borderRadius: 10, background: 'rgba(224,107,107,0.12)', border: '1px solid rgba(224,107,107,0.3)',
+          width: 'fit-content',
+        }}>
+          <span className="rec-dot" />
+          <span className="mono" style={{ fontSize: 11, color: '#e06b6b', letterSpacing: '0.04em' }}>
+            {t(lang, "recording")} · {formatElapsed(elapsedSeconds)}
+          </span>
         </div>
       )}
 
@@ -101,7 +114,7 @@ export default function ChatInput({ onSend, loading, lang = "en" }) {
           style={{
             flex: 1, resize: 'none', borderRadius: 12, padding: '12px 14px',
             fontSize: 14, lineHeight: 1.6, fontFamily: 'DM Sans, sans-serif', fontWeight: 300,
-            maxHeight: 140, background: 'rgba(255,255,255,0.03)',
+            maxHeight: 140, background: 'rgba(var(--surface-tint),0.03)',
           }}
         />
         <button
@@ -111,7 +124,7 @@ export default function ChatInput({ onSend, loading, lang = "en" }) {
             padding: '12px 20px', borderRadius: 12,
             background: text.trim() && !loading
               ? 'linear-gradient(135deg, #7b5ea7 0%, #4ecdc4 100%)'
-              : 'rgba(255,255,255,0.05)',
+              : 'rgba(var(--surface-tint),0.05)',
             border: '1px solid',
             borderColor: text.trim() && !loading ? 'transparent' : 'var(--border)',
             fontSize: 13, fontWeight: 500, letterSpacing: '0.04em',
@@ -130,18 +143,18 @@ export default function ChatInput({ onSend, loading, lang = "en" }) {
 
 const iconBtn = {
   width: 40, height: 44, borderRadius: 12, flexShrink: 0,
-  background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)',
+  background: 'rgba(var(--surface-tint),0.04)', border: '1px solid var(--border)',
   color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 14,
   display: 'flex', alignItems: 'center', justifyContent: 'center',
 }
 const btnPrimary = {
   padding: '8px 20px', borderRadius: 8, fontSize: 13,
   background: 'rgba(123,94,167,0.3)', border: '1px solid rgba(123,94,167,0.5)',
-  color: '#c4a8f0', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+  color: 'var(--violet-text)', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
 }
 const btnGhost = {
   padding: '8px 18px', borderRadius: 8, fontSize: 13,
-  background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)',
+  background: 'rgba(var(--surface-tint),0.04)', border: '1px solid var(--border)',
   color: 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
   transition: 'border-color 0.2s ease',
 }

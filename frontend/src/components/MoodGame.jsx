@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react"
+import { t } from "../i18n"
 
 const CARDS = ["😊","😔","😠","😨","😲","😒","🥰","😤"]
 const ALL_CARDS = [...CARDS, ...CARDS]
@@ -13,7 +14,7 @@ function shuffle(arr) {
   return a
 }
 
-export default function MoodGame({ onClose }) {
+export default function MoodGame({ onClose, lang = "en" }) {
   const [cards, setCards] = useState(() => shuffle(ALL_CARDS))
   const [flipped, setFlipped] = useState([])
   const [matched, setMatched] = useState([])
@@ -62,23 +63,23 @@ export default function MoodGame({ onClose }) {
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }} onClick={onClose}>
       <div style={{
-        background: 'rgba(20,24,40,0.98)', border: '1px solid rgba(255,255,255,0.1)',
+        background: 'var(--bg)', border: '1px solid rgba(var(--surface-tint),0.1)',
         borderRadius: 24, padding: 32, width: 360, maxWidth: '95vw',
       }} onClick={e => e.stopPropagation()}>
 
         {/* Header */}
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom: 20 }}>
           <div>
-            <p className="serif" style={{ fontSize: 24, fontWeight: 400, color: '#f0ece6' }}>Mood Match</p>
+            <p className="serif" style={{ fontSize: 24, fontWeight: 400, color: 'var(--text-primary)' }}>{t(lang, "moodMatchTitle")}</p>
             <p className="mono" style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.08em', marginTop: 3 }}>
-              FIND ALL {CARDS.length} PAIRS · {moves} MOVES
+              {t(lang, "findAllPairs", CARDS.length)} · {t(lang, "movesCount", moves)}
             </p>
           </div>
           <button onClick={onClose} style={{ background:'none', border:'none', color:'var(--text-muted)', fontSize:20, cursor:'pointer', lineHeight:1 }}>×</button>
         </div>
 
         {/* Progress */}
-        <div style={{ height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 2, marginBottom: 20, overflow: 'hidden' }}>
+        <div style={{ height: 3, background: 'rgba(var(--surface-tint),0.06)', borderRadius: 2, marginBottom: 20, overflow: 'hidden' }}>
           <div style={{
             height: '100%', borderRadius: 2,
             width: `${(matched.length / CARDS.length) * 100}%`,
@@ -102,14 +103,14 @@ export default function MoodGame({ onClose }) {
                     ? 'rgba(61,217,200,0.15)'
                     : face
                       ? 'rgba(139,111,212,0.2)'
-                      : 'rgba(255,255,255,0.05)',
-                  border: `1px solid ${isMatchedCard ? 'rgba(61,217,200,0.4)' : face ? 'rgba(139,111,212,0.4)' : 'rgba(255,255,255,0.08)'}`,
+                      : 'rgba(var(--surface-tint),0.05)',
+                  border: `1px solid ${isMatchedCard ? 'rgba(61,217,200,0.4)' : face ? 'rgba(139,111,212,0.4)' : 'rgba(var(--surface-tint),0.08)'}`,
                   transition: 'all 0.25s cubic-bezier(0.22,1,0.36,1)',
                   transform: face ? 'scale(1.04)' : 'scale(1)',
                   boxShadow: isMatchedCard ? '0 0 16px rgba(61,217,200,0.3)' : 'none',
                 }}>
                   {face ? card.emoji : (
-                    <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'rgba(255,255,255,0.08)' }} />
+                    <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'rgba(var(--surface-tint),0.08)' }} />
                   )}
                 </div>
               )
@@ -118,19 +119,19 @@ export default function MoodGame({ onClose }) {
         ) : (
           <div className="animate-pop-in" style={{ textAlign: 'center', padding: '20px 0' }}>
             <p style={{ fontSize: 48, marginBottom: 12 }}>🎉</p>
-            <p className="serif" style={{ fontSize: 26, color: '#f0ece6', marginBottom: 6 }}>You matched them all!</p>
-            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>Completed in {moves} moves</p>
+            <p className="serif" style={{ fontSize: 26, color: 'var(--text-primary)', marginBottom: 6 }}>{t(lang, "youMatchedAll")}</p>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>{t(lang, "completedInMoves", moves)}</p>
             <div style={{ display:'flex', gap:10, justifyContent:'center' }}>
               <button onClick={reset} style={{
                 padding: '10px 24px', borderRadius: 10, border: 'none', cursor: 'pointer',
                 background: 'linear-gradient(135deg, #8b6fd4, #3dd9c8)',
                 color: '#fff', fontSize: 13, fontFamily: 'DM Sans', fontWeight: 500,
-              }}>Play Again</button>
+              }}>{t(lang, "playAgain")}</button>
               <button onClick={onClose} style={{
                 padding: '10px 24px', borderRadius: 10, cursor: 'pointer',
-                background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+                background: 'rgba(var(--surface-tint),0.06)', border: '1px solid rgba(var(--surface-tint),0.1)',
                 color: 'var(--text-secondary)', fontSize: 13, fontFamily: 'DM Sans',
-              }}>Close</button>
+              }}>{t(lang, "close")}</button>
             </div>
           </div>
         )}
@@ -138,10 +139,10 @@ export default function MoodGame({ onClose }) {
         {!won && (
           <button onClick={reset} style={{
             width: '100%', marginTop: 16, padding: '10px', borderRadius: 10,
-            background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+            background: 'rgba(var(--surface-tint),0.04)', border: '1px solid rgba(var(--surface-tint),0.08)',
             color: 'var(--text-muted)', fontSize: 12, fontFamily: 'DM Mono',
             cursor: 'pointer', letterSpacing: '0.06em',
-          }}>↺ SHUFFLE & RESTART</button>
+          }}>↺ {t(lang, "shuffleRestart")}</button>
         )}
       </div>
     </div>

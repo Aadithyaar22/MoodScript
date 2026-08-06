@@ -1,6 +1,7 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import MoodGame from "./MoodGame"
 import { t } from "../i18n"
+import { translateBatch } from "../api"
 
 const EMOTION_COLORS = {
   happy:"#e2b94b", sad:"#4d8de8", angry:"#e06b6b",
@@ -127,18 +128,18 @@ function TipCard({ tip, color, isOpen, onToggle }) {
   return (
     <div onClick={onToggle} style={{
       borderRadius: 12, padding: '11px 13px', cursor: 'pointer',
-      background: isOpen ? `${color}18` : 'rgba(255,255,255,0.03)',
-      border: `1px solid ${isOpen ? color+'50' : 'rgba(255,255,255,0.07)'}`,
+      background: isOpen ? `${color}18` : 'rgba(var(--surface-tint),0.03)',
+      border: `1px solid ${isOpen ? color+'50' : 'rgba(var(--surface-tint),0.07)'}`,
       transition: 'all 0.25s ease',
     }}>
       <div style={{ display:'flex', alignItems:'center', gap:10 }}>
         <span style={{ fontSize:16, flexShrink:0 }}>{tip.icon}</span>
-        <p style={{ fontSize:12, color: isOpen ? '#f0ece6' : '#9aa0bc', fontWeight:400, flex:1 }}>{tip.title}</p>
+        <p style={{ fontSize:12, color: isOpen ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight:400, flex:1 }}>{tip.title}</p>
         <span style={{ fontSize:10, color, transition:'transform 0.2s', display:'inline-block', transform: isOpen ? 'rotate(180deg)' : 'none' }}>▾</span>
       </div>
       {isOpen && (
         <p className="animate-fade-up" style={{
-          fontSize:12, color:'#9aa0bc', lineHeight:1.7, marginTop:9,
+          fontSize:12, color:'var(--text-secondary)', lineHeight:1.7, marginTop:9,
           paddingTop:9, borderTop:`1px solid ${color}28`, fontWeight:300,
         }}>{tip.detail}</p>
       )}
@@ -153,7 +154,7 @@ function RadarRing({ emotion, score, color, size=88 }) {
   return (
     <div style={{ position:'relative', width:size, height:size, flexShrink:0 }}>
       <svg width={size} height={size} style={{ transform:'rotate(-90deg)' }}>
-        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={6}/>
+        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(var(--surface-tint),0.06)" strokeWidth={6}/>
         <circle cx={size/2} cy={size/2} r={r} fill="none"
           stroke={color} strokeWidth={6} strokeLinecap="round"
           strokeDasharray={`${dash} ${circ}`}
@@ -179,6 +180,33 @@ export default function RightPanel({ result, loading, history, lang = "en" }) {
   const tips = useMemo(() => getRandomTips(emotion, 4), [emotion])
   const quote = useMemo(() => getDailyQuote(), [])
 
+  const [displayTips, setDisplayTips] = useState(tips)
+  const [displayQuoteText, setDisplayQuoteText] = useState(quote.text)
+
+  useEffect(() => {
+    if (lang === "en") {
+      setDisplayTips(tips)
+      setDisplayQuoteText(quote.text)
+      return
+    }
+    let cancelled = false
+    const texts = [...tips.flatMap(tip => [tip.title, tip.detail]), quote.text]
+    translateBatch(texts, lang)
+      .then(translated => {
+        if (cancelled) return
+        setDisplayTips(tips.map((tip, i) => ({
+          ...tip,
+          title: translated[i * 2] ?? tip.title,
+          detail: translated[i * 2 + 1] ?? tip.detail,
+        })))
+        setDisplayQuoteText(translated[translated.length - 1] ?? quote.text)
+      })
+      .catch(() => {
+        if (!cancelled) { setDisplayTips(tips); setDisplayQuoteText(quote.text) }
+      })
+    return () => { cancelled = true }
+  }, [tips, quote, lang])
+
   const allScores = result?.fusion_result?.all_scores || {}
   const topThree  = Object.entries(allScores).sort((a,b)=>b[1]-a[1]).slice(0,3)
 
@@ -198,7 +226,7 @@ export default function RightPanel({ result, loading, history, lang = "en" }) {
 
   return (
     <>
-      {showGame && <MoodGame onClose={() => setShowGame(false)} />}
+      {showGame && <MoodGame onClose={() => setShowGame(false)} lang={lang} />}
 
       <aside style={{ padding:'28px 14px', display:'flex', flexDirection:'column', gap:14, overflowY:'auto', maxHeight:'100vh' }}>
 
@@ -216,7 +244,7 @@ export default function RightPanel({ result, loading, history, lang = "en" }) {
                 {topThree.map(([e,s]) => (
                   <div key={e} style={{ display:'flex', alignItems:'center', gap:8 }}>
                     <span style={{ fontSize:10, color:'var(--text-muted)', width:56, textTransform:'capitalize', fontFamily:'DM Mono' }}>{t(lang, e)}</span>
-                    <div style={{ flex:1, height:3, background:'rgba(255,255,255,0.06)', borderRadius:2, overflow:'hidden' }}>
+                    <div style={{ flex:1, height:3, background:'rgba(var(--surface-tint),0.06)', borderRadius:2, overflow:'hidden' }}>
                       <div style={{
                         height:'100%', borderRadius:2, width:`${s*100}%`,
                         background:`linear-gradient(90deg, ${EMOTION_COLORS[e]}, ${EMOTION_COLORS[e]}aa)`,
@@ -231,7 +259,7 @@ export default function RightPanel({ result, loading, history, lang = "en" }) {
             </>
           ) : (
             <div style={{ padding:'16px 0', textAlign:'center', width:'100%' }}>
-              <div style={{ width:72, height:72, borderRadius:'50%', margin:'0 auto 10px', background:'rgba(255,255,255,0.03)', border:'2px dashed rgba(255,255,255,0.08)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:24, opacity:0.4 }}>○</div>
+              <div style={{ width:72, height:72, borderRadius:'50%', margin:'0 auto 10px', background:'rgba(var(--surface-tint),0.03)', border:'2px dashed rgba(var(--surface-tint),0.08)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:24, opacity:0.4 }}>○</div>
               <p style={{ fontSize:11, color:'var(--text-muted)', fontStyle:'italic' }}>{t(lang, "analyseFirstEntry")}</p>
             </div>
           )}
@@ -260,7 +288,7 @@ export default function RightPanel({ result, loading, history, lang = "en" }) {
             <span style={{ fontSize:9, color, fontFamily:'DM Mono', opacity:0.8 }}>tap ↓</span>
           </div>
           <div style={{ display:'flex', flexDirection:'column', gap:7 }}>
-            {tips.map((tip, i) => (
+            {displayTips.map((tip, i) => (
               <TipCard key={i} tip={tip} color={color} isOpen={openTip===i} onToggle={() => setOpenTip(openTip===i ? null : i)}/>
             ))}
           </div>
@@ -273,8 +301,8 @@ export default function RightPanel({ result, loading, history, lang = "en" }) {
           border:'1px solid rgba(179,157,255,0.25)',
         }}>
           <p className="mono" style={{ fontSize:9, color:'var(--text-muted)', letterSpacing:'0.12em', marginBottom:10 }}>✦ {t(lang, "quoteOfTheDay")}</p>
-          <p className="serif" style={{ fontSize:14, fontStyle:'italic', color:'#d4cef0', lineHeight:1.75, fontWeight:300 }}>
-            "{quote.text}"
+          <p className="serif" style={{ fontSize:14, fontStyle:'italic', color:'var(--violet-soft-text)', lineHeight:1.75, fontWeight:300 }}>
+            "{displayQuoteText}"
           </p>
           <p className="mono" style={{ fontSize:9, color:'var(--text-muted)', marginTop:8, letterSpacing:'0.06em' }}>— {quote.author}</p>
         </div>
@@ -284,7 +312,7 @@ export default function RightPanel({ result, loading, history, lang = "en" }) {
           width:'100%', padding:'12px', borderRadius:14,
           background:'linear-gradient(135deg, rgba(139,111,212,0.2), rgba(61,217,200,0.15))',
           border:'1px solid rgba(139,111,212,0.35)',
-          color:'#c4a8f0', fontSize:12, fontFamily:'DM Mono',
+          color:'var(--violet-text)', fontSize:12, fontFamily:'DM Mono',
           cursor:'pointer', letterSpacing:'0.08em',
           display:'flex', alignItems:'center', justifyContent:'center', gap:10,
           transition:'all 0.2s ease',

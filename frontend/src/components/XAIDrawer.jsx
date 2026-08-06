@@ -17,8 +17,8 @@ function EmotionCard({ emotion, score, maxScore, words, isActive, onClick }) {
   return (
     <div onClick={onClick} style={{
       borderRadius: 14, padding: '14px 16px', cursor: 'pointer',
-      background: isActive ? `${color}22` : 'rgba(255,255,255,0.03)',
-      border: `1px solid ${isActive ? color+'60' : isTop ? color+'35' : 'rgba(255,255,255,0.07)'}`,
+      background: isActive ? `${color}22` : 'rgba(var(--surface-tint),0.03)',
+      border: `1px solid ${isActive ? color+'60' : isTop ? color+'35' : 'rgba(var(--surface-tint),0.07)'}`,
       transition: 'all 0.25s ease',
       boxShadow: isActive ? `0 0 24px ${color}25` : 'none',
     }}>
@@ -26,13 +26,13 @@ function EmotionCard({ emotion, score, maxScore, words, isActive, onClick }) {
         <span style={{ fontSize:20 }}>{EMOTION_EMOJI[emotion] || '○'}</span>
         <div style={{ flex:1 }}>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', marginBottom:6 }}>
-            <span style={{ fontSize:13, color: isActive ? '#f0ece6' : '#9aa0bc', textTransform:'capitalize', fontWeight: isTop ? 500 : 300 }}>
+            <span style={{ fontSize:13, color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)', textTransform:'capitalize', fontWeight: isTop ? 500 : 300 }}>
               {emotion}
               {isTop && <span className="mono" style={{ fontSize:9, color, marginLeft:8, letterSpacing:'0.08em' }}>TOP</span>}
             </span>
             <span className="mono" style={{ fontSize:12, color }}>{(score*100).toFixed(0)}%</span>
           </div>
-          <div style={{ height:4, background:'rgba(255,255,255,0.06)', borderRadius:2, overflow:'hidden' }}>
+          <div style={{ height:4, background:'rgba(var(--surface-tint),0.06)', borderRadius:2, overflow:'hidden' }}>
             <div style={{
               height:'100%', borderRadius:2, width:`${pct}%`,
               background:`linear-gradient(90deg, ${color}, ${color}bb)`,
@@ -127,8 +127,8 @@ export default function XAIDrawer({ xai, textResult, faceResult, fusionResult, o
       {/* Drawer */}
       <div className="animate-fade-up" style={{
         position:'relative', width:480, maxWidth:'95vw',
-        background:'rgba(12,16,28,0.98)',
-        borderLeft:'1px solid rgba(255,255,255,0.08)',
+        background:'var(--bg)',
+        borderLeft:'1px solid rgba(var(--surface-tint),0.08)',
         overflowY:'auto', maxHeight:'100vh',
         padding:28, display:'flex', flexDirection:'column', gap:24,
       }}>
@@ -136,13 +136,13 @@ export default function XAIDrawer({ xai, textResult, faceResult, fusionResult, o
         {/* Header */}
         <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between' }}>
           <div>
-            <h2 className="serif" style={{ fontSize:28, fontWeight:400, color:'#f0ece6' }}>Explainability</h2>
+            <h2 className="serif" style={{ fontSize:28, fontWeight:400, color:'var(--text-primary)' }}>Explainability</h2>
             <p className="mono" style={{ fontSize:10, color:'var(--text-muted)', letterSpacing:'0.08em', marginTop:4 }}>
               WHAT DROVE THE PREDICTION
             </p>
           </div>
           <button onClick={onClose} style={{
-            background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)',
+            background:'rgba(var(--surface-tint),0.06)', border:'1px solid rgba(var(--surface-tint),0.1)',
             borderRadius:8, width:32, height:32, cursor:'pointer',
             color:'var(--text-muted)', fontSize:16, display:'flex',
             alignItems:'center', justifyContent:'center',
@@ -159,7 +159,7 @@ export default function XAIDrawer({ xai, textResult, faceResult, fusionResult, o
             <p className="mono" style={{ fontSize:9, color:'var(--text-muted)', letterSpacing:'0.1em', marginBottom:10 }}>
               HIGHEST EMOTION SENTENCE
             </p>
-            <p className="serif" style={{ fontSize:17, fontStyle:'italic', color:'#c4b8e8', lineHeight:1.75 }}>
+            <p className="serif" style={{ fontSize:17, fontStyle:'italic', color:'var(--violet-soft-text)', lineHeight:1.75 }}>
               "{xai.key_sentence}"
             </p>
           </div>
@@ -173,7 +173,7 @@ export default function XAIDrawer({ xai, textResult, faceResult, fusionResult, o
             display:'flex', gap:10, alignItems:'flex-start',
           }}>
             <span style={{ fontSize:14, flexShrink:0 }}>⚡</span>
-            <p style={{ fontSize:12, color:'#7dd9d0', lineHeight:1.6 }}>{resolution}</p>
+            <p style={{ fontSize:12, color:'var(--cyan)', lineHeight:1.6 }}>{resolution}</p>
           </div>
         )}
 

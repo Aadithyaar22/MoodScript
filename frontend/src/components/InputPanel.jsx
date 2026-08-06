@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from "react"
 import Webcam from "react-webcam"
 import { t } from "../i18n"
-import { useSpeechRecognition } from "../useSpeechRecognition"
+import { useSpeechRecognition, formatElapsed } from "../useSpeechRecognition"
 
 export default function InputPanel({ onAnalyze, loading, lang = "en" }) {
   const [text, setText] = useState("")
@@ -14,7 +14,7 @@ export default function InputPanel({ onAnalyze, loading, lang = "en" }) {
   const handleVoiceResult = useCallback((transcript) => {
     setText(prev => (prev ? prev.trim() + " " : "") + transcript)
   }, [])
-  const { isListening, toggle: toggleMic, supported: micSupported } = useSpeechRecognition(lang, handleVoiceResult)
+  const { isListening, elapsedSeconds, toggle: toggleMic, supported: micSupported } = useSpeechRecognition(lang, handleVoiceResult)
 
   const handleFileUpload = (e) => {
     const file = e.target.files[0]
@@ -59,13 +59,25 @@ export default function InputPanel({ onAnalyze, loading, lang = "en" }) {
                 position: 'absolute', top: 12, right: 12, width: 32, height: 32, borderRadius: '50%',
                 border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 background: isListening ? 'rgba(224,107,107,0.3)' : 'rgba(139,111,212,0.2)',
-                color: isListening ? '#e06b6b' : '#c4a8f0', fontSize: 15,
+                color: isListening ? '#e06b6b' : 'var(--violet-text)', fontSize: 15,
                 boxShadow: isListening ? '0 0 0 4px rgba(224,107,107,0.15)' : 'none',
                 transition: 'all 0.2s ease',
               }}
             >🎙</button>
           )}
         </div>
+        {isListening && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', marginTop: 8,
+            borderRadius: 10, background: 'rgba(224,107,107,0.12)', border: '1px solid rgba(224,107,107,0.3)',
+            width: 'fit-content',
+          }}>
+            <span className="rec-dot" />
+            <span className="mono" style={{ fontSize: 11, color: '#e06b6b', letterSpacing: '0.04em' }}>
+              {t(lang, "recording")} · {formatElapsed(elapsedSeconds)}
+            </span>
+          </div>
+        )}
         {wordCount > 0 && wordCount < 20 && (
           <p style={{ fontSize: 12, color: 'var(--gold)', marginTop: 6, fontWeight: 300 }}>
             {t(lang, "longerEntries")}
@@ -83,7 +95,7 @@ export default function InputPanel({ onAnalyze, loading, lang = "en" }) {
             <div>
               <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{t(lang, "imageCaptured")}</p>
               <button onClick={() => { setImageBase64(null); setPreview(null) }}
-                style={{ fontSize: 12, color: '#f4a0a0', background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginTop: 2 }}>
+                style={{ fontSize: 12, color: 'var(--danger-text)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginTop: 2 }}>
                 {t(lang, "remove")}
               </button>
             </div>
@@ -114,7 +126,7 @@ export default function InputPanel({ onAnalyze, loading, lang = "en" }) {
           width: '100%', padding: '14px 24px',
           background: text.trim() && !loading
             ? 'linear-gradient(135deg, #7b5ea7 0%, #4ecdc4 100%)'
-            : 'rgba(255,255,255,0.05)',
+            : 'rgba(var(--surface-tint),0.05)',
           border: '1px solid',
           borderColor: text.trim() && !loading ? 'transparent' : 'var(--border)',
           borderRadius: 12, fontSize: 14, fontWeight: 500,
@@ -135,11 +147,11 @@ export default function InputPanel({ onAnalyze, loading, lang = "en" }) {
 const btnPrimary = {
   padding: '8px 20px', borderRadius: 8, fontSize: 13,
   background: 'rgba(123,94,167,0.3)', border: '1px solid rgba(123,94,167,0.5)',
-  color: '#c4a8f0', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+  color: 'var(--violet-text)', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
 }
 const btnGhost = {
   padding: '8px 18px', borderRadius: 8, fontSize: 13,
-  background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)',
+  background: 'rgba(var(--surface-tint),0.04)', border: '1px solid var(--border)',
   color: 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
   transition: 'border-color 0.2s ease',
 }

@@ -4,7 +4,7 @@ import { t } from "../i18n"
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
 
-export default function Login({ onAuth, lang = "en" }) {
+export default function Login({ onAuth, lang = "en", theme = "dark" }) {
   const [mode, setMode] = useState("login") // "login" | "signup"
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
@@ -30,10 +30,11 @@ export default function Login({ onAuth, lang = "en" }) {
         }
       },
     })
+    googleBtnRef.current.innerHTML = ""
     window.google.accounts.id.renderButton(googleBtnRef.current, {
-      theme: "filled_black", size: "large", width: 316, text: "continue_with",
+      theme: theme === "light" ? "outline" : "filled_black", size: "large", width: 316, text: "continue_with",
     })
-  }, [])
+  }, [theme])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -71,7 +72,7 @@ export default function Login({ onAuth, lang = "en" }) {
             fontSize: 20, fontWeight: 700, color: '#fff', fontFamily: 'DM Mono, monospace',
             boxShadow: '0 0 24px rgba(139,111,212,0.5)',
           }}>M</div>
-          <h1 className="serif" style={{ fontSize: 26, fontWeight: 300, color: '#f0ece6' }}>
+          <h1 className="serif" style={{ fontSize: 26, fontWeight: 300, color: 'var(--text-primary)' }}>
             {mode === "login" ? t(lang, "welcomeBack") : t(lang, "createYourSpace")}
           </h1>
           <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 6, fontWeight: 300 }}>
@@ -86,8 +87,8 @@ export default function Login({ onAuth, lang = "en" }) {
             onChange={e => setUsername(e.target.value)}
             autoComplete="username"
             style={{
-              background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)',
-              borderRadius: 10, padding: '11px 14px', color: '#f0ece6', fontSize: 14,
+              background: 'rgba(var(--surface-tint),0.03)', border: '1px solid var(--border)',
+              borderRadius: 10, padding: '11px 14px', color: 'var(--text-primary)', fontSize: 14,
               fontFamily: 'DM Sans, sans-serif', outline: 'none',
             }}
           />
@@ -101,8 +102,8 @@ export default function Login({ onAuth, lang = "en" }) {
             onChange={e => setPassword(e.target.value)}
             autoComplete={mode === "login" ? "current-password" : "new-password"}
             style={{
-              background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)',
-              borderRadius: 10, padding: '11px 14px', color: '#f0ece6', fontSize: 14,
+              background: 'rgba(var(--surface-tint),0.03)', border: '1px solid var(--border)',
+              borderRadius: 10, padding: '11px 14px', color: 'var(--text-primary)', fontSize: 14,
               fontFamily: 'DM Sans, sans-serif', outline: 'none',
             }}
           />
@@ -111,7 +112,7 @@ export default function Login({ onAuth, lang = "en" }) {
         {error && (
           <div style={{
             background: 'rgba(205,78,78,0.1)', border: '1px solid rgba(205,78,78,0.3)',
-            borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#f4a0a0',
+            borderRadius: 10, padding: '10px 14px', fontSize: 13, color: 'var(--danger-text)',
           }}>{error}</div>
         )}
 
