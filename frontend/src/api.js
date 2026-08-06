@@ -108,8 +108,8 @@ export async function exportJournal() {
   await _downloadFile("/export", "moodscript_journal.txt")
 }
 
-export async function exportDoctorReport() {
-  await _downloadFile("/export/doctor-report", "moodscript_doctor_report.txt")
+export async function exportDoctorReport(format = "txt") {
+  await _downloadFile(`/export/doctor-report?format=${format}`, `moodscript_doctor_report.${format}`)
 }
 
 export async function deleteAccount() {

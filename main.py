@@ -11,7 +11,7 @@ from models.arbiter import Arbiter
 from models.response import ResponseEngine
 from models.crisis import assess_crisis
 from models.rating import compute_rating, summarize_history
-from models.report import build_doctor_report
+from models.report import build_doctor_report, build_doctor_report_pdf
 from models.translate import translate_text, translate_texts
 from database.db import MoodDatabase
 from auth import get_current_user_id, hash_password, verify_password, create_token
@@ -346,11 +346,26 @@ async def export_journal(user_id: int = Depends(get_current_user_id)):
     )
 
 @app.get("/export/doctor-report")
-async def export_doctor_report(user_id: int = Depends(get_current_user_id)):
+async def export_doctor_report(format: str = "txt", user_id: int = Depends(get_current_user_id)):
     user = db.get_user_by_id(user_id)
     if not user:
         raise HTTPException(status_code=401, detail="Session expired — please log in again")
+    if format not in ("txt", "pdf"):
+        raise HTTPException(status_code=400, detail="format must be 'txt' or 'pdf'")
     entries = db.get_user_journal_entries(user_id, limit=1000)
+
+    if format == "pdf":
+        rating = compute_rating(entries)
+        crisis_count = sum(1 for e in entries if e.get("crisis_flag"))
+        clinical_summary = await response_engine.generate_clinical_summary(
+            user["username"], entries, rating, crisis_count,
+        )
+        pdf_bytes = build_doctor_report_pdf(user["username"], entries, clinical_summary)
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename=moodscript_doctor_report_{user['username']}.pdf"},
+        )
 
     body = build_doctor_report(user["username"], entries)
     return Response(

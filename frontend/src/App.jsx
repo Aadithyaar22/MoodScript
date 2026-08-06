@@ -147,19 +147,13 @@ export default function App() {
     }
   }
 
-  const handleExport = async () => {
+  const handleExportFormat = async (format) => {
     try {
-      await exportJournal()
+      if (format === "journal-txt") await exportJournal()
+      else if (format === "report-txt") await exportDoctorReport("txt")
+      else if (format === "report-pdf") await exportDoctorReport("pdf")
     } catch {
-      setError("Couldn't export your journal — try again")
-    }
-  }
-
-  const handleExportDoctorReport = async () => {
-    try {
-      await exportDoctorReport()
-    } catch {
-      setError("Couldn't export the doctor report — try again")
+      setError("Couldn't export — try again")
     }
   }
 
@@ -240,8 +234,7 @@ export default function App() {
           onNewConversation={handleNewConversation}
           onDeleteConversation={handleDeleteConversation}
           onLogout={handleLogout}
-          onExport={handleExport}
-          onExportDoctorReport={handleExportDoctorReport}
+          onExportFormat={handleExportFormat}
           onDeleteAccount={handleDeleteAccount}
           lang={lang}
           onLangChange={handleLangChange}

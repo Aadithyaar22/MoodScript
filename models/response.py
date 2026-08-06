@@ -334,6 +334,61 @@ Rules:
         resources = CRISIS_RESOURCES_ACUTE if reason == "explicit_language" else CRISIS_RESOURCES_SUPPORTIVE
         return f"{acknowledgment}\n\n{resources}"
 
+    async def generate_clinical_summary(self, username: str, entries: list, rating: dict, crisis_count: int = 0) -> str:
+        """Third-person clinical-overview paragraph for the doctor report — written to help
+        a therapist or healthcare provider quickly understand a new client's recent patterns
+        before a session, not a chat reply and not addressed to the patient directly."""
+        if not entries:
+            return f"{username} has not yet recorded any journal entries in MoodScript."
+
+        counts = {}
+        for e in entries:
+            emo = e.get("emotion")
+            if emo:
+                counts[emo] = counts.get(emo, 0) + 1
+        top_str = ", ".join(f"{emo} ({n}x)" for emo, n in
+                             sorted(counts.items(), key=lambda kv: kv[1], reverse=True)[:3])
+        snippets = "\n".join(f'- "{e["content"][:160]}"' for e in entries[:8] if e.get("content"))
+        crisis_note = (f"{crisis_count} entries were flagged for elevated-risk language during this "
+                        f"period — mention this plainly if it's relevant to the overall picture."
+                        if crisis_count else "No entries were flagged for elevated-risk language.")
+
+        system_prompt = """You are writing a brief clinical-overview paragraph as part of an
+AI-assisted mood-tracking report, to help a therapist or healthcare provider quickly
+understand a new client's recent emotional patterns before a session. Write in the third
+person, objective and professional — like a chart note, not a warm message to the patient.
+Reference concrete patterns from what they actually wrote, not just emotion labels. Do not
+diagnose, do not use clinical disorder labels (no "depression", "anxiety disorder", etc. as
+if confirmed), do not speculate beyond what the entries actually show — this is self-reported
+journal data with AI-assisted sentiment analysis, not a clinical assessment. 4-6 sentences,
+no bullet points."""
+
+        user_prompt = f"""Patient: {username}
+{len(entries)} journal entries on record. Most common recorded emotions: {top_str or 'not enough data'}.
+Overall mood score: {rating.get('score')}/100 ({rating.get('label')}). Recent trend: {rating.get('trend')}.
+{crisis_note}
+
+Some of what they actually wrote (most recent first):
+{snippets}
+
+Write the clinical overview paragraph."""
+
+        try:
+            completion = await self.client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[{"role": "system", "content": system_prompt},
+                          {"role": "user", "content": user_prompt}],
+                max_tokens=280,
+                temperature=0.7,
+                top_p=0.9,
+            )
+            return completion.choices[0].message.content.strip()
+        except Exception as e:
+            print(f"[Groq] ERROR (clinical summary): {type(e).__name__}: {e}")
+            return (f"{username} has logged {len(entries)} entries with an overall mood score of "
+                    f"{rating.get('score')}/100 ({rating.get('label')}), trending {rating.get('trend')}. "
+                    f"Most frequently recorded emotions: {top_str or 'insufficient data'}.")
+
     async def generate_reflection(self, entries, rating, persona_id) -> str:
         """Weekly reflection letter — a short, warm recap of the person's last 7 days of
         entries, written directly to them. entries: this week's journal entries, most recent

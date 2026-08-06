@@ -11,3 +11,4 @@ google-auth
 google-cloud-translate
 requests
 httpx
+reportlab
