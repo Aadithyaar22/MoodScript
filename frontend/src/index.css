@@ -98,6 +98,11 @@ body {
   body { overflow-x:hidden; }
 }
 
+/* Overlay scrim behind fullscreen panels — darker in dark mode, softer in light
+   so the light-themed panel still reads as lifted off the page. */
+.modal-scrim { background:rgba(7,9,15,0.86); }
+:root[data-theme="light"] .modal-scrim { background:rgba(24,24,34,0.5); }
+
 .bg-canvas { position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;opacity:var(--orb-opacity); }
 .orb { position:absolute;border-radius:50%;filter:blur(110px);animation:drift linear infinite; }
 .orb-1 { width:700px;height:700px;background:radial-gradient(circle,rgba(139,111,212,0.28) 0%,rgba(77,141,232,0.12) 50%,transparent 70%);top:-250px;left:-150px;animation-duration:22s; }

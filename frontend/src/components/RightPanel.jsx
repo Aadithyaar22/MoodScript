@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react"
 import MoodGame from "./MoodGame"
+import FullscreenModal, { ExpandButton } from "./Expandable"
 import { t } from "../i18n"
 import { translateBatch } from "../api"
 
@@ -124,23 +125,24 @@ function getRandomTips(emotion, count = 4) {
   return shuffled.slice(0, count)
 }
 
-function TipCard({ tip, color, isOpen, onToggle }) {
+function TipCard({ tip, color, isOpen, onToggle, big = false }) {
   return (
     <div onClick={onToggle} style={{
-      borderRadius: 12, padding: '11px 13px', cursor: 'pointer',
+      borderRadius: 12, padding: big ? '16px 18px' : '11px 13px', cursor: big ? 'default' : 'pointer',
       background: isOpen ? `${color}18` : 'rgba(var(--surface-tint),0.03)',
       border: `1px solid ${isOpen ? color+'50' : 'rgba(var(--surface-tint),0.07)'}`,
       transition: 'all 0.25s ease',
     }}>
-      <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-        <span style={{ fontSize:15, flexShrink:0 }}>{tip.icon}</span>
-        <p style={{ fontSize:13, lineHeight:1.35, color: isOpen ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight:400, flex:1, minWidth:0 }}>{tip.title}</p>
-        <span style={{ fontSize:11, color, flexShrink:0, transition:'transform 0.2s', display:'inline-block', transform: isOpen ? 'rotate(180deg)' : 'none' }}>▾</span>
+      <div style={{ display:'flex', alignItems:'center', gap: big ? 12 : 8 }}>
+        <span style={{ fontSize: big ? 22 : 15, flexShrink:0 }}>{tip.icon}</span>
+        <p style={{ fontSize: big ? 17 : 13, lineHeight:1.35, color: isOpen ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight:400, flex:1, minWidth:0 }}>{tip.title}</p>
+        {!big && <span style={{ fontSize:11, color, flexShrink:0, transition:'transform 0.2s', display:'inline-block', transform: isOpen ? 'rotate(180deg)' : 'none' }}>▾</span>}
       </div>
       {isOpen && (
-        <p className="animate-fade-up" style={{
-          fontSize:13, color:'var(--text-secondary)', lineHeight:1.65, marginTop:9,
-          paddingTop:9, borderTop:`1px solid ${color}28`, fontWeight:400,
+        <p className={big ? undefined : "animate-fade-up"} style={{
+          fontSize: big ? 15 : 13, color:'var(--text-secondary)', lineHeight:1.7,
+          marginTop: big ? 12 : 9, paddingTop: big ? 12 : 9,
+          borderTop:`1px solid ${color}28`, fontWeight:400,
         }}>{tip.detail}</p>
       )}
     </div>
@@ -171,6 +173,7 @@ function RadarRing({ emotion, score, color, size=88 }) {
 export default function RightPanel({ result, loading, history, lang = "en" }) {
   const [openTip, setOpenTip] = useState(null)
   const [showGame, setShowGame] = useState(false)
+  const [expanded, setExpanded] = useState(null)   // 'radar' | 'tips' | 'quote'
 
   const emotion = result?.unified_emotion || 'neutral'
   const confidence = result?.unified_confidence || 0
@@ -208,7 +211,8 @@ export default function RightPanel({ result, loading, history, lang = "en" }) {
   }, [tips, quote, lang])
 
   const allScores = result?.fusion_result?.all_scores || {}
-  const topThree  = Object.entries(allScores).sort((a,b)=>b[1]-a[1]).slice(0,3)
+  const ranked    = Object.entries(allScores).sort((a,b)=>b[1]-a[1])
+  const topThree  = ranked.slice(0,3)
 
   const streak = (() => {
     if (!history.length) return 0
@@ -224,45 +228,92 @@ export default function RightPanel({ result, loading, history, lang = "en" }) {
     return Math.max(count, history.length > 0 ? 1 : 0)
   })()
 
+  /* Section bodies are rendered by these helpers so the sidebar card and its
+     fullscreen version stay in sync — `big` only scales sizes and, for the radar,
+     shows every emotion instead of just the top three. */
+  const radarBody = (big = false) => (
+    result && !loading ? (
+      <>
+        <RadarRing emotion={emotion} score={confidence} color={color} size={big ? 210 : 90}/>
+        <div style={{ width:'100%', display:'flex', flexDirection:'column', gap: big ? 14 : 8 }}>
+          {(big ? ranked : topThree).map(([e,s]) => (
+            <div key={e} style={{ display:'flex', alignItems:'center', gap: big ? 14 : 8 }}>
+              <span style={{ fontSize: big ? 15 : 12, color: big ? 'var(--text-secondary)' : 'var(--text-muted)', width: big ? 104 : 56, textTransform:'capitalize', fontFamily:'DM Mono' }}>{t(lang, e)}</span>
+              <div style={{ flex:1, height: big ? 8 : 3, background:'rgba(var(--surface-tint),0.06)', borderRadius:4, overflow:'hidden' }}>
+                <div style={{
+                  height:'100%', borderRadius:4, width:`${s*100}%`,
+                  background:`linear-gradient(90deg, ${EMOTION_COLORS[e]}, ${EMOTION_COLORS[e]}aa)`,
+                  boxShadow:`0 0 6px ${EMOTION_COLORS[e]}80`,
+                  transition:'width 1s cubic-bezier(0.22,1,0.36,1)',
+                }}/>
+              </div>
+              <span className="mono" style={{ fontSize: big ? 15 : 12, color:'var(--text-muted)', width: big ? 40 : 26, textAlign:'right' }}>{(s*100).toFixed(0)}</span>
+            </div>
+          ))}
+        </div>
+      </>
+    ) : (
+      <div style={{ padding:'16px 0', textAlign:'center', width:'100%' }}>
+        <div style={{ width: big ? 130 : 72, height: big ? 130 : 72, borderRadius:'50%', margin:'0 auto 10px', background:'rgba(var(--surface-tint),0.03)', border:'2px dashed rgba(var(--surface-tint),0.08)', display:'flex', alignItems:'center', justifyContent:'center', fontSize: big ? 42 : 24, opacity:0.4 }}>○</div>
+        <p style={{ fontSize: big ? 16 : 13, color:'var(--text-muted)', fontStyle:'italic' }}>{t(lang, "analyseFirstEntry")}</p>
+      </div>
+    )
+  )
+
+  const tipsBody = (big = false) => (
+    <div style={{ display:'flex', flexDirection:'column', gap: big ? 12 : 7 }}>
+      {displayTips.map((tip, i) => (
+        <TipCard key={i} tip={tip} color={color} big={big}
+          isOpen={big ? true : openTip===i}
+          onToggle={() => big ? null : setOpenTip(openTip===i ? null : i)}/>
+      ))}
+    </div>
+  )
+
+  const quoteBody = (big = false) => (
+    <>
+      <p className="serif" style={{ fontSize: big ? 30 : 15, fontStyle:'italic', color:'var(--violet-soft-text)', lineHeight:1.75, fontWeight:300 }}>
+        "{displayQuoteText}"
+      </p>
+      <p className="mono" style={{ fontSize: big ? 14 : 11, color:'var(--text-muted)', marginTop: big ? 18 : 8, letterSpacing:'0.06em' }}>— {quote.author}</p>
+    </>
+  )
+
+  const EXPANDED = {
+    radar: { title: t(lang, "emotionRadar"), body: () => radarBody(true), maxWidth: 620 },
+    tips:  { title: result ? t(lang, emotion).toUpperCase() : t(lang, "wellnessTips"), body: () => tipsBody(true), maxWidth: 760 },
+    quote: { title: `✦ ${t(lang, "quoteOfTheDay")}`, body: () => quoteBody(true), maxWidth: 760 },
+  }
+
   return (
     <>
       {showGame && <MoodGame onClose={() => setShowGame(false)} lang={lang} />}
+
+      {expanded && EXPANDED[expanded] && (
+        <FullscreenModal
+          title={EXPANDED[expanded].title}
+          maxWidth={EXPANDED[expanded].maxWidth}
+          onClose={() => setExpanded(null)}
+        >
+          <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:22 }}>
+            {EXPANDED[expanded].body()}
+          </div>
+        </FullscreenModal>
+      )}
 
       <aside className="app-rightpanel" style={{ padding:'28px 14px', display:'flex', flexDirection:'column', gap:14, overflowY:'auto', maxHeight:'100vh' }}>
 
         {/* Emotion radar */}
         <div className="glass" style={{ borderRadius:18, padding:'18px 16px', display:'flex', flexDirection:'column', alignItems:'center', gap:14, border: result ? `1px solid ${color}35` : undefined }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', width:'100%' }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', width:'100%', gap:8 }}>
             <p className="mono" style={{ fontSize:11, color:'var(--text-muted)', letterSpacing:'0.12em' }}>{t(lang, "emotionRadar")}</p>
-            {result && <span className="mono" style={{ fontSize:12, color, letterSpacing:'0.06em' }}>{(confidence*100).toFixed(0)}%</span>}
+            <div style={{ display:'flex', alignItems:'center', gap:7 }}>
+              {result && <span className="mono" style={{ fontSize:12, color, letterSpacing:'0.06em' }}>{(confidence*100).toFixed(0)}%</span>}
+              <ExpandButton onClick={() => setExpanded('radar')} label={t(lang, "expand")}/>
+            </div>
           </div>
 
-          {result && !loading ? (
-            <>
-              <RadarRing emotion={emotion} score={confidence} color={color} size={90}/>
-              <div style={{ width:'100%', display:'flex', flexDirection:'column', gap:8 }}>
-                {topThree.map(([e,s]) => (
-                  <div key={e} style={{ display:'flex', alignItems:'center', gap:8 }}>
-                    <span style={{ fontSize:12, color:'var(--text-muted)', width:56, textTransform:'capitalize', fontFamily:'DM Mono' }}>{t(lang, e)}</span>
-                    <div style={{ flex:1, height:3, background:'rgba(var(--surface-tint),0.06)', borderRadius:2, overflow:'hidden' }}>
-                      <div style={{
-                        height:'100%', borderRadius:2, width:`${s*100}%`,
-                        background:`linear-gradient(90deg, ${EMOTION_COLORS[e]}, ${EMOTION_COLORS[e]}aa)`,
-                        boxShadow:`0 0 6px ${EMOTION_COLORS[e]}80`,
-                        transition:'width 1s cubic-bezier(0.22,1,0.36,1)',
-                      }}/>
-                    </div>
-                    <span className="mono" style={{ fontSize:12, color:'var(--text-muted)', width:26, textAlign:'right' }}>{(s*100).toFixed(0)}</span>
-                  </div>
-                ))}
-              </div>
-            </>
-          ) : (
-            <div style={{ padding:'16px 0', textAlign:'center', width:'100%' }}>
-              <div style={{ width:72, height:72, borderRadius:'50%', margin:'0 auto 10px', background:'rgba(var(--surface-tint),0.03)', border:'2px dashed rgba(var(--surface-tint),0.08)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:24, opacity:0.4 }}>○</div>
-              <p style={{ fontSize:13, color:'var(--text-muted)', fontStyle:'italic' }}>{t(lang, "analyseFirstEntry")}</p>
-            </div>
-          )}
+          {radarBody(false)}
         </div>
 
         {/* Streak + total */}
@@ -285,13 +336,12 @@ export default function RightPanel({ result, loading, history, lang = "en" }) {
             <p className="mono" style={{ fontSize:11, color:'var(--text-muted)', letterSpacing:'0.12em' }}>
               {result ? t(lang, emotion).toUpperCase() : t(lang, "wellnessTips")}
             </p>
-            <span style={{ fontSize:11, color, fontFamily:'DM Mono', opacity:0.8 }}>tap ↓</span>
+            <div style={{ display:'flex', alignItems:'center', gap:7 }}>
+              <span style={{ fontSize:11, color, fontFamily:'DM Mono', opacity:0.8 }}>tap ↓</span>
+              <ExpandButton onClick={() => setExpanded('tips')} label={t(lang, "expand")}/>
+            </div>
           </div>
-          <div style={{ display:'flex', flexDirection:'column', gap:7 }}>
-            {displayTips.map((tip, i) => (
-              <TipCard key={i} tip={tip} color={color} isOpen={openTip===i} onToggle={() => setOpenTip(openTip===i ? null : i)}/>
-            ))}
-          </div>
+          {tipsBody(false)}
         </div>
 
         {/* Daily quote */}
@@ -300,11 +350,11 @@ export default function RightPanel({ result, loading, history, lang = "en" }) {
           background:'linear-gradient(135deg, rgba(179,157,255,0.1), rgba(61,217,200,0.07))',
           border:'1px solid rgba(179,157,255,0.25)',
         }}>
-          <p className="mono" style={{ fontSize:11, color:'var(--text-muted)', letterSpacing:'0.12em', marginBottom:10 }}>✦ {t(lang, "quoteOfTheDay")}</p>
-          <p className="serif" style={{ fontSize:15, fontStyle:'italic', color:'var(--violet-soft-text)', lineHeight:1.75, fontWeight:300 }}>
-            "{displayQuoteText}"
-          </p>
-          <p className="mono" style={{ fontSize:11, color:'var(--text-muted)', marginTop:8, letterSpacing:'0.06em' }}>— {quote.author}</p>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8, marginBottom:10 }}>
+            <p className="mono" style={{ fontSize:11, color:'var(--text-muted)', letterSpacing:'0.12em' }}>✦ {t(lang, "quoteOfTheDay")}</p>
+            <ExpandButton onClick={() => setExpanded('quote')} label={t(lang, "expand")}/>
+          </div>
+          {quoteBody(false)}
         </div>
 
         {/* Game button */}

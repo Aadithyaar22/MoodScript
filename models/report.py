@@ -6,8 +6,12 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.platypus import (
-    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable,
+    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable, KeepTogether,
 )
+from reportlab.graphics.shapes import Drawing, String
+from reportlab.graphics.charts.lineplots import LinePlot
+from reportlab.graphics.widgets.markers import makeMarker
+from reportlab.lib import colors as rl_colors
 
 from models.rating import compute_rating
 
@@ -206,6 +210,74 @@ def _cell(text, styles, label=False):
     return Paragraph(str(text), style)
 
 
+# Same ranking the dashboard's "Mood over time" chart uses, so the printed graph
+# and the on-screen one tell the identical story.
+EMOTION_SCORE = {
+    "happy": 6, "surprised": 5, "neutral": 4,
+    "fearful": 3, "disgusted": 2, "sad": 1, "angry": 0,
+}
+_SCORE_LABEL = {6: "Happy", 5: "Surprised", 4: "Neutral", 3: "Fearful",
+                2: "Disgusted", 1: "Sad", 0: "Angry"}
+
+
+def _mood_over_time_drawing(chrono, width=CONTENT_WIDTH, height=210):
+    """Line chart of mood score over time, drawn with reportlab's own graphics so the
+    PDF needs no plotting dependency. Returns None when there is nothing to plot."""
+    points = [(i, EMOTION_SCORE.get(e.get("emotion"), 4)) for i, e in enumerate(chrono)]
+    if len(points) < 2:
+        return None
+
+    d = Drawing(width, height)
+    left_pad, bottom_pad = 62, 34
+    plot = LinePlot()
+    plot.x, plot.y = left_pad, bottom_pad
+    plot.width = width - left_pad - 16
+    plot.height = height - bottom_pad - 18
+    plot.data = [points]
+    plot.joinedLines = 1
+    plot.lines[0].strokeColor = BRAND_PURPLE
+    plot.lines[0].strokeWidth = 1.6
+    plot.lines[0].symbol = makeMarker("FilledCircle")
+    plot.lines[0].symbol.fillColor = BRAND_PURPLE
+    plot.lines[0].symbol.strokeColor = BRAND_PURPLE
+    plot.lines[0].symbol.size = 4
+
+    plot.yValueAxis.valueMin = 0
+    plot.yValueAxis.valueMax = 6
+    plot.yValueAxis.valueStep = 1
+    plot.yValueAxis.labelTextFormat = lambda v: _SCORE_LABEL.get(int(v), "")
+    plot.yValueAxis.labels.fontName = "Helvetica"
+    plot.yValueAxis.labels.fontSize = 7
+    plot.yValueAxis.labels.fillColor = rl_colors.HexColor("#555555")
+    plot.yValueAxis.strokeColor = rl_colors.HexColor("#cccccc")
+    plot.yValueAxis.gridStrokeColor = rl_colors.HexColor("#ebe7f3")
+    plot.yValueAxis.gridStrokeWidth = 0.5
+    plot.yValueAxis.visibleGrid = 1
+
+    plot.xValueAxis.valueMin = 0
+    plot.xValueAxis.valueMax = len(points) - 1
+    plot.xValueAxis.strokeColor = rl_colors.HexColor("#cccccc")
+    plot.xValueAxis.labels.fontName = "Helvetica"
+    plot.xValueAxis.labels.fontSize = 6.5
+    plot.xValueAxis.labels.fillColor = rl_colors.HexColor("#555555")
+    plot.xValueAxis.labels.boxAnchor = "n"
+    plot.xValueAxis.labels.angle = 30
+    plot.xValueAxis.labels.dy = -3
+
+    # Label at most ~8 dates so they never collide on a long history.
+    step = max(1, len(points) // 8)
+    tick_idx = list(range(0, len(points), step))
+    plot.xValueAxis.valueSteps = tick_idx
+    date_for = {i: _fmt_date(chrono[i]["created_at"]) for i in tick_idx}
+    plot.xValueAxis.labelTextFormat = lambda v: date_for.get(int(v), "")
+
+    d.add(plot)
+    d.add(String(left_pad, height - 10, "Mood score over time (higher is more positive)",
+                 fontName="Helvetica", fontSize=7.5,
+                 fillColor=rl_colors.HexColor("#777777")))
+    return d
+
+
 def _footer(canvas, doc):
     canvas.saveState()
     canvas.setFont("Helvetica", 7.5)
@@ -285,6 +357,16 @@ def build_doctor_report_pdf(username: str, entries: list, clinical_summary: str)
         ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
     ]))
     story.append(mood_table)
+
+    # ---- Mood trend chart ----
+    # Header and chart are kept together so the banner never strands at the foot of
+    # a page with the graph pushed onto the next one.
+    chart = _mood_over_time_drawing(d["chrono"])
+    if chart is not None:
+        block = []
+        _section(block, styles, "MOOD OVER TIME")
+        block.append(chart)
+        story.append(KeepTogether(block))
 
     # ---- Emotion distribution ----
     _section(story, styles, "EMOTION DISTRIBUTION")

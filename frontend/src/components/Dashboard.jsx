@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
 import { fetchHistory, fetchRating, fetchReflection } from "../api"
+import FullscreenModal, { ExpandButton } from "./Expandable"
+import { speak, stopSpeaking } from "../useSpeechRecognition"
 import { t } from "../i18n"
 
 const TREND_CONFIG = {
@@ -36,12 +38,28 @@ export default function Dashboard({ lang = "en" }) {
   const [rating, setRating] = useState(null)
   const [reflection, setReflection] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [expanded, setExpanded] = useState(null)          // 'line' | 'pie'
+  const [speaking, setSpeaking] = useState(false)
+  const [loadingSpeech, setLoadingSpeech] = useState(false)
 
   useEffect(() => {
     fetchHistory().then(d => setHistory([...d].reverse())).catch(console.error).finally(() => setLoading(false))
     fetchRating().then(setRating).catch(console.error)
     fetchReflection().then(setReflection).catch(console.error)
   }, [])
+
+  // stop any narration if the user navigates away mid-playback
+  useEffect(() => () => stopSpeaking(), [])
+
+  const toggleReflectionSpeech = async () => {
+    if (speaking || loadingSpeech) {
+      stopSpeaking(); setSpeaking(false); setLoadingSpeech(false); return
+    }
+    setLoadingSpeech(true)
+    await speak(reflection.content, lang, "neutral", () => setSpeaking(false))
+    setLoadingSpeech(false)
+    setSpeaking(true)
+  }
 
   if (loading) return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -76,8 +94,52 @@ export default function Dashboard({ lang = "en" }) {
     </div>
   )
 
+  /* Chart bodies are shared between the inline card and the fullscreen view so
+     both always render the same data — only the height/radius scale up. */
+  const lineChart = (height = 200) => (
+    <ResponsiveContainer width="100%" height={height}>
+      <LineChart data={lineData}>
+        <CartesianGrid strokeDasharray="2 4" stroke="rgba(var(--surface-tint),0.04)" />
+        <XAxis dataKey="name" tick={{ fontSize: 13, fill: 'var(--text-muted)', fontFamily: 'DM Mono' }} axisLine={false} tickLine={false} />
+        <YAxis domain={[0,6]} hide />
+        <Tooltip content={<CustomTooltip />} />
+        <Line type="monotone" dataKey="score" stroke="#7b5ea7" strokeWidth={2}
+          dot={{ r: 4, fill: '#7b5ea7', strokeWidth: 0 }}
+          activeDot={{ r: 6, fill: '#9d7fd4', strokeWidth: 0 }} />
+      </LineChart>
+    </ResponsiveContainer>
+  )
+
+  const pieChart = (height = 180, outer = 70, inner = 30) => (
+    <ResponsiveContainer width="100%" height={height}>
+      <PieChart>
+        <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={outer} innerRadius={inner}
+          label={({ name, percent }) => `${EMOTION_EMOJI[name]} ${(percent*100).toFixed(0)}%`}
+          labelLine={false}>
+          {pieData.map(e => <Cell key={e.name} fill={EMOTION_COLORS[e.name]||"#6478a0"} />)}
+        </Pie>
+        <Tooltip contentStyle={{ background:'var(--bg)', border:'1px solid rgba(var(--surface-tint),0.1)', borderRadius:10, fontFamily:'DM Mono' }} />
+      </PieChart>
+    </ResponsiveContainer>
+  )
+
+  const EXPANDED = {
+    line: { title: t(lang, "moodOverTime"),        body: () => lineChart(520) },
+    pie:  { title: t(lang, "emotionDistribution"), body: () => pieChart(520, 190, 85) },
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }} className="animate-fade-up">
+      {expanded && EXPANDED[expanded] && (
+        <FullscreenModal
+          title={EXPANDED[expanded].title}
+          maxWidth={1100}
+          onClose={() => setExpanded(null)}
+        >
+          {EXPANDED[expanded].body()}
+        </FullscreenModal>
+      )}
+
       {/* Heading */}
       <div style={{ paddingBottom: 8 }}>
         <h2 className="serif" style={{ fontSize: 36, fontWeight: 300, color: 'var(--text-primary)' }}>{t(lang, "moodHistory")}</h2>
@@ -115,9 +177,28 @@ export default function Dashboard({ lang = "en" }) {
           background: 'linear-gradient(135deg, rgba(139,111,212,0.1), rgba(61,217,200,0.06))',
           border: '1px solid rgba(139,111,212,0.25)',
         }}>
-          <p className="mono" style={{ fontSize: 12, color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: 12 }}>
-            ✦ {t(lang, "weeklyReflection")} · {reflection.entry_count} {t(lang, "entries")}
-          </p>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, marginBottom: 12 }}>
+            <p className="mono" style={{ fontSize: 12, color: 'var(--text-muted)', letterSpacing: '0.1em' }}>
+              ✦ {t(lang, "weeklyReflection")} · {reflection.entry_count} {t(lang, "entries")}
+            </p>
+            <button
+              onClick={toggleReflectionSpeech}
+              disabled={loadingSpeech}
+              title={speaking ? t(lang, "stopListening") : t(lang, "listen")}
+              aria-label={speaking ? t(lang, "stopListening") : t(lang, "listen")}
+              style={{
+                background: 'none', border: '1px solid var(--border)', borderRadius: 8,
+                color: speaking ? 'var(--danger-text)' : 'var(--text-muted)',
+                cursor: loadingSpeech ? 'default' : 'pointer', flexShrink: 0,
+                fontSize: 12, lineHeight: 1, padding: '4px 8px',
+                fontFamily: 'DM Mono, monospace', opacity: loadingSpeech ? 0.5 : 1,
+                display: 'flex', alignItems: 'center', gap: 6,
+              }}
+            >
+              {loadingSpeech ? '…' : speaking ? '◼' : '🔊'}
+              <span>{speaking ? t(lang, "stopListening") : t(lang, "listen")}</span>
+            </button>
+          </div>
           <p className="serif" style={{ fontSize: 17, fontWeight: 300, fontStyle: 'italic', color: 'var(--violet-soft-text)', lineHeight: 1.8 }}>
             {reflection.content}
           </p>
@@ -133,33 +214,20 @@ export default function Dashboard({ lang = "en" }) {
 
       {/* Line chart */}
       <div className="glass" style={{ borderRadius: 16, padding: '24px' }}>
-        <p className="mono" style={{ fontSize: 12, color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: 20 }}>{t(lang, "moodOverTime")}</p>
-        <ResponsiveContainer width="100%" height={200}>
-          <LineChart data={lineData}>
-            <CartesianGrid strokeDasharray="2 4" stroke="rgba(var(--surface-tint),0.04)" />
-            <XAxis dataKey="name" tick={{ fontSize: 13, fill: 'var(--text-muted)', fontFamily: 'DM Mono' }} axisLine={false} tickLine={false} />
-            <YAxis domain={[0,6]} hide />
-            <Tooltip content={<CustomTooltip />} />
-            <Line type="monotone" dataKey="score" stroke="#7b5ea7" strokeWidth={2}
-              dot={{ r: 4, fill: '#7b5ea7', strokeWidth: 0 }}
-              activeDot={{ r: 6, fill: '#9d7fd4', strokeWidth: 0 }} />
-          </LineChart>
-        </ResponsiveContainer>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, marginBottom: 20 }}>
+          <p className="mono" style={{ fontSize: 12, color: 'var(--text-muted)', letterSpacing: '0.1em' }}>{t(lang, "moodOverTime")}</p>
+          <ExpandButton onClick={() => setExpanded('line')} label={t(lang, "expand")}/>
+        </div>
+        {lineChart(200)}
       </div>
 
       {/* Pie chart */}
       <div className="glass" style={{ borderRadius: 16, padding: '24px' }}>
-        <p className="mono" style={{ fontSize: 12, color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: 20 }}>{t(lang, "emotionDistribution")}</p>
-        <ResponsiveContainer width="100%" height={180}>
-          <PieChart>
-            <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} innerRadius={30}
-              label={({ name, percent }) => `${EMOTION_EMOJI[name]} ${(percent*100).toFixed(0)}%`}
-              labelLine={false}>
-              {pieData.map(e => <Cell key={e.name} fill={EMOTION_COLORS[e.name]||"#6478a0"} />)}
-            </Pie>
-            <Tooltip contentStyle={{ background:'var(--bg)', border:'1px solid rgba(var(--surface-tint),0.1)', borderRadius:10, fontFamily:'DM Mono' }} />
-          </PieChart>
-        </ResponsiveContainer>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, marginBottom: 20 }}>
+          <p className="mono" style={{ fontSize: 12, color: 'var(--text-muted)', letterSpacing: '0.1em' }}>{t(lang, "emotionDistribution")}</p>
+          <ExpandButton onClick={() => setExpanded('pie')} label={t(lang, "expand")}/>
+        </div>
+        {pieChart(180)}
       </div>
 
       {/* Recent list */}
