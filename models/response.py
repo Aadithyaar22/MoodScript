@@ -1,5 +1,6 @@
 import os
 import random
+from typing import Optional
 from groq import AsyncGroq
 from dotenv import load_dotenv
 from models.crisis import CRISIS_RESOURCES_ACUTE, CRISIS_RESOURCES_SUPPORTIVE
@@ -143,16 +144,21 @@ class ResponseEngine:
         return (f"\n\nSpecific things they mentioned — your response must clearly engage "
                 f"with at least one of these, not just react to the emotion label: {key_facts}\n")
 
-    async def generate(self, emotion, confidence, user_text, clinical_tone, conflict_note, persona_id=None, long_term_context: str = "") -> tuple:
+    async def generate(self, emotion, confidence, user_text, clinical_tone, conflict_note, persona_id=None, long_term_context: str = "", key_facts: Optional[str] = None) -> tuple:
         """First turn of a conversation. Returns (response_text, persona_id) so the
-        caller can pass persona_id back on later turns to keep Aria's voice consistent."""
+        caller can pass persona_id back on later turns to keep Aria's voice consistent.
+
+        key_facts: pass the already-awaited result of _extract_key_facts() when the
+        caller started it earlier (e.g. concurrently with emotion analysis) to keep it
+        off this call's critical path. None falls back to extracting it here."""
         if persona_id is None or not (0 <= persona_id < len(PERSONAS)):
             persona_id = random.randrange(len(PERSONAS))
         persona  = PERSONAS[persona_id]
         opening  = random.choice(OPENING_STYLES)
         angle    = _pick_angle(emotion, confidence)
         clinical = f"Secondary signal: {clinical_tone}." if clinical_tone else ""
-        key_facts = await self._extract_key_facts(user_text)
+        if key_facts is None:
+            key_facts = await self._extract_key_facts(user_text)
 
         system_prompt = f"{persona}{_long_term_block(long_term_context)}\n\n{RULES}"
 
@@ -221,15 +227,19 @@ Write your response as Aria. One person, one moment, one message. Make it feel c
             }
             return FALLBACKS.get(emotion, "Hey, whatever you're carrying today — I see you. What do you need right now?"), persona_id
 
-    async def generate_reply(self, history, emotion, confidence, user_text, clinical_tone, persona_id, long_term_context: str = "") -> str:
+    async def generate_reply(self, history, emotion, confidence, user_text, clinical_tone, persona_id, long_term_context: str = "", key_facts: Optional[str] = None) -> str:
         """Continuation turn — replies inside an ongoing chat, using real prior turns as
-        context instead of the fresh-journal-entry framing used by generate()."""
+        context instead of the fresh-journal-entry framing used by generate().
+
+        key_facts: see generate() — pass an already-awaited value to skip the internal
+        extraction call."""
         if persona_id is None or not (0 <= persona_id < len(PERSONAS)):
             persona_id = 0
         persona = PERSONAS[persona_id]
         angle   = _pick_angle(emotion, confidence)
         clinical = f"Secondary signal: {clinical_tone}." if clinical_tone else ""
-        key_facts = await self._extract_key_facts(user_text)
+        if key_facts is None:
+            key_facts = await self._extract_key_facts(user_text)
 
         system_prompt = f"""{persona}
 

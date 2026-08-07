@@ -1,4 +1,5 @@
 import os
+import asyncio
 import httpx
 from datetime import datetime, timedelta, timezone
 from fastapi import FastAPI, HTTPException, Depends, Response
@@ -57,27 +58,34 @@ _SERVICE_TIMEOUT = httpx.Timeout(75.0, connect=15.0)
 
 async def _analyze_message(text: str, image_base64: Optional[str]):
     async with httpx.AsyncClient(timeout=_SERVICE_TIMEOUT) as client:
-        try:
-            text_resp = await client.post(
-                f"{TEXT_SERVICE_URL}/analyze", json={"text": text}, headers=_internal_headers(),
-            )
-            text_resp.raise_for_status()
-        except httpx.HTTPError as e:
-            raise HTTPException(status_code=502, detail=f"Text analysis service unavailable: {e}")
-        text_data = text_resp.json()
-        text_result = text_data["text_result"]
-        xai_result = text_data["xai_result"]
-
-        face_result = None
-        if image_base64:
+        async def _call_text():
             try:
-                face_resp = await client.post(
+                resp = await client.post(
+                    f"{TEXT_SERVICE_URL}/analyze", json={"text": text}, headers=_internal_headers(),
+                )
+                resp.raise_for_status()
+                return resp.json()
+            except httpx.HTTPError as e:
+                raise HTTPException(status_code=502, detail=f"Text analysis service unavailable: {e}")
+
+        async def _call_face():
+            if not image_base64:
+                return None
+            try:
+                resp = await client.post(
                     f"{FACE_SERVICE_URL}/predict", json={"image_base64": image_base64}, headers=_internal_headers(),
                 )
-                face_resp.raise_for_status()
-                face_result = face_resp.json()
+                resp.raise_for_status()
+                return resp.json()
             except Exception as e:
                 print(f"[FACE ERROR] {type(e).__name__}: {e}")
+                return None
+
+        # Text and face analysis are independent — run them concurrently instead of
+        # back-to-back, they used to add their latencies instead of overlapping.
+        text_data, face_result = await asyncio.gather(_call_text(), _call_face())
+        text_result = text_data["text_result"]
+        xai_result = text_data["xai_result"]
 
     fusion_result = fusion.fuse(text_result, face_result)
     if face_result is not None:
@@ -170,39 +178,49 @@ async def chat(req: ChatRequest, user_id: int = Depends(get_current_user_id)):
         raise HTTPException(status_code=400, detail="Message cannot be empty")
 
     lang = req.lang or "en"
-    message_en = translate_text(req.message, "en") if lang != "en" else req.message
+    message_en = await asyncio.to_thread(translate_text, req.message, "en") if lang != "en" else req.message
+
+    # Fact extraction only needs the raw text — start it now so it overlaps with
+    # emotion analysis and DB lookups instead of running after them.
+    facts_task = asyncio.create_task(response_engine._extract_key_facts(message_en))
 
     if req.conversation_id is None:
-        conversation_id = db.create_conversation(user_id, persona_id=None)
+        conversation_id = await asyncio.to_thread(db.create_conversation, user_id, None)
         prior_messages = []
+        conversation_row = {"id": conversation_id, "persona_id": None}
     else:
-        conversation = db.get_conversation(req.conversation_id, user_id)
-        if not conversation:
+        conversation_row = await asyncio.to_thread(db.get_conversation, req.conversation_id, user_id)
+        if not conversation_row:
             raise HTTPException(status_code=404, detail="Conversation not found")
-        conversation_id = conversation["id"]
-        prior_messages = db.get_conversation_messages(conversation_id, user_id)
+        conversation_id = conversation_row["id"]
+        prior_messages = await asyncio.to_thread(db.get_conversation_messages, conversation_id, user_id)
 
-    text_result, face_result, fusion_result, xai_result = await _analyze_message(message_en, req.image_base64)
+    # Emotion analysis (network calls to other services) and the journal-entries
+    # lookup (DB) don't depend on each other — run them together.
+    (text_result, face_result, fusion_result, xai_result), journal_entries = await asyncio.gather(
+        _analyze_message(message_en, req.image_base64),
+        asyncio.to_thread(db.get_user_journal_entries, user_id, conversation_id),
+    )
     emotion = fusion_result["unified_emotion"]
     confidence = fusion_result["unified_confidence"]
     clinical_tone = text_result.get("clinical_tone")
     resolution_reason = fusion_result.get("resolution_reason", "text_only")
 
-    journal_entries = db.get_user_journal_entries(user_id, exclude_conversation_id=conversation_id)
     crisis = assess_crisis(message_en, journal_entries)
 
-    db.add_message(
-        conversation_id, user_id, role="user", content=message_en,
-        emotion=emotion, confidence=confidence,
-        face_emotion=face_result["emotion"] if face_result else None,
-        clinical_tone=clinical_tone, resolution_reason=resolution_reason,
-        crisis_flag=crisis["is_crisis"],
+    await asyncio.to_thread(
+        db.add_message,
+        conversation_id, user_id, "user", message_en,
+        emotion, confidence,
+        face_result["emotion"] if face_result else None,
+        clinical_tone, resolution_reason,
+        crisis["is_crisis"],
     )
 
-    conversation_row = db.get_conversation(conversation_id, user_id)
     persona_id = conversation_row["persona_id"]
     history_for_llm = [{"role": m["role"], "content": m["content"]} for m in prior_messages]
     long_term_context = summarize_history(journal_entries)
+    key_facts = await facts_task
 
     if crisis["is_crisis"]:
         if persona_id is None:
@@ -215,23 +233,34 @@ async def chat(req: ChatRequest, user_id: int = Depends(get_current_user_id)):
         response, persona_id = await response_engine.generate(
             emotion=emotion, confidence=confidence, user_text=message_en,
             clinical_tone=clinical_tone, conflict_note=resolution_reason,
-            persona_id=persona_id, long_term_context=long_term_context,
+            persona_id=persona_id, long_term_context=long_term_context, key_facts=key_facts,
         )
     else:
         response = await response_engine.generate_reply(
             history=history_for_llm, emotion=emotion, confidence=confidence,
             user_text=message_en, clinical_tone=clinical_tone,
-            persona_id=persona_id, long_term_context=long_term_context,
+            persona_id=persona_id, long_term_context=long_term_context, key_facts=key_facts,
         )
 
     if conversation_row["persona_id"] is None:
-        db.set_conversation_persona(conversation_id, persona_id)
+        await asyncio.to_thread(db.set_conversation_persona, conversation_id, persona_id)
 
-    db.add_message(conversation_id, user_id, role="assistant", content=response, crisis_flag=crisis["is_crisis"])
+    async def _translate_out():
+        if lang == "en":
+            return response
+        return await asyncio.to_thread(translate_text, response, lang)
 
-    display_response = translate_text(response, lang) if lang != "en" else response
+    async def _rating():
+        entries = await asyncio.to_thread(db.get_user_journal_entries, user_id)
+        return compute_rating(entries)
 
-    overall_rating = compute_rating(db.get_user_journal_entries(user_id))
+    add_assistant_task = asyncio.create_task(asyncio.to_thread(
+        db.add_message, conversation_id, user_id, "assistant", response,
+        None, None, None, None, None, crisis["is_crisis"],
+    ))
+
+    display_response, overall_rating = await asyncio.gather(_translate_out(), _rating())
+    await add_assistant_task
 
     return {
         "conversation_id": conversation_id,
@@ -256,7 +285,7 @@ class TranslateBatchRequest(BaseModel):
 async def translate_batch(req: TranslateBatchRequest, user_id: int = Depends(get_current_user_id)):
     if req.target == "en" or not req.texts:
         return {"translated": req.texts}
-    return {"translated": translate_texts(req.texts, req.target)}
+    return {"translated": await asyncio.to_thread(translate_texts, req.texts, req.target)}
 
 # ---------- conversations ----------
 

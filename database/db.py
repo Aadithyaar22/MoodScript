@@ -1,15 +1,46 @@
 import os
 import psycopg2
 import psycopg2.extras
+import psycopg2.pool
 from datetime import datetime, timezone
 from cryptography.fernet import Fernet
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 _fernet = Fernet(os.getenv("MESSAGE_ENCRYPTION_KEY"))
 
+_pool = None
+
+def _get_pool():
+    global _pool
+    if _pool is None:
+        _pool = psycopg2.pool.ThreadedConnectionPool(
+            1, 20, DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor,
+        )
+    return _pool
+
 def _connect():
-    conn = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
+    """Borrow a connection from the pool, discarding it and getting a fresh one if
+    Neon has silently closed it server-side while it sat idle — psycopg2's pool
+    doesn't detect that on its own, so a stale connection would otherwise surface
+    as an OperationalError on the caller's first query."""
+    pool = _get_pool()
+    conn = pool.getconn()
+    if conn.closed:
+        pool.putconn(conn, close=True)
+        return pool.getconn()
+    try:
+        with conn.cursor() as c:
+            c.execute("SELECT 1")
+        conn.rollback()  # the ping opened a transaction — clear it before handing the connection off
+    except psycopg2.Error:
+        pool.putconn(conn, close=True)
+        conn = pool.getconn()
     return conn
+
+def _release(conn):
+    """Return a connection to the pool instead of closing the socket outright —
+    every db call used to pay a fresh TCP+TLS+auth handshake against Neon."""
+    _get_pool().putconn(conn, close=conn.closed != 0)
 
 def _now():
     return datetime.now(timezone.utc).isoformat()
@@ -76,7 +107,7 @@ class MoodDatabase:
             )
         """)
         conn.commit()
-        conn.close()
+        _release(conn)
 
     # ---------- users ----------
     def create_user(self, username: str, password_hash: str = None, google_id: str = None) -> int:
@@ -88,7 +119,7 @@ class MoodDatabase:
         )
         user_id = c.fetchone()["id"]
         conn.commit()
-        conn.close()
+        _release(conn)
         return user_id
 
     def get_user_by_username(self, username: str):
@@ -96,7 +127,7 @@ class MoodDatabase:
         c = conn.cursor()
         c.execute("SELECT * FROM users WHERE username = %s", (username,))
         row = c.fetchone()
-        conn.close()
+        _release(conn)
         return dict(row) if row else None
 
     def get_user_by_google_id(self, google_id: str):
@@ -104,7 +135,7 @@ class MoodDatabase:
         c = conn.cursor()
         c.execute("SELECT * FROM users WHERE google_id = %s", (google_id,))
         row = c.fetchone()
-        conn.close()
+        _release(conn)
         return dict(row) if row else None
 
     def link_google_id(self, user_id: int, google_id: str):
@@ -112,14 +143,14 @@ class MoodDatabase:
         c = conn.cursor()
         c.execute("UPDATE users SET google_id = %s WHERE id = %s", (google_id, user_id))
         conn.commit()
-        conn.close()
+        _release(conn)
 
     def get_user_by_id(self, user_id: int):
         conn = _connect()
         c = conn.cursor()
         c.execute("SELECT * FROM users WHERE id = %s", (user_id,))
         row = c.fetchone()
-        conn.close()
+        _release(conn)
         return dict(row) if row else None
 
     # ---------- conversations ----------
@@ -132,7 +163,7 @@ class MoodDatabase:
         )
         conv_id = c.fetchone()["id"]
         conn.commit()
-        conn.close()
+        _release(conn)
         return conv_id
 
     def get_conversation(self, conversation_id: int, user_id: int):
@@ -140,7 +171,7 @@ class MoodDatabase:
         c = conn.cursor()
         c.execute("SELECT * FROM conversations WHERE id = %s AND user_id = %s", (conversation_id, user_id))
         row = c.fetchone()
-        conn.close()
+        _release(conn)
         return dict(row) if row else None
 
     def set_conversation_persona(self, conversation_id: int, persona_id: int):
@@ -148,7 +179,7 @@ class MoodDatabase:
         c = conn.cursor()
         c.execute("UPDATE conversations SET persona_id = %s WHERE id = %s", (persona_id, conversation_id))
         conn.commit()
-        conn.close()
+        _release(conn)
 
     def delete_conversation(self, conversation_id: int, user_id: int):
         conn = _connect()
@@ -156,7 +187,7 @@ class MoodDatabase:
         c.execute("DELETE FROM messages WHERE conversation_id = %s AND user_id = %s", (conversation_id, user_id))
         c.execute("DELETE FROM conversations WHERE id = %s AND user_id = %s", (conversation_id, user_id))
         conn.commit()
-        conn.close()
+        _release(conn)
 
     def list_conversations(self, user_id: int, limit: int = 50):
         conn = _connect()
@@ -172,7 +203,7 @@ class MoodDatabase:
             LIMIT %s
         """, (user_id, limit))
         rows = c.fetchall()
-        conn.close()
+        _release(conn)
         results = [dict(r) for r in rows]
         for r in results:
             r["opening_line"] = _decrypt(r["opening_line"])
@@ -192,7 +223,7 @@ class MoodDatabase:
         """, (conversation_id, user_id, role, _encrypt(content), emotion, confidence, face_emotion,
               clinical_tone, resolution_reason, int(crisis_flag), _now()))
         conn.commit()
-        conn.close()
+        _release(conn)
 
     def get_conversation_messages(self, conversation_id: int, user_id: int):
         conn = _connect()
@@ -201,7 +232,7 @@ class MoodDatabase:
             SELECT * FROM messages WHERE conversation_id = %s AND user_id = %s ORDER BY id ASC
         """, (conversation_id, user_id))
         rows = c.fetchall()
-        conn.close()
+        _release(conn)
         results = [dict(r) for r in rows]
         for r in results:
             r["content"] = _decrypt(r["content"])
@@ -224,7 +255,7 @@ class MoodDatabase:
                 ORDER BY created_at DESC LIMIT %s
             """, (user_id, limit))
         rows = c.fetchall()
-        conn.close()
+        _release(conn)
         results = [dict(r) for r in rows]
         for r in results:
             r["content"] = _decrypt(r["content"])
@@ -236,7 +267,7 @@ class MoodDatabase:
         c = conn.cursor()
         c.execute("SELECT * FROM reflections WHERE user_id = %s AND week_key = %s", (user_id, week_key))
         row = c.fetchone()
-        conn.close()
+        _release(conn)
         if not row:
             return None
         result = dict(row)
@@ -252,7 +283,7 @@ class MoodDatabase:
             ON CONFLICT (user_id, week_key) DO UPDATE SET content=excluded.content, entry_count=excluded.entry_count
         """, (user_id, week_key, _encrypt(content), entry_count, _now()))
         conn.commit()
-        conn.close()
+        _release(conn)
 
     # ---------- account ----------
     def delete_user_data(self, user_id: int):
@@ -263,7 +294,7 @@ class MoodDatabase:
         c.execute("DELETE FROM reflections WHERE user_id = %s", (user_id,))
         c.execute("DELETE FROM users WHERE id = %s", (user_id,))
         conn.commit()
-        conn.close()
+        _release(conn)
 
     def get_history(self, user_id: int, limit: int = 30) -> list:
         """Flat mood-log view (most recent first) shaped for the existing dashboard/sidebar UI."""
