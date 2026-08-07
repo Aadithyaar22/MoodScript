@@ -52,7 +52,7 @@ export default function ChatReply({ result, onShowXAI, lang = "en" }) {
           }}>{loadingSpeech ? '…' : speaking ? '◼' : '🔊'}</button>
         )}
       </div>
-      <p className="serif" style={{ fontSize: 18, fontWeight: 300, lineHeight: 1.8, color: 'var(--violet-soft-text)', fontStyle: 'italic' }}>
+      <p className="chat-body" style={{ fontSize: 17 }}>
         {response}
       </p>
     </div>

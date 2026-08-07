@@ -24,6 +24,7 @@
   --violet-bright: #b39dff;
   --violet-text: #c4a8f0;
   --violet-soft-text: #d4cef0;
+  --chat-text: #ddd8f5;
   --cyan: #3dd9c8;
   --gold: #e2b94b;
   --rose: #e06b8b;
@@ -48,6 +49,7 @@
   --violet-bright: #6f4fc9;
   --violet-text: #6b46b3;
   --violet-soft-text: #5d4a8c;
+  --chat-text: #3a2f5c;
   --cyan: #168274;
   --gold: #976d1c;
   --rose: #c23a5f;
@@ -124,6 +126,22 @@ body {
    roman-numeral-looking glyph — streak counts and rating scores read as "I"/"II". */
 .serif { font-family:'Cormorant Garamond',Georgia,serif;font-variant-numeric:lining-nums;font-feature-settings:"lnum" 1; }
 .mono  { font-family:'DM Mono',monospace; }
+
+/* ---- Chat reading type (scoped to the chat only, for now) --------------------
+   Cormorant Garamond is a display face: at 300 weight in italic its strokes went
+   thin enough to wash out, worst in light mode. Lora is designed for body text —
+   same warm, letter-like feel, far more solid at reading size. Upright rather
+   than italic, since italic across a whole paragraph is measurably harder to
+   read. Change --chat-face here to try a different one without touching JSX. */
+:root { --chat-face:'Lora', Georgia, serif; }
+.chat-body {
+  font-family:var(--chat-face);
+  font-weight:400;
+  font-style:normal;
+  line-height:1.75;
+  color:var(--chat-text);
+  letter-spacing:0.005em;
+}
 
 @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
 @keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }

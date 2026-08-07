@@ -296,7 +296,7 @@ export default function App() {
                         {m.imageBase64 && (
                           <img src={m.imageBase64} alt="attached" style={{ width:64, height:64, objectFit:'cover', borderRadius:10 }}/>
                         )}
-                        <p style={{ fontSize:15, color:'var(--text-primary)', lineHeight:1.6, fontWeight:300 }}>{m.text}</p>
+                        <p style={{ fontSize:15, color:'var(--text-primary)', lineHeight:1.65, fontWeight:400 }}>{m.text}</p>
                       </div>
                     </div>
                   ) : (
