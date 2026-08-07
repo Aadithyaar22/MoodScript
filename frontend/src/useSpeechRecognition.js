@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from "react"
 import { speechLangCode } from "./i18n"
+import { synthesizeSpeech } from "./api"
 
 export function useSpeechRecognition(lang, onResult) {
   const [isListening, setIsListening] = useState(false)
@@ -83,17 +84,42 @@ export function formatElapsed(seconds) {
   return `${m}:${String(s).padStart(2, "0")}`
 }
 
-export function speak(text, lang) {
-  if (typeof window === "undefined" || !window.speechSynthesis) return
+let currentAudio = null
+
+function speakWithBrowserVoice(text, lang, onEnd) {
+  if (typeof window === "undefined" || !window.speechSynthesis) { onEnd?.(); return }
   window.speechSynthesis.cancel()
   const utterance = new SpeechSynthesisUtterance(text)
   utterance.lang = speechLangCode(lang)
   const voices = window.speechSynthesis.getVoices()
   const match = voices.find(v => v.lang === utterance.lang) || voices.find(v => v.lang?.startsWith(lang))
   if (match) utterance.voice = match
+  utterance.onend = () => onEnd?.()
+  utterance.onerror = () => onEnd?.()
   window.speechSynthesis.speak(utterance)
 }
 
+// Cloud TTS (Neural2/Wavenet voices, prosody tuned to the detected emotion) is the
+// primary path — falls back to the browser's built-in voice only if the request fails,
+// so the feature still works offline or if the backend is unreachable.
+export async function speak(text, lang, emotion = "neutral", onEnd) {
+  stopSpeaking()
+  try {
+    const url = await synthesizeSpeech(text, lang, emotion)
+    const audio = new Audio(url)
+    currentAudio = audio
+    audio.onended = () => { URL.revokeObjectURL(url); onEnd?.() }
+    audio.onerror = () => { URL.revokeObjectURL(url); speakWithBrowserVoice(text, lang, onEnd) }
+    await audio.play()
+  } catch {
+    speakWithBrowserVoice(text, lang, onEnd)
+  }
+}
+
 export function stopSpeaking() {
+  if (currentAudio) {
+    currentAudio.pause()
+    currentAudio = null
+  }
   if (typeof window !== "undefined" && window.speechSynthesis) window.speechSynthesis.cancel()
 }

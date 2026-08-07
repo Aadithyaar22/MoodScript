@@ -16,22 +16,20 @@ export default function ChatReply({ result, onShowXAI, lang = "en" }) {
   const { unified_emotion, unified_confidence, response } = result
   const cfg = EMOTION_CONFIG[unified_emotion] || EMOTION_CONFIG.neutral
   const [speaking, setSpeaking] = useState(false)
+  const [loadingSpeech, setLoadingSpeech] = useState(false)
   const speechSupported = typeof window !== "undefined" && !!window.speechSynthesis
 
-  const toggleSpeak = () => {
-    if (speaking) {
+  const toggleSpeak = async () => {
+    if (speaking || loadingSpeech) {
       stopSpeaking()
       setSpeaking(false)
+      setLoadingSpeech(false)
       return
     }
-    speak(response, lang)
+    setLoadingSpeech(true)
+    await speak(response, lang, unified_emotion, () => setSpeaking(false))
+    setLoadingSpeech(false)
     setSpeaking(true)
-    const check = setInterval(() => {
-      if (!window.speechSynthesis.speaking) {
-        setSpeaking(false)
-        clearInterval(check)
-      }
-    }, 300)
   }
 
   return (
@@ -47,10 +45,11 @@ export default function ChatReply({ result, onShowXAI, lang = "en" }) {
           }}>{t(lang, "why")}</button>
         )}
         {speechSupported && (
-          <button onClick={toggleSpeak} title="Listen" style={{
+          <button onClick={toggleSpeak} title="Listen" disabled={loadingSpeech} style={{
             fontSize: 11, color: speaking ? '#e06b6b' : 'var(--text-muted)', background: 'none', border: 'none',
-            cursor: 'pointer', padding: 0, marginLeft: 2,
-          }}>{speaking ? '◼' : '🔊'}</button>
+            cursor: loadingSpeech ? 'default' : 'pointer', padding: 0, marginLeft: 2,
+            opacity: loadingSpeech ? 0.5 : 1,
+          }}>{loadingSpeech ? '…' : speaking ? '◼' : '🔊'}</button>
         )}
       </div>
       <p className="serif" style={{ fontSize: 17, fontWeight: 300, lineHeight: 1.8, color: 'var(--violet-soft-text)', fontStyle: 'italic' }}>

@@ -61,6 +61,11 @@ export async function translateBatch(texts, target) {
   return data.translated
 }
 
+export async function synthesizeSpeech(text, lang = "en", emotion = "neutral") {
+  const { data } = await client.post("/speak", { text, lang, emotion }, { responseType: "blob" })
+  return URL.createObjectURL(data)
+}
+
 export async function fetchHistory() {
   const { data } = await client.get("/history")
   return data

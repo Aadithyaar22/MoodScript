@@ -9,6 +9,7 @@ psycopg2-binary
 cryptography
 google-auth
 google-cloud-translate
+google-cloud-texttospeech
 requests
 httpx
 reportlab

@@ -14,6 +14,7 @@ from models.crisis import assess_crisis
 from models.rating import compute_rating, summarize_history
 from models.report import build_doctor_report, build_doctor_report_pdf
 from models.translate import translate_text, translate_texts
+from models.tts import synthesize_speech
 from database.db import MoodDatabase
 from auth import get_current_user_id, hash_password, verify_password, create_token
 from google.oauth2 import id_token as google_id_token
@@ -286,6 +287,18 @@ async def translate_batch(req: TranslateBatchRequest, user_id: int = Depends(get
     if req.target == "en" or not req.texts:
         return {"translated": req.texts}
     return {"translated": await asyncio.to_thread(translate_texts, req.texts, req.target)}
+
+class SpeakRequest(BaseModel):
+    text: str
+    lang: Optional[str] = "en"
+    emotion: Optional[str] = "neutral"
+
+@app.post("/speak")
+async def speak(req: SpeakRequest, user_id: int = Depends(get_current_user_id)):
+    if not req.text.strip():
+        raise HTTPException(status_code=400, detail="Text cannot be empty")
+    audio = await asyncio.to_thread(synthesize_speech, req.text[:2000], req.lang or "en", req.emotion or "neutral")
+    return Response(content=audio, media_type="audio/mpeg")
 
 # ---------- conversations ----------
 
