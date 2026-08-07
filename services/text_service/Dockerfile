@@ -12,10 +12,22 @@ RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/wh
     && pip install --no-cache-dir -r requirements.txt \
     && python -m spacy download en_core_web_sm
 
-COPY . .
-
 ENV HF_HOME=/app/.cache/huggingface
 RUN mkdir -p /app/.cache/huggingface && chmod -R 777 /app
+
+# Bake the model weights into the image instead of downloading them at container
+# startup — a cold start previously depended on HuggingFace Hub being reachable and
+# not rate-limiting us, and a 429 there meant the service could never start at all.
+RUN python -c "\
+from transformers import pipeline; \
+pipeline('text-classification', model='j-hartmann/emotion-english-distilroberta-base', top_k=None, device=-1); \
+pipeline('text-classification', model='SamLowe/roberta-base-go_emotions', top_k=3, device=-1)"
+
+# Weights are already baked in above — never touch the network for them again,
+# even just for a metadata/update check.
+ENV HF_HUB_OFFLINE=1
+
+COPY . .
 
 EXPOSE 8002
 
