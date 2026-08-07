@@ -71,11 +71,11 @@ export default function MoodGame({ onClose, lang = "en" }) {
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom: 20 }}>
           <div>
             <p className="serif" style={{ fontSize: 24, fontWeight: 400, color: 'var(--text-primary)' }}>{t(lang, "moodMatchTitle")}</p>
-            <p className="mono" style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.08em', marginTop: 3 }}>
+            <p className="mono" style={{ fontSize: 12, color: 'var(--text-muted)', letterSpacing: '0.08em', marginTop: 3 }}>
               {t(lang, "findAllPairs", CARDS.length)} · {t(lang, "movesCount", moves)}
             </p>
           </div>
-          <button onClick={onClose} style={{ background:'none', border:'none', color:'var(--text-muted)', fontSize:20, cursor:'pointer', lineHeight:1 }}>×</button>
+          <button onClick={onClose} style={{ background:'none', border:'none', color:'var(--text-muted)', fontSize:21, cursor:'pointer', lineHeight:1 }}>×</button>
         </div>
 
         {/* Progress */}
@@ -120,17 +120,17 @@ export default function MoodGame({ onClose, lang = "en" }) {
           <div className="animate-pop-in" style={{ textAlign: 'center', padding: '20px 0' }}>
             <p style={{ fontSize: 48, marginBottom: 12 }}>🎉</p>
             <p className="serif" style={{ fontSize: 26, color: 'var(--text-primary)', marginBottom: 6 }}>{t(lang, "youMatchedAll")}</p>
-            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>{t(lang, "completedInMoves", moves)}</p>
+            <p style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 20 }}>{t(lang, "completedInMoves", moves)}</p>
             <div style={{ display:'flex', gap:10, justifyContent:'center' }}>
               <button onClick={reset} style={{
                 padding: '10px 24px', borderRadius: 10, border: 'none', cursor: 'pointer',
                 background: 'linear-gradient(135deg, #8b6fd4, #3dd9c8)',
-                color: '#fff', fontSize: 13, fontFamily: 'DM Sans', fontWeight: 500,
+                color: '#fff', fontSize: 14, fontFamily: 'DM Sans', fontWeight: 500,
               }}>{t(lang, "playAgain")}</button>
               <button onClick={onClose} style={{
                 padding: '10px 24px', borderRadius: 10, cursor: 'pointer',
                 background: 'rgba(var(--surface-tint),0.06)', border: '1px solid rgba(var(--surface-tint),0.1)',
-                color: 'var(--text-secondary)', fontSize: 13, fontFamily: 'DM Sans',
+                color: 'var(--text-secondary)', fontSize: 14, fontFamily: 'DM Sans',
               }}>{t(lang, "close")}</button>
             </div>
           </div>
@@ -140,7 +140,7 @@ export default function MoodGame({ onClose, lang = "en" }) {
           <button onClick={reset} style={{
             width: '100%', marginTop: 16, padding: '10px', borderRadius: 10,
             background: 'rgba(var(--surface-tint),0.04)', border: '1px solid rgba(var(--surface-tint),0.08)',
-            color: 'var(--text-muted)', fontSize: 12, fontFamily: 'DM Mono',
+            color: 'var(--text-muted)', fontSize: 14, fontFamily: 'DM Mono',
             cursor: 'pointer', letterSpacing: '0.06em',
           }}>↺ {t(lang, "shuffleRestart")}</button>
         )}

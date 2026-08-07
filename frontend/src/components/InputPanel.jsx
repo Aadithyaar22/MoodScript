@@ -35,10 +35,10 @@ export default function InputPanel({ onAnalyze, loading, lang = "en" }) {
     <div className="glass" style={{ borderRadius: 20, padding: 28, display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
-          <label className="mono" style={{ fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+          <label className="mono" style={{ fontSize: 13, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
             {t(lang, "journalEntry")}
           </label>
-          <span className="mono" style={{ fontSize: 11, color: wordCount > 20 ? 'var(--cyan)' : 'var(--text-muted)' }}>
+          <span className="mono" style={{ fontSize: 13, color: wordCount > 20 ? 'var(--cyan)' : 'var(--text-muted)' }}>
             {wordCount} {t(lang, "words")}
           </span>
         </div>
@@ -48,7 +48,7 @@ export default function InputPanel({ onAnalyze, loading, lang = "en" }) {
             onChange={(e) => setText(e.target.value)}
             placeholder={t(lang, "journalPlaceholder")}
             rows={6}
-            style={{ width: '100%', borderRadius: 12, padding: '14px 16px', paddingRight: micSupported ? 48 : 16, fontSize: 15, lineHeight: 1.8, fontFamily: 'DM Sans, sans-serif', fontWeight: 300 }}
+            style={{ width: '100%', borderRadius: 12, padding: '14px 16px', paddingRight: micSupported ? 48 : 16, fontSize: 16, lineHeight: 1.8, fontFamily: 'DM Sans, sans-serif', fontWeight: 300 }}
           />
           {micSupported && (
             <button
@@ -59,7 +59,7 @@ export default function InputPanel({ onAnalyze, loading, lang = "en" }) {
                 position: 'absolute', top: 12, right: 12, width: 32, height: 32, borderRadius: '50%',
                 border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 background: isListening ? 'rgba(224,107,107,0.3)' : 'rgba(139,111,212,0.2)',
-                color: isListening ? '#e06b6b' : 'var(--violet-text)', fontSize: 15,
+                color: isListening ? 'var(--danger-text)' : 'var(--violet-text)', fontSize: 16,
                 boxShadow: isListening ? '0 0 0 4px rgba(224,107,107,0.15)' : 'none',
                 transition: 'all 0.2s ease',
               }}
@@ -73,29 +73,29 @@ export default function InputPanel({ onAnalyze, loading, lang = "en" }) {
             width: 'fit-content',
           }}>
             <span className="rec-dot" />
-            <span className="mono" style={{ fontSize: 11, color: '#e06b6b', letterSpacing: '0.04em' }}>
+            <span className="mono" style={{ fontSize: 13, color: 'var(--danger-text)', letterSpacing: '0.04em' }}>
               {t(lang, "recording")} · {formatElapsed(elapsedSeconds)}
             </span>
           </div>
         )}
         {wordCount > 0 && wordCount < 20 && (
-          <p style={{ fontSize: 12, color: 'var(--gold)', marginTop: 6, fontWeight: 300 }}>
+          <p style={{ fontSize: 14, color: 'var(--gold)', marginTop: 6, fontWeight: 300 }}>
             {t(lang, "longerEntries")}
           </p>
         )}
       </div>
 
       <div>
-        <label className="mono" style={{ fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: 10 }}>
+        <label className="mono" style={{ fontSize: 13, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: 10 }}>
           {t(lang, "faceImage")} <span style={{ color: 'var(--text-muted)', fontWeight: 300 }}>— {t(lang, "optional")}</span>
         </label>
         {preview ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <img src={preview} alt="preview" style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 10, border: '1px solid var(--border)' }} />
             <div>
-              <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{t(lang, "imageCaptured")}</p>
+              <p style={{ fontSize: 14, color: 'var(--text-secondary)' }}>{t(lang, "imageCaptured")}</p>
               <button onClick={() => { setImageBase64(null); setPreview(null) }}
-                style={{ fontSize: 12, color: 'var(--danger-text)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginTop: 2 }}>
+                style={{ fontSize: 14, color: 'var(--danger-text)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginTop: 2 }}>
                 {t(lang, "remove")}
               </button>
             </div>
@@ -129,7 +129,7 @@ export default function InputPanel({ onAnalyze, loading, lang = "en" }) {
             : 'rgba(var(--surface-tint),0.05)',
           border: '1px solid',
           borderColor: text.trim() && !loading ? 'transparent' : 'var(--border)',
-          borderRadius: 12, fontSize: 14, fontWeight: 500,
+          borderRadius: 12, fontSize: 15, fontWeight: 500,
           letterSpacing: '0.06em', textTransform: 'uppercase',
           color: text.trim() && !loading ? '#fff' : 'var(--text-muted)',
           cursor: text.trim() && !loading ? 'pointer' : 'not-allowed',
@@ -145,12 +145,12 @@ export default function InputPanel({ onAnalyze, loading, lang = "en" }) {
 }
 
 const btnPrimary = {
-  padding: '8px 20px', borderRadius: 8, fontSize: 13,
+  padding: '8px 20px', borderRadius: 8, fontSize: 14,
   background: 'rgba(123,94,167,0.3)', border: '1px solid rgba(123,94,167,0.5)',
   color: 'var(--violet-text)', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
 }
 const btnGhost = {
-  padding: '8px 18px', borderRadius: 8, fontSize: 13,
+  padding: '8px 18px', borderRadius: 8, fontSize: 14,
   background: 'rgba(var(--surface-tint),0.04)', border: '1px solid var(--border)',
   color: 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
   transition: 'border-color 0.2s ease',

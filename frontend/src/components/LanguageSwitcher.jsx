@@ -15,7 +15,7 @@ export default function LanguageSwitcher({ lang, onLangChange, style }) {
             padding: '5px 10px', borderRadius: 7, border: 'none', cursor: 'pointer',
             background: lang === l.code ? 'rgba(139,111,212,0.3)' : 'transparent',
             color: lang === l.code ? 'var(--text-primary)' : 'var(--text-muted)',
-            fontSize: 11, fontFamily: 'DM Sans, sans-serif',
+            fontSize: 13, fontFamily: 'DM Sans, sans-serif',
             fontWeight: lang === l.code ? 500 : 300,
             transition: 'all 0.2s ease',
           }}

@@ -23,14 +23,14 @@ function EmotionCard({ emotion, score, maxScore, words, isActive, onClick }) {
       boxShadow: isActive ? `0 0 24px ${color}25` : 'none',
     }}>
       <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom: isActive ? 12 : 0 }}>
-        <span style={{ fontSize:20 }}>{EMOTION_EMOJI[emotion] || '○'}</span>
+        <span style={{ fontSize:21 }}>{EMOTION_EMOJI[emotion] || '○'}</span>
         <div style={{ flex:1 }}>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', marginBottom:6 }}>
-            <span style={{ fontSize:13, color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)', textTransform:'capitalize', fontWeight: isTop ? 500 : 300 }}>
+            <span style={{ fontSize:14, color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)', textTransform:'capitalize', fontWeight: isTop ? 500 : 300 }}>
               {emotion}
-              {isTop && <span className="mono" style={{ fontSize:9, color, marginLeft:8, letterSpacing:'0.08em' }}>TOP</span>}
+              {isTop && <span className="mono" style={{ fontSize:11, color, marginLeft:8, letterSpacing:'0.08em' }}>TOP</span>}
             </span>
-            <span className="mono" style={{ fontSize:12, color }}>{(score*100).toFixed(0)}%</span>
+            <span className="mono" style={{ fontSize:14, color }}>{(score*100).toFixed(0)}%</span>
           </div>
           <div style={{ height:4, background:'rgba(var(--surface-tint),0.06)', borderRadius:2, overflow:'hidden' }}>
             <div style={{
@@ -41,12 +41,12 @@ function EmotionCard({ emotion, score, maxScore, words, isActive, onClick }) {
             }}/>
           </div>
         </div>
-        <span style={{ fontSize:11, color:'var(--text-muted)', transform: isActive ? 'rotate(180deg)' : 'none', transition:'transform 0.2s' }}>▾</span>
+        <span style={{ fontSize:13, color:'var(--text-muted)', transform: isActive ? 'rotate(180deg)' : 'none', transition:'transform 0.2s' }}>▾</span>
       </div>
 
       {isActive && words && words.length > 0 && (
         <div className="animate-fade-up">
-          <p className="mono" style={{ fontSize:9, color:'var(--text-muted)', letterSpacing:'0.1em', marginBottom:10 }}>
+          <p className="mono" style={{ fontSize:11, color:'var(--text-muted)', letterSpacing:'0.1em', marginBottom:10 }}>
             WORDS DRIVING THIS EMOTION
           </p>
           <div style={{ display:'flex', flexWrap:'wrap', gap:7 }}>
@@ -57,23 +57,23 @@ function EmotionCard({ emotion, score, maxScore, words, isActive, onClick }) {
                 background: w.direction === 'positive' ? `${color}20` : 'rgba(224,107,107,0.15)',
                 border: `1px solid ${w.direction === 'positive' ? color+'45' : 'rgba(224,107,107,0.35)'}`,
               }}>
-                <span style={{ fontSize:11, color: w.direction === 'positive' ? color : '#e06b6b', fontFamily:'DM Mono', fontWeight:500 }}>
+                <span style={{ fontSize:13, color: w.direction === 'positive' ? color : 'var(--danger-text)', fontFamily:'DM Mono', fontWeight:500 }}>
                   {w.word}
                 </span>
-                <span style={{ fontSize:9, color: w.direction === 'positive' ? color : '#e06b6b', opacity:0.8 }}>
+                <span style={{ fontSize:11, color: w.direction === 'positive' ? color : 'var(--danger-text)', opacity:0.8 }}>
                   {w.direction === 'positive' ? '▲' : '▼'}
                 </span>
               </div>
             ))}
           </div>
-          <p className="mono" style={{ fontSize:9, color:'var(--text-muted)', marginTop:10, lineHeight:1.6 }}>
+          <p className="mono" style={{ fontSize:11, color:'var(--text-muted)', marginTop:10, lineHeight:1.6 }}>
             ▲ pushes toward {emotion} · ▼ works against it
           </p>
         </div>
       )}
 
       {isActive && (!words || words.length === 0) && (
-        <p style={{ fontSize:12, color:'var(--text-muted)', fontStyle:'italic', marginTop:8 }}>
+        <p style={{ fontSize:14, color:'var(--text-muted)', fontStyle:'italic', marginTop:8 }}>
           No word-level data for this emotion.
         </p>
       )}
@@ -137,14 +137,14 @@ export default function XAIDrawer({ xai, textResult, faceResult, fusionResult, o
         <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between' }}>
           <div>
             <h2 className="serif" style={{ fontSize:28, fontWeight:400, color:'var(--text-primary)' }}>Explainability</h2>
-            <p className="mono" style={{ fontSize:10, color:'var(--text-muted)', letterSpacing:'0.08em', marginTop:4 }}>
+            <p className="mono" style={{ fontSize:12, color:'var(--text-muted)', letterSpacing:'0.08em', marginTop:4 }}>
               WHAT DROVE THE PREDICTION
             </p>
           </div>
           <button onClick={onClose} style={{
             background:'rgba(var(--surface-tint),0.06)', border:'1px solid rgba(var(--surface-tint),0.1)',
             borderRadius:8, width:32, height:32, cursor:'pointer',
-            color:'var(--text-muted)', fontSize:16, display:'flex',
+            color:'var(--text-muted)', fontSize:17, display:'flex',
             alignItems:'center', justifyContent:'center',
           }}>×</button>
         </div>
@@ -156,10 +156,10 @@ export default function XAIDrawer({ xai, textResult, faceResult, fusionResult, o
             background:'rgba(139,111,212,0.08)',
             borderLeft:'2px solid rgba(139,111,212,0.7)',
           }}>
-            <p className="mono" style={{ fontSize:9, color:'var(--text-muted)', letterSpacing:'0.1em', marginBottom:10 }}>
+            <p className="mono" style={{ fontSize:11, color:'var(--text-muted)', letterSpacing:'0.1em', marginBottom:10 }}>
               HIGHEST EMOTION SENTENCE
             </p>
-            <p className="serif" style={{ fontSize:17, fontStyle:'italic', color:'var(--violet-soft-text)', lineHeight:1.75 }}>
+            <p className="serif" style={{ fontSize:18, fontStyle:'italic', color:'var(--violet-soft-text)', lineHeight:1.75 }}>
               "{xai.key_sentence}"
             </p>
           </div>
@@ -172,21 +172,21 @@ export default function XAIDrawer({ xai, textResult, faceResult, fusionResult, o
             background:'rgba(61,217,200,0.08)', border:'1px solid rgba(61,217,200,0.2)',
             display:'flex', gap:10, alignItems:'flex-start',
           }}>
-            <span style={{ fontSize:14, flexShrink:0 }}>⚡</span>
-            <p style={{ fontSize:12, color:'var(--cyan)', lineHeight:1.6 }}>{resolution}</p>
+            <span style={{ fontSize:15, flexShrink:0 }}>⚡</span>
+            <p style={{ fontSize:14, color:'var(--cyan)', lineHeight:1.6 }}>{resolution}</p>
           </div>
         )}
 
         {/* Fusion weights */}
         {fusionResult?.modalities_used?.length > 1 && (
           <div>
-            <p className="mono" style={{ fontSize:9, color:'var(--text-muted)', letterSpacing:'0.1em', marginBottom:12 }}>
+            <p className="mono" style={{ fontSize:11, color:'var(--text-muted)', letterSpacing:'0.1em', marginBottom:12 }}>
               FUSION WEIGHTS
             </p>
             <div style={{ display:'flex', gap:10 }}>
               {[
-                { label:'Text', weight: fusionResult.text_weight, color:'#b39dff' },
-                { label:'Face', weight: fusionResult.face_weight, color:'#3dd9c8' },
+                { label:'Text', weight: fusionResult.text_weight, color:'var(--violet-bright)' },
+                { label:'Face', weight: fusionResult.face_weight, color:'var(--cyan)' },
               ].map(m => (
                 <div key={m.label} style={{
                   flex:1, padding:'12px', borderRadius:12,
@@ -194,7 +194,7 @@ export default function XAIDrawer({ xai, textResult, faceResult, fusionResult, o
                   textAlign:'center',
                 }}>
                   <p className="serif" style={{ fontSize:24, fontWeight:700, color:m.color }}>{(m.weight*100).toFixed(0)}%</p>
-                  <p className="mono" style={{ fontSize:9, color:'var(--text-muted)', marginTop:4, letterSpacing:'0.08em' }}>{m.label.toUpperCase()} MODEL</p>
+                  <p className="mono" style={{ fontSize:11, color:'var(--text-muted)', marginTop:4, letterSpacing:'0.08em' }}>{m.label.toUpperCase()} MODEL</p>
                 </div>
               ))}
             </div>
@@ -203,7 +203,7 @@ export default function XAIDrawer({ xai, textResult, faceResult, fusionResult, o
 
         {/* Text model emotion cards */}
         <div>
-          <p className="mono" style={{ fontSize:9, color:'var(--text-muted)', letterSpacing:'0.1em', marginBottom:12 }}>
+          <p className="mono" style={{ fontSize:11, color:'var(--text-muted)', letterSpacing:'0.1em', marginBottom:12 }}>
             TEXT MODEL · click an emotion to see what drove it
           </p>
           <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
@@ -224,7 +224,7 @@ export default function XAIDrawer({ xai, textResult, faceResult, fusionResult, o
         {/* Face model cards */}
         {faceResult && Object.keys(faceScores).length > 0 && (
           <div>
-            <p className="mono" style={{ fontSize:9, color:'var(--text-muted)', letterSpacing:'0.1em', marginBottom:12 }}>
+            <p className="mono" style={{ fontSize:11, color:'var(--text-muted)', letterSpacing:'0.1em', marginBottom:12 }}>
               FACE MODEL
             </p>
             <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
@@ -245,7 +245,7 @@ export default function XAIDrawer({ xai, textResult, faceResult, fusionResult, o
 
         {/* Fused output */}
         <div>
-          <p className="mono" style={{ fontSize:9, color:'var(--text-muted)', letterSpacing:'0.1em', marginBottom:12 }}>
+          <p className="mono" style={{ fontSize:11, color:'var(--text-muted)', letterSpacing:'0.1em', marginBottom:12 }}>
             FUSED OUTPUT
           </p>
           <div style={{ display:'flex', flexDirection:'column', gap:8 }}>

@@ -22,7 +22,7 @@ function AnimatedBar({ emotion, score, maxScore, delay = 0 }) {
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-      <span className="mono" style={{ fontSize: 11, color: 'var(--text-muted)', width: 72, textTransform: 'capitalize' }}>
+      <span className="mono" style={{ fontSize: 13, color: 'var(--text-muted)', width: 72, textTransform: 'capitalize' }}>
         {emotion}
       </span>
       <div style={{ flex: 1, height: 4, background: 'rgba(var(--surface-tint),0.06)', borderRadius: 2, overflow: 'hidden' }}>
@@ -33,7 +33,7 @@ function AnimatedBar({ emotion, score, maxScore, delay = 0 }) {
           width: 0,
         }} />
       </div>
-      <span className="mono" style={{ fontSize: 11, color: 'var(--text-muted)', width: 32, textAlign: 'right' }}>
+      <span className="mono" style={{ fontSize: 13, color: 'var(--text-muted)', width: 32, textAlign: 'right' }}>
         {(score * 100).toFixed(0)}%
       </span>
     </div>
@@ -58,7 +58,7 @@ export default function XAIPanel({ xai, textResult, faceResult, fusionResult }) 
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
         <div>
           <h3 className="serif" style={{ fontSize: 22, fontWeight: 400, color: 'var(--text-primary)' }}>Explainability</h3>
-          <p className="mono" style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.06em', marginTop: 2 }}>
+          <p className="mono" style={{ fontSize: 13, color: 'var(--text-muted)', letterSpacing: '0.06em', marginTop: 2 }}>
             What drove the prediction
           </p>
         </div>
@@ -66,9 +66,9 @@ export default function XAIPanel({ xai, textResult, faceResult, fusionResult }) 
           <div style={{ display: 'flex', gap: 6 }}>
             {fusionResult.modalities_used.map(m => (
               <span key={m} className="mono" style={{
-                fontSize: 10, padding: '3px 10px', borderRadius: 20,
+                fontSize: 12, padding: '3px 10px', borderRadius: 20,
                 background: 'rgba(78,205,196,0.1)', border: '1px solid rgba(78,205,196,0.3)',
-                color: '#4ecdc4', letterSpacing: '0.08em', textTransform: 'uppercase'
+                color: 'var(--cyan)', letterSpacing: '0.08em', textTransform: 'uppercase'
               }}>{m}</span>
             ))}
           </div>
@@ -81,10 +81,10 @@ export default function XAIPanel({ xai, textResult, faceResult, fusionResult }) 
           padding: '16px 20px', borderRadius: 12,
           background: 'rgba(123,94,167,0.08)', borderLeft: '2px solid rgba(123,94,167,0.6)',
         }}>
-          <p className="mono" style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: 8 }}>
+          <p className="mono" style={{ fontSize: 12, color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: 8 }}>
             KEY SENTENCE
           </p>
-          <p className="serif" style={{ fontSize: 16, fontStyle: 'italic', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+          <p className="serif" style={{ fontSize: 17, fontStyle: 'italic', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
             "{xai.key_sentence}"
           </p>
         </div>
@@ -93,13 +93,13 @@ export default function XAIPanel({ xai, textResult, faceResult, fusionResult }) 
       {/* Word drivers */}
       {xai.top_words?.length > 0 && (
         <div>
-          <p className="mono" style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: 12 }}>
+          <p className="mono" style={{ fontSize: 12, color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: 12 }}>
             WORD ATTRIBUTION
           </p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {xai.top_words.map((w, i) => (
               <span key={i} className="mono" style={{
-                fontSize: 12, padding: '5px 14px', borderRadius: 8,
+                fontSize: 14, padding: '5px 14px', borderRadius: 8,
                 background: w.direction === 'positive' ? 'rgba(123,94,167,0.15)' : 'rgba(205,78,78,0.1)',
                 border: `1px solid ${w.direction === 'positive' ? 'rgba(123,94,167,0.4)' : 'rgba(205,78,78,0.3)'}`,
                 color: w.direction === 'positive' ? 'var(--violet-text)' : 'var(--danger-text)',
@@ -109,7 +109,7 @@ export default function XAIPanel({ xai, textResult, faceResult, fusionResult }) 
               </span>
             ))}
           </div>
-          <p className="mono" style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 8, letterSpacing: '0.04em' }}>
+          <p className="mono" style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8, letterSpacing: '0.04em' }}>
             ↑ increases emotion signal · ↓ decreases emotion signal
           </p>
         </div>
@@ -118,7 +118,7 @@ export default function XAIPanel({ xai, textResult, faceResult, fusionResult }) 
       {/* Confidence bars */}
       <div style={{ display: 'grid', gridTemplateColumns: faceResult ? '1fr 1fr' : '1fr', gap: 28 }}>
         <div>
-          <p className="mono" style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: 14 }}>
+          <p className="mono" style={{ fontSize: 12, color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: 14 }}>
             TEXT MODEL
             {fusionResult && <span style={{ color: 'var(--violet-bright)', marginLeft: 8 }}>{((fusionResult.text_weight||0.55)*100).toFixed(0)}%</span>}
           </p>
@@ -131,7 +131,7 @@ export default function XAIPanel({ xai, textResult, faceResult, fusionResult }) 
 
         {faceResult && (
           <div>
-            <p className="mono" style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: 14 }}>
+            <p className="mono" style={{ fontSize: 12, color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: 14 }}>
               FACE MODEL
               {fusionResult && <span style={{ color: 'var(--cyan)', marginLeft: 8 }}>{((fusionResult.face_weight||0.45)*100).toFixed(0)}%</span>}
             </p>
@@ -146,7 +146,7 @@ export default function XAIPanel({ xai, textResult, faceResult, fusionResult }) 
 
       {/* Fused */}
       <div style={{ paddingTop: 20, borderTop: '1px solid var(--border)' }}>
-        <p className="mono" style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: 14 }}>
+        <p className="mono" style={{ fontSize: 12, color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: 14 }}>
           FUSED OUTPUT
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

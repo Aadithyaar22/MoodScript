@@ -132,15 +132,15 @@ function TipCard({ tip, color, isOpen, onToggle }) {
       border: `1px solid ${isOpen ? color+'50' : 'rgba(var(--surface-tint),0.07)'}`,
       transition: 'all 0.25s ease',
     }}>
-      <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-        <span style={{ fontSize:16, flexShrink:0 }}>{tip.icon}</span>
-        <p style={{ fontSize:12, color: isOpen ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight:400, flex:1 }}>{tip.title}</p>
-        <span style={{ fontSize:10, color, transition:'transform 0.2s', display:'inline-block', transform: isOpen ? 'rotate(180deg)' : 'none' }}>▾</span>
+      <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+        <span style={{ fontSize:15, flexShrink:0 }}>{tip.icon}</span>
+        <p style={{ fontSize:13, lineHeight:1.35, color: isOpen ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight:400, flex:1, minWidth:0 }}>{tip.title}</p>
+        <span style={{ fontSize:11, color, flexShrink:0, transition:'transform 0.2s', display:'inline-block', transform: isOpen ? 'rotate(180deg)' : 'none' }}>▾</span>
       </div>
       {isOpen && (
         <p className="animate-fade-up" style={{
-          fontSize:12, color:'var(--text-secondary)', lineHeight:1.7, marginTop:9,
-          paddingTop:9, borderTop:`1px solid ${color}28`, fontWeight:300,
+          fontSize:13, color:'var(--text-secondary)', lineHeight:1.65, marginTop:9,
+          paddingTop:9, borderTop:`1px solid ${color}28`, fontWeight:400,
         }}>{tip.detail}</p>
       )}
     </div>
@@ -228,13 +228,13 @@ export default function RightPanel({ result, loading, history, lang = "en" }) {
     <>
       {showGame && <MoodGame onClose={() => setShowGame(false)} lang={lang} />}
 
-      <aside style={{ padding:'28px 14px', display:'flex', flexDirection:'column', gap:14, overflowY:'auto', maxHeight:'100vh' }}>
+      <aside className="app-rightpanel" style={{ padding:'28px 14px', display:'flex', flexDirection:'column', gap:14, overflowY:'auto', maxHeight:'100vh' }}>
 
         {/* Emotion radar */}
         <div className="glass" style={{ borderRadius:18, padding:'18px 16px', display:'flex', flexDirection:'column', alignItems:'center', gap:14, border: result ? `1px solid ${color}35` : undefined }}>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', width:'100%' }}>
-            <p className="mono" style={{ fontSize:9, color:'var(--text-muted)', letterSpacing:'0.12em' }}>{t(lang, "emotionRadar")}</p>
-            {result && <span className="mono" style={{ fontSize:10, color, letterSpacing:'0.06em' }}>{(confidence*100).toFixed(0)}%</span>}
+            <p className="mono" style={{ fontSize:11, color:'var(--text-muted)', letterSpacing:'0.12em' }}>{t(lang, "emotionRadar")}</p>
+            {result && <span className="mono" style={{ fontSize:12, color, letterSpacing:'0.06em' }}>{(confidence*100).toFixed(0)}%</span>}
           </div>
 
           {result && !loading ? (
@@ -243,7 +243,7 @@ export default function RightPanel({ result, loading, history, lang = "en" }) {
               <div style={{ width:'100%', display:'flex', flexDirection:'column', gap:8 }}>
                 {topThree.map(([e,s]) => (
                   <div key={e} style={{ display:'flex', alignItems:'center', gap:8 }}>
-                    <span style={{ fontSize:10, color:'var(--text-muted)', width:56, textTransform:'capitalize', fontFamily:'DM Mono' }}>{t(lang, e)}</span>
+                    <span style={{ fontSize:12, color:'var(--text-muted)', width:56, textTransform:'capitalize', fontFamily:'DM Mono' }}>{t(lang, e)}</span>
                     <div style={{ flex:1, height:3, background:'rgba(var(--surface-tint),0.06)', borderRadius:2, overflow:'hidden' }}>
                       <div style={{
                         height:'100%', borderRadius:2, width:`${s*100}%`,
@@ -252,7 +252,7 @@ export default function RightPanel({ result, loading, history, lang = "en" }) {
                         transition:'width 1s cubic-bezier(0.22,1,0.36,1)',
                       }}/>
                     </div>
-                    <span className="mono" style={{ fontSize:10, color:'var(--text-muted)', width:26, textAlign:'right' }}>{(s*100).toFixed(0)}</span>
+                    <span className="mono" style={{ fontSize:12, color:'var(--text-muted)', width:26, textAlign:'right' }}>{(s*100).toFixed(0)}</span>
                   </div>
                 ))}
               </div>
@@ -260,7 +260,7 @@ export default function RightPanel({ result, loading, history, lang = "en" }) {
           ) : (
             <div style={{ padding:'16px 0', textAlign:'center', width:'100%' }}>
               <div style={{ width:72, height:72, borderRadius:'50%', margin:'0 auto 10px', background:'rgba(var(--surface-tint),0.03)', border:'2px dashed rgba(var(--surface-tint),0.08)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:24, opacity:0.4 }}>○</div>
-              <p style={{ fontSize:11, color:'var(--text-muted)', fontStyle:'italic' }}>{t(lang, "analyseFirstEntry")}</p>
+              <p style={{ fontSize:13, color:'var(--text-muted)', fontStyle:'italic' }}>{t(lang, "analyseFirstEntry")}</p>
             </div>
           )}
         </div>
@@ -268,24 +268,24 @@ export default function RightPanel({ result, loading, history, lang = "en" }) {
         {/* Streak + total */}
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
           <div className="glass" style={{ borderRadius:14, padding:'13px 12px', borderLeft:'2px solid #e2b94b' }}>
-            <div style={{ fontSize:18, marginBottom:4 }}>🔥</div>
-            <p className="serif" style={{ fontSize:22, fontWeight:700, color:'#e2b94b', lineHeight:1 }}>{streak}</p>
-            <p className="mono" style={{ fontSize:9, color:'var(--text-muted)', marginTop:3, letterSpacing:'0.08em' }}>{t(lang, "dayStreak")}</p>
+            <div style={{ fontSize:19, marginBottom:4 }}>🔥</div>
+            <p className="serif" style={{ fontSize:22, fontWeight:700, color:'var(--gold)', lineHeight:1 }}>{streak}</p>
+            <p className="mono" style={{ fontSize:11, color:'var(--text-muted)', marginTop:3, letterSpacing:'0.04em', whiteSpace:'nowrap' }}>{t(lang, "dayStreak")}</p>
           </div>
           <div className="glass" style={{ borderRadius:14, padding:'13px 12px', borderLeft:'2px solid #b39dff' }}>
-            <div style={{ fontSize:18, marginBottom:4 }}>📓</div>
-            <p className="serif" style={{ fontSize:22, fontWeight:700, color:'#b39dff', lineHeight:1 }}>{history.length}</p>
-            <p className="mono" style={{ fontSize:9, color:'var(--text-muted)', marginTop:3, letterSpacing:'0.08em' }}>{t(lang, "total")}</p>
+            <div style={{ fontSize:19, marginBottom:4 }}>📓</div>
+            <p className="serif" style={{ fontSize:22, fontWeight:700, color:'var(--violet-bright)', lineHeight:1 }}>{history.length}</p>
+            <p className="mono" style={{ fontSize:11, color:'var(--text-muted)', marginTop:3, letterSpacing:'0.04em', whiteSpace:'nowrap' }}>{t(lang, "total")}</p>
           </div>
         </div>
 
         {/* Interactive wellness tips */}
         <div className="glass" style={{ borderRadius:18, padding:'16px 14px', border:`1px solid ${color}25` }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
-            <p className="mono" style={{ fontSize:9, color:'var(--text-muted)', letterSpacing:'0.12em' }}>
+            <p className="mono" style={{ fontSize:11, color:'var(--text-muted)', letterSpacing:'0.12em' }}>
               {result ? t(lang, emotion).toUpperCase() : t(lang, "wellnessTips")}
             </p>
-            <span style={{ fontSize:9, color, fontFamily:'DM Mono', opacity:0.8 }}>tap ↓</span>
+            <span style={{ fontSize:11, color, fontFamily:'DM Mono', opacity:0.8 }}>tap ↓</span>
           </div>
           <div style={{ display:'flex', flexDirection:'column', gap:7 }}>
             {displayTips.map((tip, i) => (
@@ -300,11 +300,11 @@ export default function RightPanel({ result, loading, history, lang = "en" }) {
           background:'linear-gradient(135deg, rgba(179,157,255,0.1), rgba(61,217,200,0.07))',
           border:'1px solid rgba(179,157,255,0.25)',
         }}>
-          <p className="mono" style={{ fontSize:9, color:'var(--text-muted)', letterSpacing:'0.12em', marginBottom:10 }}>✦ {t(lang, "quoteOfTheDay")}</p>
-          <p className="serif" style={{ fontSize:14, fontStyle:'italic', color:'var(--violet-soft-text)', lineHeight:1.75, fontWeight:300 }}>
+          <p className="mono" style={{ fontSize:11, color:'var(--text-muted)', letterSpacing:'0.12em', marginBottom:10 }}>✦ {t(lang, "quoteOfTheDay")}</p>
+          <p className="serif" style={{ fontSize:15, fontStyle:'italic', color:'var(--violet-soft-text)', lineHeight:1.75, fontWeight:300 }}>
             "{displayQuoteText}"
           </p>
-          <p className="mono" style={{ fontSize:9, color:'var(--text-muted)', marginTop:8, letterSpacing:'0.06em' }}>— {quote.author}</p>
+          <p className="mono" style={{ fontSize:11, color:'var(--text-muted)', marginTop:8, letterSpacing:'0.06em' }}>— {quote.author}</p>
         </div>
 
         {/* Game button */}
@@ -312,7 +312,7 @@ export default function RightPanel({ result, loading, history, lang = "en" }) {
           width:'100%', padding:'12px', borderRadius:14,
           background:'linear-gradient(135deg, rgba(139,111,212,0.2), rgba(61,217,200,0.15))',
           border:'1px solid rgba(139,111,212,0.35)',
-          color:'var(--violet-text)', fontSize:12, fontFamily:'DM Mono',
+          color:'var(--violet-text)', fontSize:14, fontFamily:'DM Mono',
           cursor:'pointer', letterSpacing:'0.08em',
           display:'flex', alignItems:'center', justifyContent:'center', gap:10,
           transition:'all 0.2s ease',
@@ -320,7 +320,7 @@ export default function RightPanel({ result, loading, history, lang = "en" }) {
         onMouseEnter={e => e.currentTarget.style.background='linear-gradient(135deg, rgba(139,111,212,0.32), rgba(61,217,200,0.22))'}
         onMouseLeave={e => e.currentTarget.style.background='linear-gradient(135deg, rgba(139,111,212,0.2), rgba(61,217,200,0.15))'}
         >
-          <span style={{ fontSize:16 }}>🎮</span>
+          <span style={{ fontSize:17 }}>🎮</span>
           {t(lang, "moodMatch")}
         </button>
       </aside>

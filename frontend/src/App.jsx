@@ -223,11 +223,7 @@ export default function App() {
         />
       )}
 
-      <div style={{
-        position:'relative', zIndex:10,
-        display:'grid', gridTemplateColumns:'240px 1fr 220px',
-        minHeight:'100vh',
-      }}>
+      <div className="app-grid" style={{ position:'relative', zIndex:10, minHeight:'100vh' }}>
         <Sidebar
           tab={tab} setTab={setTab} history={history}
           conversations={conversations}
@@ -244,7 +240,7 @@ export default function App() {
           onThemeChange={handleThemeChange}
         />
 
-        <main style={{
+        <main className="app-main" style={{
           borderLeft:'1px solid rgba(var(--surface-tint),0.05)',
           borderRight:'1px solid rgba(var(--surface-tint),0.05)',
           padding:'40px 32px', overflowY:'auto', maxHeight:'100vh',
@@ -258,7 +254,7 @@ export default function App() {
                     {t(lang, "howAreYou")}<br/>
                     <em style={{ color:'var(--violet-bright)', fontStyle:'italic' }}>{t(lang, "feelingToday")}</em>
                   </h1>
-                  <p style={{ fontSize:14, color:'var(--text-muted)', fontWeight:300, lineHeight:1.8 }}>
+                  <p style={{ fontSize:15, color:'var(--text-muted)', fontWeight:300, lineHeight:1.8 }}>
                     {t(lang, "introText")}
                   </p>
                 </div>
@@ -269,8 +265,8 @@ export default function App() {
                   borderRadius: 14, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10,
                   border: '1px solid rgba(226,185,75,0.3)', background: 'rgba(226,185,75,0.06)',
                 }}>
-                  <span style={{ fontSize: 16 }}>🔥</span>
-                  <p style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 300 }}>
+                  <span style={{ fontSize: 17 }}>🔥</span>
+                  <p style={{ fontSize: 14, color: 'var(--text-secondary)', fontWeight: 300 }}>
                     {streakBeforeToday > 0
                       ? t(lang, "streakBanner", streakBeforeToday)
                       : t(lang, "noEntryToday")}
@@ -281,7 +277,7 @@ export default function App() {
               {messages.length > 0 && (
                 <div style={{ display:'flex', justifyContent:'flex-end' }}>
                   <button onClick={handleNewConversation} style={{
-                    fontSize:12, color:'var(--text-muted)', background:'none',
+                    fontSize:14, color:'var(--text-muted)', background:'none',
                     border:'1px solid var(--border)', borderRadius:8, padding:'6px 12px',
                     cursor:'pointer', fontFamily:'DM Mono, monospace',
                   }}>{t(lang, "newConversation")}</button>
@@ -300,7 +296,7 @@ export default function App() {
                         {m.imageBase64 && (
                           <img src={m.imageBase64} alt="attached" style={{ width:64, height:64, objectFit:'cover', borderRadius:10 }}/>
                         )}
-                        <p style={{ fontSize:14, color:'var(--text-primary)', lineHeight:1.6, fontWeight:300 }}>{m.text}</p>
+                        <p style={{ fontSize:15, color:'var(--text-primary)', lineHeight:1.6, fontWeight:300 }}>{m.text}</p>
                       </div>
                     </div>
                   ) : (
@@ -316,7 +312,7 @@ export default function App() {
               {error && (
                 <div style={{
                   background:'rgba(205,78,78,0.1)', border:'1px solid rgba(205,78,78,0.3)',
-                  borderRadius:12, padding:'12px 16px', fontSize:13, color:'var(--danger-text)'
+                  borderRadius:12, padding:'12px 16px', fontSize:14, color:'var(--danger-text)'
                 }}>{error}</div>
               )}
 

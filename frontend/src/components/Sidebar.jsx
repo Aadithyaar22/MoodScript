@@ -39,7 +39,7 @@ export default function Sidebar({ tab, setTab, history, conversations = [], acti
   const topEmotion   = Object.entries(emotionCounts).sort((a,b)=>b[1]-a[1])[0]
 
   return (
-    <aside style={{ padding: '28px 18px', display: 'flex', flexDirection: 'column', gap: 24, overflowY: 'auto', maxHeight: '100vh', background: 'rgba(var(--surface-tint),0.01)' }}>
+    <aside className="app-sidebar" style={{ padding: '28px 18px', display: 'flex', flexDirection: 'column', gap: 24, overflowY: 'auto', maxHeight: '100vh', background: 'rgba(var(--surface-tint),0.01)' }}>
 
       {/* Logo */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -47,12 +47,12 @@ export default function Sidebar({ tab, setTab, history, conversations = [], acti
           width: 36, height: 36, borderRadius: 10, flexShrink: 0,
           background: 'linear-gradient(135deg, #8b6fd4 0%, #3dd9c8 100%)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 16, fontWeight: 700, color: '#fff', fontFamily: 'DM Mono, monospace',
+          fontSize: 17, fontWeight: 700, color: '#fff', fontFamily: 'DM Mono, monospace',
           boxShadow: '0 0 20px rgba(139,111,212,0.5)',
         }}>M</div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p className="serif" style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1 }}>{t(lang, "appName")}</p>
-          <p className="mono" style={{ fontSize: 9, color: 'var(--text-muted)', letterSpacing: '0.12em' }}>{t(lang, "tagline")}</p>
+          <p className="serif" style={{ fontSize: 19, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1 }}>{t(lang, "appName")}</p>
+          <p className="mono" style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.12em' }}>{t(lang, "tagline")}</p>
         </div>
       </div>
 
@@ -65,12 +65,15 @@ export default function Sidebar({ tab, setTab, history, conversations = [], acti
       {/* User + logout */}
       {username && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-          <p style={{ fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <p title={username} style={{
+            fontSize: 13, color: 'var(--text-secondary)', minWidth: 0, flex: 1,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
             👤 {username}
           </p>
           <button onClick={onLogout} style={{
-            fontSize: 10, color: 'var(--text-muted)', background: 'none',
-            border: '1px solid var(--border)', borderRadius: 8, padding: '4px 10px',
+            fontSize: 11, color: 'var(--text-secondary)', background: 'none',
+            border: '1px solid var(--border)', borderRadius: 8, padding: '4px 9px',
             cursor: 'pointer', fontFamily: 'DM Mono, monospace', flexShrink: 0,
           }}>{t(lang, "logOut")}</button>
         </div>
@@ -79,7 +82,7 @@ export default function Sidebar({ tab, setTab, history, conversations = [], acti
       {/* Export */}
       {username && (
         <div>
-          <p className="mono" style={{ fontSize: 9, color: 'var(--text-muted)', letterSpacing: '0.14em', marginBottom: 8 }}>
+          <p className="mono" style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.14em', marginBottom: 8 }}>
             {t(lang, "export")}
           </p>
           <select
@@ -89,7 +92,7 @@ export default function Sidebar({ tab, setTab, history, conversations = [], acti
               width: '100%', padding: '10px 12px', borderRadius: 10,
               background: 'rgba(var(--surface-tint),0.03)', border: '1px solid var(--border)',
               color: exportFormat ? 'var(--text-primary)' : 'var(--text-muted)',
-              fontSize: 12, fontFamily: 'DM Sans, sans-serif', cursor: 'pointer', outline: 'none',
+              fontSize: 14, fontFamily: 'DM Sans, sans-serif', cursor: 'pointer', outline: 'none',
             }}
           >
             <option value="" disabled>{t(lang, "chooseFormat")}</option>
@@ -99,7 +102,7 @@ export default function Sidebar({ tab, setTab, history, conversations = [], acti
           </select>
           {exportStatus && (
             <p className="mono animate-fade-up" style={{
-              fontSize: 10, marginTop: 7, display: 'flex', alignItems: 'center', gap: 6,
+              fontSize: 12, marginTop: 7, display: 'flex', alignItems: 'center', gap: 6,
               color: exportStatus.state === "success" ? 'var(--cyan)' : 'var(--text-muted)',
             }}>
               {exportStatus.state === "loading"
@@ -121,7 +124,7 @@ export default function Sidebar({ tab, setTab, history, conversations = [], acti
       {/* Delete account */}
       {username && (
         <button onClick={onDeleteAccount} style={{
-          fontSize: 10, color: '#e06b6b', background: 'none', border: 'none',
+          fontSize: 12, color: 'var(--danger-text)', background: 'none', border: 'none',
           cursor: 'pointer', fontFamily: 'DM Mono, monospace', textDecoration: 'underline',
           padding: 0, textAlign: 'left', width: 'fit-content',
         }}>{t(lang, "deleteAccount")}</button>
@@ -136,22 +139,22 @@ export default function Sidebar({ tab, setTab, history, conversations = [], acti
         <p className="mono" style={{ fontSize: 26, color: 'var(--text-primary)', letterSpacing: '0.04em', lineHeight: 1 }}>
           {time.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' })}
         </p>
-        <p className="mono" style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 6, letterSpacing: '0.08em' }}>
+        <p className="mono" style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6, letterSpacing: '0.08em' }}>
           {time.toLocaleDateString('en-IN', { weekday:'long', month:'short', day:'numeric' }).toUpperCase()}
         </p>
         {todayEntries.length > 0 && (
           <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(139,111,212,0.2)', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 11, color: '#b39dff', fontFamily: 'DM Mono' }}>{todayEntries.length} {t(lang, todayEntries.length === 1 ? "entryToday" : "entriesToday")}</span>
+            <span style={{ fontSize: 13, color: 'var(--violet-bright)', fontFamily: 'DM Mono' }}>{todayEntries.length} {t(lang, todayEntries.length === 1 ? "entryToday" : "entriesToday")}</span>
           </div>
         )}
       </div>
 
       {/* Nav */}
       <nav style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <p className="mono" style={{ fontSize: 9, color: 'var(--text-muted)', letterSpacing: '0.14em', marginBottom: 4 }}>{t(lang, "navigation")}</p>
+        <p className="mono" style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.14em', marginBottom: 4 }}>{t(lang, "navigation")}</p>
         {[
-          { id: 'analyze', label: t(lang, "journal"), icon: '✦', color: '#b39dff' },
-          { id: 'dashboard', label: t(lang, "dashboard"), icon: '◎', color: '#3dd9c8' },
+          { id: 'analyze', label: t(lang, "journal"), icon: '✦', color: 'var(--violet-bright)' },
+          { id: 'dashboard', label: t(lang, "dashboard"), icon: '◎', color: 'var(--cyan)' },
         ].map(item => (
           <button key={item.id} onClick={() => setTab(item.id)} style={{
             display: 'flex', alignItems: 'center', gap: 12,
@@ -159,11 +162,11 @@ export default function Sidebar({ tab, setTab, history, conversations = [], acti
             background: tab === item.id ? `${item.color}18` : 'transparent',
             borderLeft: `2px solid ${tab === item.id ? item.color : 'transparent'}`,
             color: tab === item.id ? item.color : 'var(--text-muted)',
-            fontFamily: 'DM Sans, sans-serif', fontSize: 13, fontWeight: tab === item.id ? 500 : 300,
+            fontFamily: 'DM Sans, sans-serif', fontSize: 14, fontWeight: tab === item.id ? 500 : 300,
             transition: 'all 0.2s ease', textAlign: 'left',
             boxShadow: tab === item.id ? `0 0 20px ${item.color}20` : 'none',
           }}>
-            <span className="mono" style={{ fontSize: 12 }}>{item.icon}</span>
+            <span className="mono" style={{ fontSize: 14 }}>{item.icon}</span>
             {item.label}
           </button>
         ))}
@@ -173,9 +176,9 @@ export default function Sidebar({ tab, setTab, history, conversations = [], acti
       {conversations.length > 0 && (
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <p className="mono" style={{ fontSize: 9, color: 'var(--text-muted)', letterSpacing: '0.14em' }}>{t(lang, "conversations")}</p>
+            <p className="mono" style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.14em' }}>{t(lang, "conversations")}</p>
             <button onClick={onNewConversation} style={{
-              fontSize: 9, color: 'var(--violet-bright)', background: 'none', border: 'none',
+              fontSize: 11, color: 'var(--violet-bright)', background: 'none', border: 'none',
               cursor: 'pointer', fontFamily: 'DM Mono, monospace',
             }}>{t(lang, "newLink")}</button>
           </div>
@@ -191,10 +194,10 @@ export default function Sidebar({ tab, setTab, history, conversations = [], acti
                   background: 'none', border: 'none',
                 }}>
                   <p style={{
-                    fontSize: 11, color: 'var(--violet-soft-text)', overflow: 'hidden', textOverflow: 'ellipsis',
+                    fontSize: 13, color: 'var(--violet-soft-text)', overflow: 'hidden', textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap', fontWeight: 300,
                   }}>{c.opening_line || t(lang, "newConversationLabel")}</p>
-                  <p className="mono" style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 2 }}>
+                  <p className="mono" style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
                     {new Date(c.started_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })} · {c.message_count} msgs
                   </p>
                 </button>
@@ -203,7 +206,7 @@ export default function Sidebar({ tab, setTab, history, conversations = [], acti
                   title={t(lang, "deleteConversation")}
                   style={{
                     flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer',
-                    color: 'var(--text-muted)', fontSize: 13, padding: '0 10px', lineHeight: 1,
+                    color: 'var(--text-muted)', fontSize: 14, padding: '0 10px', lineHeight: 1,
                   }}
                 >×</button>
               </div>
@@ -215,7 +218,7 @@ export default function Sidebar({ tab, setTab, history, conversations = [], acti
       {/* Recent entries */}
       {recentFive.length > 0 && (
         <div style={{ flex: 1 }}>
-          <p className="mono" style={{ fontSize: 9, color: 'var(--text-muted)', letterSpacing: '0.14em', marginBottom: 10 }}>{t(lang, "recent")}</p>
+          <p className="mono" style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.14em', marginBottom: 10 }}>{t(lang, "recent")}</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
             {recentFive.map((h, i) => {
               const c = EMOTION_COLOR[h.emotion] || '#6478a0'
@@ -226,10 +229,10 @@ export default function Sidebar({ tab, setTab, history, conversations = [], acti
                   border: `1px solid ${c}30`,
                   display: 'flex', alignItems: 'center', gap: 10,
                 }}>
-                  <span style={{ fontSize: 16 }}>{EMOTION_EMOJI[h.emotion] || '😐'}</span>
+                  <span style={{ fontSize: 17 }}>{EMOTION_EMOJI[h.emotion] || '😐'}</span>
                   <div style={{ minWidth: 0, flex: 1 }}>
-                    <p style={{ fontSize: 12, color: 'var(--text-primary)', textTransform: 'capitalize', fontWeight: 400 }}>{t(lang, h.emotion)}</p>
-                    <p className="mono" style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 1 }}>
+                    <p style={{ fontSize: 14, color: 'var(--text-primary)', textTransform: 'capitalize', fontWeight: 400 }}>{t(lang, h.emotion)}</p>
+                    <p className="mono" style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
                       {new Date(h.timestamp).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' })}
                     </p>
                   </div>
@@ -247,11 +250,11 @@ export default function Sidebar({ tab, setTab, history, conversations = [], acti
           background: `${EMOTION_COLOR[topEmotion[0]] || '#6478a0'}15`,
           border: `1px solid ${EMOTION_COLOR[topEmotion[0]] || '#6478a0'}40`,
         }}>
-          <p className="mono" style={{ fontSize: 9, color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: 8 }}>{t(lang, "dominantEmotion")}</p>
+          <p className="mono" style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: 8 }}>{t(lang, "dominantEmotion")}</p>
           <p style={{ fontSize: 22 }}>{EMOTION_EMOJI[topEmotion[0]]}
-            <span className="serif" style={{ fontSize: 16, color: 'var(--text-primary)', marginLeft: 8, fontStyle: 'italic', textTransform: 'capitalize' }}>{t(lang, topEmotion[0])}</span>
+            <span className="serif" style={{ fontSize: 17, color: 'var(--text-primary)', marginLeft: 8, fontStyle: 'italic', textTransform: 'capitalize' }}>{t(lang, topEmotion[0])}</span>
           </p>
-          <p className="mono" style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 6 }}>{topEmotion[1]} {t(lang, "of")} {history.length} {t(lang, "entries")}</p>
+          <p className="mono" style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>{topEmotion[1]} {t(lang, "of")} {history.length} {t(lang, "entries")}</p>
         </div>
       )}
     </aside>
