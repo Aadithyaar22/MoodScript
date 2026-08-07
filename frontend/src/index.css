@@ -91,6 +91,7 @@ body {
 .animate-pop-in          { animation:popIn 0.4s cubic-bezier(0.22,1,0.36,1) both; }
 
 @keyframes recPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.35;transform:scale(0.8)} }
+@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
 .rec-dot { display:inline-block;width:7px;height:7px;border-radius:50%;background:#e06b6b;animation:recPulse 1.1s ease-in-out infinite; }
 
 .shimmer { background:linear-gradient(90deg,transparent 0%,rgba(var(--surface-tint),0.06) 50%,transparent 100%);background-size:200% 100%;animation:shimmer 1.5s infinite; }

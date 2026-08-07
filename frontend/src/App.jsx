@@ -152,8 +152,10 @@ export default function App() {
       if (format === "journal-txt") await exportJournal()
       else if (format === "report-txt") await exportDoctorReport("txt")
       else if (format === "report-pdf") await exportDoctorReport("pdf")
+      return true
     } catch {
       setError("Couldn't export — try again")
+      return false
     }
   }
 

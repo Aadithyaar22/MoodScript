@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { t } from "../i18n"
 import LanguageSwitcher from "./LanguageSwitcher"
 import ThemeSwitcher from "./ThemeSwitcher"
@@ -9,13 +9,26 @@ const EMOTION_COLOR  = { happy:"#e2b94b", sad:"#4d8de8", angry:"#e06b6b", fearfu
 export default function Sidebar({ tab, setTab, history, conversations = [], activeConversationId, onSelectConversation, onNewConversation, onLogout, onExportFormat, onDeleteAccount, onDeleteConversation, lang, onLangChange, theme, onThemeChange }) {
   const [time, setTime] = useState(new Date())
   const [exportFormat, setExportFormat] = useState("")
+  const [exportStatus, setExportStatus] = useState(null) // { label, state: 'loading' | 'success' }
+  const exportTimeoutRef = useRef(null)
   useEffect(() => { const timer = setInterval(() => setTime(new Date()), 1000); return () => clearInterval(timer) }, [])
+  useEffect(() => () => clearTimeout(exportTimeoutRef.current), [])
 
-  const handleExportChange = (e) => {
+  const FORMAT_LABEL_KEY = { "journal-txt": "journalTxtOption", "report-txt": "reportTxtOption", "report-pdf": "reportPdfOption" }
+
+  const handleExportChange = async (e) => {
     const format = e.target.value
-    if (format) {
-      onExportFormat(format)
-      setExportFormat("")
+    if (!format) return
+    const label = t(lang, FORMAT_LABEL_KEY[format])
+    setExportFormat("")
+    clearTimeout(exportTimeoutRef.current)
+    setExportStatus({ label, state: "loading" })
+    const success = await onExportFormat(format)
+    if (success) {
+      setExportStatus({ label, state: "success" })
+      exportTimeoutRef.current = setTimeout(() => setExportStatus(null), 4000)
+    } else {
+      setExportStatus(null)
     }
   }
 
@@ -84,6 +97,24 @@ export default function Sidebar({ tab, setTab, history, conversations = [], acti
             <option value="report-txt">{t(lang, "reportTxtOption")}</option>
             <option value="report-pdf">{t(lang, "reportPdfOption")}</option>
           </select>
+          {exportStatus && (
+            <p className="mono animate-fade-up" style={{
+              fontSize: 10, marginTop: 7, display: 'flex', alignItems: 'center', gap: 6,
+              color: exportStatus.state === "success" ? 'var(--cyan)' : 'var(--text-muted)',
+            }}>
+              {exportStatus.state === "loading"
+                ? <>
+                    <span style={{
+                      width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+                      border: '1.5px solid var(--text-muted)', borderTopColor: 'transparent',
+                      animation: 'spin 0.7s linear infinite',
+                    }} />
+                    {t(lang, "exporting")} {exportStatus.label}…
+                  </>
+                : <>✓ {exportStatus.label} {t(lang, "exportedSuccessfully")}</>
+              }
+            </p>
+          )}
         </div>
       )}
 
