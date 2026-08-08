@@ -151,17 +151,27 @@ These are the claims the paper can defend with the evidence in §6.
 4. **An empirical demonstration that public-benchmark ranking can invert under
    domain shift** — the candidate model that wins on GoEmotions by 26 points loses on
    journal-style text (§6.2). Generalisable beyond this system.
-5. **A two-pass response generation scheme** that extracts concrete facts before
+5. **A second negative result, on hand-engineered NLP preprocessing.** Two intuitive,
+   linguistically-motivated components of our own text pipeline — sentence-level
+   segmentation with weighted aggregation, and syntax-aware negation dampening — were
+   each shown to *reduce* accuracy on 1,056 held-out in-domain texts (combined −4.45
+   points, p = 1.08×10⁻⁶). The negation rule had validated at +6 points on the 49
+   hand-written cases it was tuned against, and reversed sign on real data, breaking 20
+   correct predictions while fixing none (§6.2b). Removing both improved accuracy *and*
+   cut latency 4.3×.
+6. **A two-pass response generation scheme** that extracts concrete facts before
    generating, measurably increasing content-specificity (§6.6).
-6. **A complete, deployed, explainable system** integrating the above with LIME
+7. **A complete, deployed, explainable system** integrating the above with LIME
    explainability, rule-based crisis detection, multilingual support, and
    clinician-readable report generation.
 
-> **Note on framing.** Contributions 1–3 are the research core. The paper is
+> **Note on framing.** Contributions 1–3 are the research core, with 5 as a strong
+> supporting result. The paper is
 > strongest if it presents the *sequence*: a measurement exposes a flaw (2), a
 > principled method fixes it (1), and an obvious-sounding alternative is tested and
 > rejected on evidence (3). Reviewers trust a paper that reports a component of its
-> own system failing.
+> own system failing — and this paper reports **two** such components (3 and 5), both
+> of which were our own ideas, both removed on evidence we generated ourselves.
 
 ---
 
@@ -211,22 +221,37 @@ request-coordination layer. Inter-service calls are authenticated with a shared
 | Model | `j-hartmann/emotion-english-distilroberta-base` |
 | Architecture | DistilRoBERTa (6-layer distilled transformer) |
 | Output classes | 7 (angry, disgusted, fearful, happy, neutral, sad, surprised) |
-| Sentence segmentation | spaCy `en_core_web_sm` |
+| Granularity | whole entry (per-sentence pass retained only for the emotion arc) |
+| Sentence segmentation | spaCy `en_core_web_sm` (arc only) |
+| Latency | 40 ms/entry, CPU |
+| Peak resident memory | 0.87 GB (service cap 2 GiB) |
 | Explainability | LIME (`LimeTextExplainer`) |
 | Secondary signal | `SamLowe/roberta-base-go_emotions` → clinical tone (anxiety / depression / stress / positive / confusion / curiosity) |
 
-**Processing:** the entry is segmented into sentences; each sentence is classified
-independently; per-sentence results are aggregated with position, length, and confidence
-weighting to produce an overall distribution plus a per-sentence *emotion arc*.
+**Processing:** the overall distribution comes from classifying the **whole entry in one
+pass**. The entry is *also* segmented into sentences with spaCy and each sentence
+classified independently, but that output is used only to render the per-sentence
+*emotion arc* in the UI — it no longer determines the headline label.
 
-**Negation dampening (own contribution).** A syntax-aware correction using spaCy's
-dependency parse. The rule fires **only** on negation of an auxiliary-headed adjectival
-complement (`acomp`), e.g. *"I am **not** happy"*. This narrow scoping matters: an initial
-broad implementation that dampened on *any* `neg` dependency also caught idiomatic negated
-verbs that do **not** invert sentiment (*"can't stop crying"*, *"won't listen"*) and
-**reduced** journal-domain accuracy from 72% to 61%. Restricting to AUX-headed `acomp`
-negation raised it from 72% to 78% with no regressions. **This failed-then-fixed result is
-worth reporting** — it is concrete evidence that naive negation handling is harmful.
+This is a change from the originally deployed design, and the reason is measured, not
+stylistic: see §6.2b. Both the sentence-level aggregation and the negation heuristic that
+preceded it were removed because they were shown to *reduce* accuracy on in-domain data.
+
+**Negation dampening (retired — see §6.2b).** A syntax-aware correction using spaCy's
+dependency parse, firing only on negation of an auxiliary-headed adjectival complement
+(`acomp`), e.g. *"I am **not** happy"*. It was developed against a 49-case hand-written
+set, where narrow scoping mattered a great deal: a broad version that dampened on *any*
+`neg` dependency also caught idiomatic negated verbs that do not invert sentiment
+(*"can't stop crying"*, *"won't listen"*) and cut accuracy from 72% to 61%, while the
+narrow AUX-`acomp` version raised it from 72% to 78%.
+
+**It did not replicate.** Evaluated later on 1,056 held-out in-domain journal texts, the
+same narrow rule changed 32 labels, **broke 20 correct predictions and corrected zero**.
+It has been removed from the serving path. The code remains in
+`services/text_service/text_model.py`, called by nothing, so the ablation stays
+reproducible. Report this as a negative result — it is a cleaner and more useful finding
+than the original "failed-then-fixed" framing, which was an artifact of tuning and
+evaluating on the same 49 cases.
 
 ### 4.3 Facial emotion stage
 
@@ -546,9 +571,15 @@ between happy and fearful.
 
 | Model | GoEmotions (Ekman-mapped) | Journal-style (49 cases) |
 |---|---|---|
-| **Deployed** (`j-hartmann` distilroberta + negation dampening) | 43.75% | **77.6% (38/49)** |
+| **Deployed at the time** (`j-hartmann` distilroberta + negation dampening) | 43.75% | **77.6% (38/49)** |
 | `SamLowe/roberta-base-go_emotions` | **69.65%** | 71.4% (35/49) |
 | `j-hartmann/emotion-english-roberta-large` | 47.34% | not evaluated |
+
+> Note: the "journal-style" column here is the **49 hand-written cases**, which is what was
+> available when the checkpoint was chosen. §6.2b later re-ran this comparison on 1,056
+> held-out in-domain texts and confirmed the checkpoint choice while overturning the
+> wrapper around it. The two sections use different evaluation sets — say so in the paper
+> rather than presenting the numbers as comparable.
 
 **The finding:** SamLowe outperforms the deployed model on GoEmotions by **25.9
 percentage points**, yet *underperforms* it by **6.2 points** on journal-style text.
@@ -582,10 +613,91 @@ the text stage, and as motivation for the arbitration layer.
 | sad | 42.1 | 64.9 |
 | surprised | 32.7 | 56.1 |
 
+### 6.2b Text pipeline ablation — hand-engineering that cost accuracy
+
+Everything above (§6.2) selected a *checkpoint*. This subsection evaluates the
+hand-written wrapper around it, on the **1,056 held-out journal-domain texts** of paired
+Set B — 21× the 49-case set the wrapper was originally tuned on. All variants use the
+identical checkpoint and the identical split, so McNemar's paired test applies.
+
+| Variant | Acc % | Macro-F1 | neutral preds |
+|---|---|---|---|
+| **A** whole text, no wrapper | **64.49** | **55.45** | 57 |
+| **B** sentence-split + weighted aggregation | 60.80 | — | — |
+| **C** B + negation dampening (*originally deployed*) | 60.13 | 53.01 | 107 |
+
+| Comparison | p (McNemar) | Verdict |
+|---|---|---|
+| A vs C | 2.1e-06 | A significantly better |
+| A vs B | 2.4e-05 | A significantly better |
+| B vs C | 0.0455 | B significantly better |
+
+**Two independent hand-engineered components each made the system worse.**
+
+1. **Sentence splitting + weighted aggregation cost 3.7 points** (64.49 → 60.80). These
+   entries average ~22 words, so segmentation discards the very context the classifier
+   needs, and the fragments are then recombined using position/length/confidence
+   coefficients that were chosen by hand and never fitted to any data.
+2. **Negation dampening cost a further 1.89 points** and, isolated on its own, changed 32
+   of 1,056 labels: **20 previously-correct answers broken, 0 wrong answers fixed.** Its
+   signature is visible in the neutral column — it inflates neutral predictions from 57 to
+   107, which is exactly what a rule that pushes mass toward neutral would do.
+
+**End-to-end effect of removing both** (verified by running the production `predict()`
+over the same split, not a reimplementation):
+
+| Pipeline | Acc % | Macro-F1 | neutral preds | ms/entry |
+|---|---|---|---|---|
+| original deployed | 60.04 | 53.01 | 107 | 174 |
+| **current** | **64.49** | **55.45** | 57 | **40** |
+
+McNemar: new-only correct 68, old-only correct 21, **p = 1.08e-06**. Accuracy improves by
+**4.45 points while latency drops 4.3×**, because the whole-entry pass *replaces* the
+per-sentence work rather than adding to it.
+
+**Why this belongs in the paper.** It is a controlled demonstration that intuitive,
+linguistically-motivated preprocessing can degrade a modern transformer, and that a
+heuristic validated on a small hand-authored set (49 cases, +6 points) can reverse sign
+entirely on real in-domain data (1,056 cases, −1.89 points). The failure mode is
+tuning and evaluating on the same small sample. This is a concrete, quantified instance of
+a mistake that is extremely common and rarely reported.
+
+**Checkpoint size vs. deployment constraint (report as a design decision, not an
+oversight).** `j-hartmann/emotion-english-roberta-large` reaches **67.33%** on this split
+(vs 64.49%, p=4.0e-07) but peaks at **1.82 GB resident against the service's 2 GiB Cloud
+Run cap**, leaving no headroom for the server process. The distilled checkpoint peaks at
+0.87 GB. The larger model was measured, rejected on memory grounds, and the numbers are
+reported here so the trade-off is explicit.
+
+Also measured: `SamLowe/roberta-base-go_emotions` 52.65% and
+`cirimus/modernbert-base-go-emotions` 52.27% on this same split — both significantly
+*worse* than the deployed checkpoint (p=4.2e-06 and p=9.9e-07), reinforcing §6.2.
+
+> **Coarse-grained accuracy.** Scoring the *same* predictions at 3-class valence
+> (positive / negative / neutral) gives **83.71%**. Useful for arguing that the
+> system's response-level behaviour is more reliable than the 7-class number suggests,
+> but note this split contains **no neutral examples**, so treat it as indicative only.
+
 ### 6.3 Fusion strategy comparison — THE HEADLINE RESULT
 
 Held-out test splits of the paired benchmark (§5.1). Set A = GoEmotions text
 (n=577), Set B = EmpatheticDialogues journal-style text (n=1,056).
+
+> ⚠️ **READ BEFORE USING THESE NUMBERS.** Every result in §6.3 and §6.4 was computed from
+> text predictions cached in `paired_set_*.json`, which were generated by the **original**
+> text pipeline (60.04% on Set B), *before* the §6.2b changes. The "Text only" row below is
+> therefore 60.04, not the current 64.49.
+>
+> The fusion *method* and its conclusions are unaffected — every strategy in the table
+> consumed the identical text distributions, so the comparison between strategies remains
+> valid and the ranking stands. But the **absolute** fusion numbers understate the current
+> system, because the text branch feeding them is now measurably better.
+>
+> **Required before submission:** rebuild the paired sets with the current text pipeline
+> (`build_paired_set.py`) and re-run `eval_fusion_v2.py` and `eval_ablation.py`. Also
+> re-fit the text temperature and per-class reliabilities in `models/fusion.py` — those
+> constants were calibrated against the old text distributions and are now stale. Do not
+> report §6.2b and §6.3 side by side as if they came from one system until this is done.
 
 | Strategy | Set A acc | Set A F1 | Set A ECE | Set B acc | Set B F1 | Set B ECE |
 |---|---|---|---|---|---|---|
@@ -865,9 +977,32 @@ DELETE /account                 GET /health
     nuance may be lost, and this was not measured.
 11. **No controlled latency benchmark** — see §6.8.
 12. **Single-face assumption.** Only the largest detected face is used.
-13. **The proposed fusion is not deployed.** It exists on the `research/calibrated-fusion`
-    branch; production still runs the linear confidence-weighted rule. The paper must
-    not describe the improved method as the live system unless it is merged first.
+13. **Calibration constants are stale relative to the current text pipeline.** The
+    temperatures and class-conditional reliabilities in `models/fusion.py` were fitted
+    against text distributions produced by the pre-§6.2b pipeline. They must be re-fitted
+    before the fusion and text results can be reported as one coherent system — see the
+    warning box at the head of §6.3. This is a bookkeeping debt, not a flaw in the method.
+14. **The §6.2b improvement is measured on text alone.** Its effect on end-to-end fused
+    accuracy has not yet been quantified, for the reason in item 13. It is expected to
+    help, but "expected" is not "measured" — do not claim a fused number for it.
+15. **The headline label can now contradict the displayed emotion arc.** Because the
+    overall label comes from a whole-entry pass while the arc comes from a per-sentence
+    pass, the two can disagree — observed live on *"Work was fine today. Nothing much
+    happened."* (headline `sad`, arc `[neutral, neutral]`) and *"I keep telling myself it
+    is fine but I am not okay."* (headline `fearful`, arc `[neutral, sad]`). This was
+    structurally impossible under the previous design, where the headline was an
+    aggregation of the arc. It is a user-visible consistency regression that the accuracy
+    gain does not by itself justify ignoring, and it is not captured by any metric in §6.2b.
+16. **Neutral behaviour is effectively unmeasured.** Set B contains no neutral examples
+    (limitation 4), so every §6.2b number is blind to the class that is probably the most
+    common in real journaling. The first live probe above — a plainly neutral entry
+    labelled `sad` at 0.542 confidence — is exactly the failure this blind spot would
+    hide. Any claim about neutral performance requires a benchmark that contains it.
+17. **Sentence-level aggregation was removed but not replaced with a fitted alternative.**
+    A learned aggregator over sentence distributions might outperform whole-entry
+    classification on long entries; only the hand-weighted version was tested and
+    rejected. Entries in the benchmark average ~22 words, so the result may not transfer
+    to substantially longer journal entries.
 
 ### 8.1 Experiments that would strengthen the paper (if time permits)
 
@@ -957,6 +1092,12 @@ python research/eval_text_model.py           # GoEmotions, deployed pipeline
 python research/eval_text_candidates.py      # GoEmotions, candidates
 python research/eval_deployed_journal.py     # 49 journal cases, deployed
 python research/eval_samlowe_journal.py      # 49 journal cases, candidate
+
+# ---- text pipeline ablation + current pipeline verification (§6.2b) ----
+# these need Set B built first (see the block below)
+python research/eval_text_journal_bench.py       # 4 candidate checkpoints, 1,056 texts
+python research/eval_text_pipeline_ablation.py   # variants A / B / C + McNemar
+python research/eval_text_model_v2.py            # runs the real predict(), old vs new
 
 # ---- build the paired benchmarks (§5.1) — run these first for §6.3-6.5 ----
 python research/build_paired_set.py --per-class 200 \
