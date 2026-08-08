@@ -303,9 +303,10 @@ recovered exactly; as one modality becomes uncertain its influence shrinks propo
 input modality (a face image is optional) and because entries are authored deliberately
 while a webcam frame is incidental. *This prior was not swept experimentally — see §8.1.*
 
-> **This is the DEPLOYED rule, and the paper's baseline — not its contribution.**
-> §4.4b replaces it. On the paired benchmark it scores 87.97%, i.e. *below* using the
-> face modality alone (89.30%).
+> **This is the PREVIOUS rule, and the paper's baseline — not its contribution.**
+> §4.4b replaced it in production; it survives behind `MOODSCRIPT_LEGACY_FUSION=1`.
+> On the paired benchmark it scores 86.27%, i.e. *below* using the face modality
+> alone (89.30%).
 
 ### 4.4b Reliability-aware log-linear fusion — THE PROPOSED METHOD
 
@@ -762,10 +763,10 @@ through to fused accuracy, by +0.52 pp on Set A and +1.23 pp on Set B.
 
 **The four claims this table supports:**
 
-1. **The deployed rule is worse than ignoring text entirely** — 85.10/87.97 against
-   89.30 for face alone. Uncalibrated confidence weighting actively degrades the
+1. **The previous rule is worse than ignoring text entirely** — 83.36/86.27 against
+   88.39/89.30 for face alone. Uncalibrated confidence weighting actively degrades the
    stronger modality. This is the problem the paper solves.
-2. **The proposed method significantly beats the deployed one** on both sets.
+2. **The proposed method significantly beats the previous one** on both sets.
 3. **The proposed method significantly beats the best single modality** on both sets.
    This is the claim multimodal papers must make and the earlier design could not.
 4. **It also beats a learned combiner.** Multinomial logistic regression on the

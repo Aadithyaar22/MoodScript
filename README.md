@@ -34,7 +34,7 @@ pinned: false
 
 MoodScript is a full-stack emotional journaling app. You write (or speak, or show your face) how you're feeling, and it:
 
-1. **Detects your emotion** — from your words, sentence by sentence, and optionally from a photo/webcam frame
+1. **Detects your emotion** — from your words, and optionally from a photo/webcam frame
 2. **Fuses both signals** after calibrating each onto a common confidence scale, weighting each by its measured per-class reliability, and combining them multiplicatively rather than by averaging
 3. **Responds as Aria** — a therapist-persona LLM companion that extracts the specific things you actually said before replying, and remembers your last conversation, your last week, and your long-term patterns
 4. **Watches for real crisis signals** — and only surfaces helpline resources when something is genuinely serious, never as a reflex
@@ -46,10 +46,10 @@ It's not a chatbot wrapper. Every emotional read is a real model inference (text
 ## Features
 
 **Emotion intelligence**
-- Sentence-level text emotion classification (position/length/confidence-weighted aggregation), with negation-aware dampening so "I'm not scared, I've got this" doesn't get read as fear
+- Whole-entry text emotion classification, with a second per-sentence pass that drives the emotion-arc view. Both sentence-level aggregation and a syntax-aware negation rule were shipped earlier and later **removed**: measured on 1,056 held-out journal texts they cost 4.45 points combined, and the negation rule broke 20 correct predictions while fixing none (see [Research & evaluation](#research--evaluation))
 - Optional face-image emotion detection (photo upload or webcam), with the face located and cropped before classification — the classifier is trained on close-up faces, and feeding it a full frame with background measurably degrades it
-- Calibration-aware log-linear fusion — each modality is first calibrated onto a common confidence scale (the text model was measured to be badly over-confident, ECE 0.217, against 0.015 for the face model, so their raw confidences were never comparable), weighted by a per-class reliability estimate rather than one number, and combined by multiplying rather than averaging so a confident "definitely not this" can actually rule a class out. On a held-out paired benchmark this scores 91.95% against 87.97% for the previous confidence-weighted average — which was itself *below* using the face modality alone (89.30%)
-- LLM arbitration on unresolved conflicts — retained in the pipeline, but measured and reported honestly: it does **not** improve accuracy (see [Research & evaluation](#research--evaluation)), because it adjudicates by reading the text while never seeing the face image, and text is the weaker signal on exactly those cases
+- Calibration-aware log-linear fusion — each modality is first calibrated onto a common confidence scale (the text model was measured to be badly over-confident, ECE 0.217, against 0.015 for the face model, so their raw confidences were never comparable), weighted by a per-class reliability estimate rather than one number, and combined by multiplying rather than averaging so a confident "definitely not this" can actually rule a class out. On a held-out paired benchmark this scores 93.18% against 86.27% for the previous confidence-weighted average — which was itself *below* using the face modality alone (89.30%)
+- LLM arbitration on unresolved conflicts — implemented, measured, and now **disabled by default**, because it did not improve accuracy (see [Research & evaluation](#research--evaluation)): it adjudicates by reading the text while never seeing the face image, and text is the weaker signal on exactly those cases. Re-enable with `MOODSCRIPT_ENABLE_ARBITER=1`
 - LIME explainability — see exactly which words drove the detected emotion, and a full text/face/fused confidence breakdown on every message
 
 **Conversation & memory**
@@ -91,7 +91,7 @@ The backend is split into three independently deployable services, so each piece
 flowchart TD
     U[User] -->|message + optional image, any of 3 languages| FE[React Frontend]
     FE -->|POST /chat| API[Orchestrator<br/>auth · chat · DB · crisis · translation]
-    API -->|POST /analyze| TXT[Text Service<br/>j-hartmann distilroberta + negation dampening + LIME]
+    API -->|POST /analyze| TXT[Text Service<br/>j-hartmann distilroberta + LIME]
     API -->|POST /predict| FACE[Face Service<br/>dima806 ViT face-expression]
     TXT --> FUSE[Fusion Layer<br/>confidence-weighted text/face blend]
     FACE --> FUSE
@@ -123,7 +123,7 @@ The orchestrator talks to the other two over plain HTTP (`FACE_SERVICE_URL`, `TE
 |---|---|
 | Frontend | React 19, Vite, Tailwind, Recharts, `react-webcam`, Web Speech API |
 | Backend | FastAPI, Uvicorn |
-| Text emotion | `j-hartmann/emotion-english-distilroberta-base` (HF Transformers) + custom negation dampening |
+| Text emotion | `j-hartmann/emotion-english-distilroberta-base` (HF Transformers), whole-entry classification |
 | Face emotion | `dima806/facial_emotions_image_detection` (HF Transformers) — see [Research & evaluation](#research--evaluation) for why this model, not the more obvious first pick |
 | Fusion arbitration & fact extraction | Groq — Llama 3.1 8B Instant (fast/cheap, one-word or short-list outputs only) |
 | Conversational LLM | Groq — Llama 3.3 70B Versatile |
@@ -251,22 +251,34 @@ Paired McNemar's test: p = 8.5×10⁻²⁰⁶ — not remotely due to chance. Th
 | Strategy | Set A (n=577) | Set B (n=1,056) |
 |---|---|---|
 | Face only | 88.39% | 89.30% |
-| Confidence-weighted average (previous) | 85.10% | 87.97% |
-| **Calibration-aware log-linear (current)** | **90.99%** | **91.95%** |
+| Confidence-weighted average (previous) | 83.36% | 86.27% |
+| **Calibration-aware log-linear (current)** | **91.51%** | **93.18%** |
 
-Significant against the previous rule (p = 7.7×10⁻⁶ / 6.2×10⁻¹⁰) and against the stronger single modality (p = 0.0019 / 2.6×10⁻⁶). An ablation isolates text calibration as the dominant factor (+6.54 pp); face calibration contributes +0.39 pp because that model was already calibrated.
+Significant against the previous rule (p = 3.1×10⁻⁸ / 1.5×10⁻¹³) and against the stronger single modality (p = 0.0013 / 7.0×10⁻⁷). These numbers come from running the shipped `models/fusion.py` itself (`research/verify_production_fusion.py`), not a research reimplementation. An ablation isolates text calibration as the dominant factor (+8.54 pp); face calibration contributes +0.39 pp because that model was already calibrated.
 
-**LLM arbitration: tested and does not help.** Four designs — direct classification, binary choice given the correct reliability prior, confidence-gated abstention, and meta-linguistic trust scoring — all scored below fusion without an LLM on the conflict cases where arbitration fires (best 75.40% against 76.98%). The arbiter reads the *text* and only ever receives the face model's label, never the image, and text is worth ~17% accuracy on exactly those cases. Its trust estimates were uncorrelated with whether the text was actually right (0.738 when right, 0.763 when wrong). Retained in the pipeline but reported honestly; see `research/eval_arbiter_v2.py`.
+**LLM arbitration: tested and does not help.** Four designs — direct classification, binary choice given the correct reliability prior, confidence-gated abstention, and meta-linguistic trust scoring — all scored below fusion without an LLM on the conflict cases where arbitration fires (best 75.40% against 76.98%). The arbiter reads the *text* and only ever receives the face model's label, never the image, and text is worth ~17% accuracy on exactly those cases. Its trust estimates were uncorrelated with whether the text was actually right (0.738 when right, 0.763 when wrong). Now disabled by default (`MOODSCRIPT_ENABLE_ARBITER=1` re-enables it); the code and the evaluation both remain in the repo. See `research/eval_arbiter_v2.py`.
 
 **Text model: kept, not swapped.** Two candidates were tested on GoEmotions *and* cross-checked against a 49-case journal-style benchmark, since a model's benchmark win doesn't necessarily generalize to the product's actual input distribution:
 
 | Model | GoEmotions | Journal-style (49 cases) |
 |---|---|---|
-| Current (`j-hartmann` distilroberta + negation fix) | 43.75% | **78%** |
+| Current (`j-hartmann` distilroberta) | 43.75% | **78%** |
 | `SamLowe/roberta-base-go_emotions` (native GoEmotions model) | 69.65% | 71% |
 | `j-hartmann/emotion-english-roberta-large` | 47.34% | — |
 
 SamLowe wins big on GoEmotions (expected — it's trained directly on it) but loses on the benchmark that resembles real usage. Kept the current model.
+
+**Text pipeline: two of our own ideas, both removed on evidence.** The checkpoint above was the right choice; the hand-written wrapper around it was not. Re-measured on 1,056 held-out journal-domain texts — 21× the 49-case set the wrapper was tuned against:
+
+| Variant | Accuracy |
+|---|---|
+| Whole entry, no wrapper | **64.49%** |
+| Sentence-split + position/length/confidence-weighted aggregation | 60.80% |
+| The above + syntax-aware negation dampening (previously shipped) | 60.13% |
+
+Sentence splitting cost 3.7 points — these entries average ~22 words, so segmentation discards the context the classifier needs and then recombines the fragments with coefficients never fitted to anything. Negation dampening cost a further 1.89 points: it changed 32 labels, **broke 20 correct predictions and fixed zero**, having validated at +6 points on the 49 hand-written cases it was both tuned and tested on. Removing both improved accuracy 60.04% → 64.49% (McNemar p = 1.1×10⁻⁶) *and* cut latency from 174 ms to 40 ms per entry, since the whole-entry pass replaces the per-sentence work rather than adding to it. Re-runnable via `research/eval_text_pipeline_ablation.py` and `research/eval_text_model_v2.py`.
+
+A larger checkpoint (`j-hartmann/emotion-english-roberta-large`) reaches 67.33% on the same split but peaks at 1.82 GB resident against the text service's 2 GiB Cloud Run cap, so it was measured and rejected on memory grounds rather than quietly ignored.
 
 The 49 journal-style cases are checked into the repo at `research/data/journal_tests_49.json` (labelled by category: clear, negation, sarcasm, mixed, short, long-arc), and both sides of that comparison are re-runnable — `research/eval_deployed_journal.py` for the shipped pipeline and `research/eval_samlowe_journal.py` for the candidate. Neither model handles sarcasm at all (0/2 for both), which is the clearest known limitation of the text stage and part of why LLM arbitration exists downstream.
 
