@@ -1,0 +1,153 @@
+{
+  "temperature": {
+    "text": 1.9343298829426612,
+    "face": 0.9001609624252959
+  },
+  "n_test": 577,
+  "rows": [
+    {
+      "text_calibration": false,
+      "face_calibration": false,
+      "confidence_weighting": false,
+      "post_fusion_calibration": false,
+      "accuracy": 0.8110918544194108,
+      "macro_f1": 0.811078265292222,
+      "ece": 0.19074147136837294
+    },
+    {
+      "text_calibration": false,
+      "face_calibration": false,
+      "confidence_weighting": false,
+      "post_fusion_calibration": true,
+      "accuracy": 0.8110918544194108,
+      "macro_f1": 0.811078265292222,
+      "ece": 0.054094610657733994
+    },
+    {
+      "text_calibration": false,
+      "face_calibration": false,
+      "confidence_weighting": true,
+      "post_fusion_calibration": false,
+      "accuracy": 0.8509532062391681,
+      "macro_f1": 0.8438147365179801,
+      "ece": 0.1725752396840545
+    },
+    {
+      "text_calibration": false,
+      "face_calibration": false,
+      "confidence_weighting": true,
+      "post_fusion_calibration": true,
+      "accuracy": 0.8509532062391681,
+      "macro_f1": 0.8438147365179801,
+      "ece": 0.025935465859676564
+    },
+    {
+      "text_calibration": false,
+      "face_calibration": true,
+      "confidence_weighting": false,
+      "post_fusion_calibration": false,
+      "accuracy": 0.8197573656845754,
+      "macro_f1": 0.8183157499780483,
+      "ece": 0.18949477353067562
+    },
+    {
+      "text_calibration": false,
+      "face_calibration": true,
+      "confidence_weighting": false,
+      "post_fusion_calibration": true,
+      "accuracy": 0.8197573656845754,
+      "macro_f1": 0.8183157499780483,
+      "ece": 0.06154999708482611
+    },
+    {
+      "text_calibration": false,
+      "face_calibration": true,
+      "confidence_weighting": true,
+      "post_fusion_calibration": false,
+      "accuracy": 0.8578856152512998,
+      "macro_f1": 0.8503157847624397,
+      "ece": 0.16605324520335035
+    },
+    {
+      "text_calibration": false,
+      "face_calibration": true,
+      "confidence_weighting": true,
+      "post_fusion_calibration": true,
+      "accuracy": 0.8578856152512998,
+      "macro_f1": 0.8503157847624397,
+      "ece": 0.024095498422913468
+    },
+    {
+      "text_calibration": true,
+      "face_calibration": false,
+      "confidence_weighting": false,
+      "post_fusion_calibration": false,
+      "accuracy": 0.901213171577123,
+      "macro_f1": 0.8920838731941482,
+      "ece": 0.33374125996060616
+    },
+    {
+      "text_calibration": true,
+      "face_calibration": false,
+      "confidence_weighting": false,
+      "post_fusion_calibration": true,
+      "accuracy": 0.901213171577123,
+      "macro_f1": 0.8920838731941482,
+      "ece": 0.021451039015652172
+    },
+    {
+      "text_calibration": true,
+      "face_calibration": false,
+      "confidence_weighting": true,
+      "post_fusion_calibration": false,
+      "accuracy": 0.8994800693240901,
+      "macro_f1": 0.8909665885587671,
+      "ece": 0.21799635390016486
+    },
+    {
+      "text_calibration": true,
+      "face_calibration": false,
+      "confidence_weighting": true,
+      "post_fusion_calibration": true,
+      "accuracy": 0.8994800693240901,
+      "macro_f1": 0.8909665885587671,
+      "ece": 0.030817944647307423
+    },
+    {
+      "text_calibration": true,
+      "face_calibration": true,
+      "confidence_weighting": false,
+      "post_fusion_calibration": false,
+      "accuracy": 0.901213171577123,
+      "macro_f1": 0.8932383637901092,
+      "ece": 0.32623994084519226
+    },
+    {
+      "text_calibration": true,
+      "face_calibration": true,
+      "confidence_weighting": false,
+      "post_fusion_calibration": true,
+      "accuracy": 0.901213171577123,
+      "macro_f1": 0.8932383637901092,
+      "ece": 0.02536829223788118
+    },
+    {
+      "text_calibration": true,
+      "face_calibration": true,
+      "confidence_weighting": true,
+      "post_fusion_calibration": false,
+      "accuracy": 0.8994800693240901,
+      "macro_f1": 0.8914611517674919,
+      "ece": 0.20536642788837625
+    },
+    {
+      "text_calibration": true,
+      "face_calibration": true,
+      "confidence_weighting": true,
+      "post_fusion_calibration": true,
+      "accuracy": 0.8994800693240901,
+      "macro_f1": 0.8914611517674919,
+      "ece": 0.03591478171255235
+    }
+  ]
+}

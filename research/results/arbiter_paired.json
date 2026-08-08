@@ -1,0 +1,425 @@
+{
+  "n_test_pairs": 577,
+  "n_conflicts": 51,
+  "conflict_rate": 0.08838821490467938,
+  "accuracy": {
+    "LLM arbitration (proposed)": 0.5098039215686274,
+    "numeric fusion (what it overrides)": 0.5294117647058824,
+    "text only": 0.1568627450980392,
+    "face only": 0.7058823529411765
+  },
+  "changed": 28,
+  "helped": 11,
+  "hurt": 12,
+  "net": -1,
+  "cases": [
+    {
+      "text": "Why is it that EVERY SINGLE TIME ONE OF THESE HAPPENS I’m only like a day late",
+      "true": "angry",
+      "text_pred": "surprised",
+      "face_pred": "angry",
+      "fusion": "angry",
+      "arbiter": "angry"
+    },
+    {
+      "text": "[NAME] is a hungry little bastard.",
+      "true": "angry",
+      "text_pred": "disgusted",
+      "face_pred": "angry",
+      "fusion": "angry",
+      "arbiter": "angry"
+    },
+    {
+      "text": "Oof, what a bad and dated meme",
+      "true": "sad",
+      "text_pred": "disgusted",
+      "face_pred": "fearful",
+      "fusion": "disgusted",
+      "arbiter": "disgusted"
+    },
+    {
+      "text": "It doesn’t look cool",
+      "true": "angry",
+      "text_pred": "sad",
+      "face_pred": "angry",
+      "fusion": "angry",
+      "arbiter": "sad"
+    },
+    {
+      "text": "I'm literally screaming.",
+      "true": "sad",
+      "text_pred": "fearful",
+      "face_pred": "sad",
+      "fusion": "sad",
+      "arbiter": "sad"
+    },
+    {
+      "text": "I don't feel so financially secure",
+      "true": "fearful",
+      "text_pred": "happy",
+      "face_pred": "fearful",
+      "fusion": "happy",
+      "arbiter": "sad"
+    },
+    {
+      "text": "*OOH* *AH* *OW*",
+      "true": "happy",
+      "text_pred": "surprised",
+      "face_pred": "happy",
+      "fusion": "surprised",
+      "arbiter": "surprised"
+    },
+    {
+      "text": "One of my worst nightmares. Ugh.",
+      "true": "fearful",
+      "text_pred": "disgusted",
+      "face_pred": "fearful",
+      "fusion": "fearful",
+      "arbiter": "fearful"
+    },
+    {
+      "text": "It’s a terrible thing when someone who doesn’t let themselves laugh has a reddit account",
+      "true": "sad",
+      "text_pred": "disgusted",
+      "face_pred": "sad",
+      "fusion": "disgusted",
+      "arbiter": "sad"
+    },
+    {
+      "text": "I mean, it certainly is weird but don't kinkshame",
+      "true": "sad",
+      "text_pred": "disgusted",
+      "face_pred": "sad",
+      "fusion": "disgusted",
+      "arbiter": "sad"
+    },
+    {
+      "text": "Plot twist: they don‘t Want to Go To school",
+      "true": "angry",
+      "text_pred": "sad",
+      "face_pred": "angry",
+      "fusion": "angry",
+      "arbiter": "sad"
+    },
+    {
+      "text": "Hhhhhaaarrryyy [NAME]!",
+      "true": "neutral",
+      "text_pred": "surprised",
+      "face_pred": "fearful",
+      "fusion": "neutral",
+      "arbiter": "happy"
+    },
+    {
+      "text": "For unrelated reasons, school is another mess. But vaccine injury in definitely represented through absurd levels of special ed. ",
+      "true": "neutral",
+      "text_pred": "disgusted",
+      "face_pred": "fearful",
+      "fusion": "disgusted",
+      "arbiter": "sad"
+    },
+    {
+      "text": "Have you ever consider knocking three times and that hide and seek/stalker vibe is terrifying. It's the most disturbing thing I can link you my AR 15.",
+      "true": "angry",
+      "text_pred": "disgusted",
+      "face_pred": "angry",
+      "fusion": "disgusted",
+      "arbiter": "disgusted"
+    },
+    {
+      "text": "Yikes that's cringe",
+      "true": "fearful",
+      "text_pred": "fearful",
+      "face_pred": "sad",
+      "fusion": "sad",
+      "arbiter": "sad"
+    },
+    {
+      "text": "And you better fucking get there early too! Bargain shoppers don't fuck around.",
+      "true": "angry",
+      "text_pred": "angry",
+      "face_pred": "fearful",
+      "fusion": "angry",
+      "arbiter": "angry"
+    },
+    {
+      "text": "Omg, *please*",
+      "true": "angry",
+      "text_pred": "surprised",
+      "face_pred": "angry",
+      "fusion": "surprised",
+      "arbiter": "surprised"
+    },
+    {
+      "text": "Former [NAME]? I've been scared already by [NAME] who were former d-line",
+      "true": "surprised",
+      "text_pred": "fearful",
+      "face_pred": "surprised",
+      "fusion": "fearful",
+      "arbiter": "fearful"
+    },
+    {
+      "text": "I dont get into politics much but if they want to echo chamber leave them alone it wont change them they will only get more angry",
+      "true": "neutral",
+      "text_pred": "angry",
+      "face_pred": "sad",
+      "fusion": "angry",
+      "arbiter": "angry"
+    },
+    {
+      "text": "I don't think this happened at all tbh",
+      "true": "angry",
+      "text_pred": "surprised",
+      "face_pred": "angry",
+      "fusion": "angry",
+      "arbiter": "surprised"
+    },
+    {
+      "text": "Talk about an oldddd school shit coin.",
+      "true": "angry",
+      "text_pred": "disgusted",
+      "face_pred": "angry",
+      "fusion": "angry",
+      "arbiter": "happy"
+    },
+    {
+      "text": "that was so sad :(",
+      "true": "sad",
+      "text_pred": "sad",
+      "face_pred": "angry",
+      "fusion": "sad",
+      "arbiter": "sad"
+    },
+    {
+      "text": "No I don’t want it to be unhappy or unhealthy AT ALL, just more like a normal/fussy baby.",
+      "true": "angry",
+      "text_pred": "sad",
+      "face_pred": "angry",
+      "fusion": "angry",
+      "arbiter": "sad"
+    },
+    {
+      "text": "This man makes aggressive grunts while breathing",
+      "true": "angry",
+      "text_pred": "disgusted",
+      "face_pred": "angry",
+      "fusion": "disgusted",
+      "arbiter": "angry"
+    },
+    {
+      "text": "You said it baby, can't wait to see what marvelous wonders the rest of 2019 will bring!",
+      "true": "surprised",
+      "text_pred": "happy",
+      "face_pred": "surprised",
+      "fusion": "happy",
+      "arbiter": "happy"
+    },
+    {
+      "text": "Being a nice, interesting person has helped me get a lot of friends but hasn't really gotten me anywhere with regards to women. ",
+      "true": "sad",
+      "text_pred": "happy",
+      "face_pred": "fearful",
+      "fusion": "fearful",
+      "arbiter": "sad"
+    },
+    {
+      "text": "Yes, we are going to kink shame you. ",
+      "true": "sad",
+      "text_pred": "disgusted",
+      "face_pred": "sad",
+      "fusion": "disgusted",
+      "arbiter": "angry"
+    },
+    {
+      "text": "It's so weird having HGs up this early, but I love having something to watch before my 8am lecture starts.",
+      "true": "angry",
+      "text_pred": "disgusted",
+      "face_pred": "angry",
+      "fusion": "angry",
+      "arbiter": "happy"
+    },
+    {
+      "text": "Clearly not well enough",
+      "true": "angry",
+      "text_pred": "sad",
+      "face_pred": "angry",
+      "fusion": "angry",
+      "arbiter": "sad"
+    },
+    {
+      "text": "Maybe I’m unsure of that",
+      "true": "surprised",
+      "text_pred": "fearful",
+      "face_pred": "surprised",
+      "fusion": "surprised",
+      "arbiter": "surprised"
+    },
+    {
+      "text": "Eh, says who? Anyway, I like being by myself. I'm by myself right now.",
+      "true": "surprised",
+      "text_pred": "happy",
+      "face_pred": "surprised",
+      "fusion": "surprised",
+      "arbiter": "sad"
+    },
+    {
+      "text": "EDIT: wrong link sorry here’s the right one I hope",
+      "true": "sad",
+      "text_pred": "sad",
+      "face_pred": "happy",
+      "fusion": "sad",
+      "arbiter": "sad"
+    },
+    {
+      "text": "I don't think either of them is a bad director. They are both bad writers, though.",
+      "true": "angry",
+      "text_pred": "disgusted",
+      "face_pred": "angry",
+      "fusion": "angry",
+      "arbiter": "angry"
+    },
+    {
+      "text": "Fuck a newspaper",
+      "true": "angry",
+      "text_pred": "angry",
+      "face_pred": "sad",
+      "fusion": "angry",
+      "arbiter": "angry"
+    },
+    {
+      "text": "2nd one resounds with me so much, I rarely realize how little I trust other people to do any task lol",
+      "true": "surprised",
+      "text_pred": "fearful",
+      "face_pred": "surprised",
+      "fusion": "surprised",
+      "arbiter": "surprised"
+    },
+    {
+      "text": "*10 minutes of awkward roleplay*",
+      "true": "sad",
+      "text_pred": "disgusted",
+      "face_pred": "sad",
+      "fusion": "disgusted",
+      "arbiter": "sad"
+    },
+    {
+      "text": "I’m not a fan of that hire at all... I’m also not a fan about how that all came out. All around bad.",
+      "true": "angry",
+      "text_pred": "disgusted",
+      "face_pred": "angry",
+      "fusion": "angry",
+      "arbiter": "angry"
+    },
+    {
+      "text": "Omg enough of all the damn hashtags, it’s not 2016 anymore",
+      "true": "angry",
+      "text_pred": "surprised",
+      "face_pred": "angry",
+      "fusion": "surprised",
+      "arbiter": "angry"
+    },
+    {
+      "text": "And it’s always so uncomfortably awkward when someone says shit like this to you.",
+      "true": "angry",
+      "text_pred": "disgusted",
+      "face_pred": "angry",
+      "fusion": "angry",
+      "arbiter": "disgusted"
+    },
+    {
+      "text": "I’m glad I’m not the only one who was pedantic enough to notice.",
+      "true": "happy",
+      "text_pred": "happy",
+      "face_pred": "sad",
+      "fusion": "happy",
+      "arbiter": "happy"
+    },
+    {
+      "text": "Same. You all tried to save me, but I rewatched with the sound on and... I have regrets.",
+      "true": "sad",
+      "text_pred": "sad",
+      "face_pred": "fearful",
+      "fusion": "fearful",
+      "arbiter": "sad"
+    },
+    {
+      "text": "Oh no that's so awkward, I don't understand how people don't understand how weird things like that are! ",
+      "true": "sad",
+      "text_pred": "disgusted",
+      "face_pred": "sad",
+      "fusion": "disgusted",
+      "arbiter": "sad"
+    },
+    {
+      "text": "Then I'll be accused of being a racist.",
+      "true": "surprised",
+      "text_pred": "angry",
+      "face_pred": "surprised",
+      "fusion": "surprised",
+      "arbiter": "surprised"
+    },
+    {
+      "text": "Must be a tough life when all you can think about is sad stories to keep you from enjoying anything.",
+      "true": "sad",
+      "text_pred": "sad",
+      "face_pred": "angry",
+      "fusion": "sad",
+      "arbiter": "angry"
+    },
+    {
+      "text": "Do you have any tinder picture or bio advice? I have no selfies or mirror pics but still not doing very well",
+      "true": "surprised",
+      "text_pred": "sad",
+      "face_pred": "surprised",
+      "fusion": "surprised",
+      "arbiter": "sad"
+    },
+    {
+      "text": "When I think about [NAME] and [NAME] at the same time I get a fucking aneurysm from the stupidity.",
+      "true": "angry",
+      "text_pred": "surprised",
+      "face_pred": "angry",
+      "fusion": "surprised",
+      "arbiter": "angry"
+    },
+    {
+      "text": "Sounds weird but dont swallow",
+      "true": "surprised",
+      "text_pred": "disgusted",
+      "face_pred": "surprised",
+      "fusion": "surprised",
+      "arbiter": "surprised"
+    },
+    {
+      "text": "Tl, dr - Take the abuse. Squirming only gets them off more.",
+      "true": "fearful",
+      "text_pred": "disgusted",
+      "face_pred": "fearful",
+      "fusion": "neutral",
+      "arbiter": "disgusted"
+    },
+    {
+      "text": "This, in top of my already terrible mental health, is the reason why I'm severely underweight and need help.",
+      "true": "sad",
+      "text_pred": "fearful",
+      "face_pred": "sad",
+      "fusion": "fearful",
+      "arbiter": "sad"
+    },
+    {
+      "text": "You didnt!",
+      "true": "neutral",
+      "text_pred": "angry",
+      "face_pred": "sad",
+      "fusion": "angry",
+      "arbiter": "sad"
+    },
+    {
+      "text": "Hold my wine, I have to go vomit in sorrow. ",
+      "true": "sad",
+      "text_pred": "disgusted",
+      "face_pred": "angry",
+      "fusion": "angry",
+      "arbiter": "sad"
+    }
+  ]
+}
