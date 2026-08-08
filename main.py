@@ -24,6 +24,7 @@ GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 FACE_SERVICE_URL = os.getenv("FACE_SERVICE_URL", "http://localhost:8001")
 TEXT_SERVICE_URL = os.getenv("TEXT_SERVICE_URL", "http://localhost:8002")
 INTERNAL_API_KEY = os.getenv("INTERNAL_API_KEY")
+ARBITER_ENABLED = os.getenv("MOODSCRIPT_ENABLE_ARBITER", "").lower() in ("1", "true", "yes")
 
 def _internal_headers():
     return {"X-Internal-Key": INTERNAL_API_KEY} if INTERNAL_API_KEY else {}
@@ -89,12 +90,16 @@ async def _analyze_message(text: str, image_base64: Optional[str]):
         xai_result = text_data["xai_result"]
 
     fusion_result = fusion.fuse(text_result, face_result)
-    if face_result is not None:
-        # Numeric fusion already resolves the easy cases (agreement, one modality
-        # clearly stronger, one reading neutral). Only genuine unresolved conflicts —
-        # both modalities disagree with comparable confidence — escalate to an LLM call
-        # that can read the actual text and catch things a pure score blend can't, like
-        # sarcasm or context. See models/arbiter.py.
+
+    # LLM arbitration is OFF by default. The idea was that on a genuine conflict a
+    # language model could read the text and catch what a score blend cannot, like
+    # sarcasm. Measured on two paired benchmarks it does the opposite: on the cases
+    # where it fires it scored 46.83% against 48.41% for the fusion it overrides
+    # (net -2 of 61 changed labels), and three redesigns did no better. It reasons
+    # over the text while never seeing the face image, and text is the weaker signal
+    # on exactly those cases. Calibrated fusion resolves them at 76.98%.
+    # See research/eval_arbiter_v2.py. Set MOODSCRIPT_ENABLE_ARBITER=1 to restore it.
+    if face_result is not None and ARBITER_ENABLED:
         fusion_result = await arbiter.arbitrate(text, text_result, face_result, fusion_result)
 
     return text_result, face_result, fusion_result, xai_result
