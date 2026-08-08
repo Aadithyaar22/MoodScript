@@ -57,6 +57,31 @@ def fuse(A, B):
     return (wt / t) * A + (wf / t) * B
 
 
+def class_reliability(P, y, K=7, smoothing=5.0):
+    pred = P.argmax(1)
+    overall = float((pred == y).mean())
+    r = np.zeros(K)
+    for c in range(K):
+        m = pred == c
+        n = int(m.sum())
+        hits = float((y[m] == c).sum()) if n else 0.0
+        r[c] = (hits + smoothing * overall) / (n + smoothing)
+    return r
+
+
+def fuse_v2(A, B, rel_t, rel_f):
+    """Class-conditional reliability weighting + log-linear pooling (fusion v2)."""
+    at = (rel_t[A.argmax(1)] * A.max(1))[:, None] * 0.55
+    af = (rel_f[B.argmax(1)] * B.max(1))[:, None] * 0.45
+    tot = at + af
+    tot[tot == 0] = 1.0
+    at, af = at / tot, af / tot
+    logp = at * np.log(np.clip(A, 1e-12, 1)) + af * np.log(np.clip(B, 1e-12, 1))
+    logp -= logp.max(1, keepdims=True)
+    e = np.exp(logp)
+    return e / e.sum(1, keepdims=True)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--paired-set", default="paired_set.json")
@@ -89,12 +114,16 @@ def main():
     F = np.stack([vec(p["face_dist"]) for p in sub])
     y = np.array([IDX[p["true"]] for p in sub])
 
+    rel_t = class_reliability(ts(Tc, T_text), yc)
+    rel_f = class_reliability(ts(Fc, T_face), yc)
     rows = [
         ("text only", float((T.argmax(1) == y).mean())),
         ("face only", float((F.argmax(1) == y).mean())),
         ("numeric fusion (deployed)", float((fuse(T, F).argmax(1) == y).mean())),
-        ("calibrated fusion (proposed)",
+        ("calibrated linear fusion",
          float((fuse(ts(T, T_text), ts(F, T_face)).argmax(1) == y).mean())),
+        ("log-linear + class reliability (v2)",
+         float((fuse_v2(ts(T, T_text), ts(F, T_face), rel_t, rel_f).argmax(1) == y).mean())),
     ]
 
     arb_file = args.arbiter_result or (

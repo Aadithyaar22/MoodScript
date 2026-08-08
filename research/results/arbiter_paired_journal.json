@@ -1,76 +1,52 @@
 {
-  "n_test_pairs": 343,
-  "n_conflicts": 30,
-  "conflict_rate": 0.08746355685131195,
+  "n_test_pairs": 1056,
+  "n_conflicts": 126,
+  "conflict_rate": 0.11931818181818182,
   "accuracy": {
-    "LLM arbitration (proposed)": 0.43333333333333335,
-    "numeric fusion (what it overrides)": 0.4666666666666667,
+    "LLM arbitration (proposed)": 0.46825396825396826,
+    "numeric fusion (what it overrides)": 0.48412698412698413,
     "text only": 0.16666666666666666,
-    "face only": 0.7666666666666667
+    "face only": 0.7142857142857143
   },
-  "changed": 14,
-  "helped": 6,
-  "hurt": 7,
-  "net": -1,
+  "changed": 61,
+  "helped": 23,
+  "hurt": 25,
+  "net": -2,
   "cases": [
     {
-      "text": "I recently found out that I am having baby number 4. ",
-      "true": "surprised",
-      "text_pred": "happy",
-      "face_pred": "surprised",
-      "fusion": "happy",
-      "arbiter": "happy"
-    },
-    {
-      "text": "I spent Saturday night playing Lord of the Rings Online.",
-      "true": "sad",
-      "text_pred": "happy",
-      "face_pred": "sad",
-      "fusion": "happy",
-      "arbiter": "happy"
-    },
-    {
-      "text": "pregnant",
-      "true": "surprised",
-      "text_pred": "sad",
-      "face_pred": "surprised",
-      "fusion": "surprised",
-      "arbiter": "surprised"
-    },
-    {
-      "text": "moving forward from a dark situation",
-      "true": "happy",
-      "text_pred": "fearful",
-      "face_pred": "happy",
-      "fusion": "happy",
-      "arbiter": "neutral"
-    },
-    {
-      "text": "I recently heard what appeared to be gunshots on my street. I locked all my doors and closed my windows.",
+      "text": "My department is being closed.",
       "true": "fearful",
-      "text_pred": "angry",
-      "face_pred": "happy",
+      "text_pred": "sad",
+      "face_pred": "fearful",
+      "fusion": "sad",
+      "arbiter": "sad"
+    },
+    {
+      "text": "I saw a man yelling at a young boy.  It made me very upset.",
+      "true": "angry",
+      "text_pred": "disgusted",
+      "face_pred": "angry",
       "fusion": "angry",
       "arbiter": "sad"
     },
     {
-      "text": "One year for christmas I really wanted a new computer but knew there was no way it was happening, but my parents surprised me with a new computer.",
-      "true": "happy",
+      "text": "My cat got spooked by something and jumped over my half wall that I had a candle sitting on top of, and knocked the burning candle onto the ground shattering the glass everywhere and liquid wax flew a",
+      "true": "angry",
+      "text_pred": "fearful",
+      "face_pred": "angry",
+      "fusion": "fearful",
+      "arbiter": "sad"
+    },
+    {
+      "text": "I can't beleve I only got half of the maximum for my raise?",
+      "true": "angry",
       "text_pred": "surprised",
-      "face_pred": "happy",
-      "fusion": "surprised",
-      "arbiter": "happy"
+      "face_pred": "angry",
+      "fusion": "angry",
+      "arbiter": "surprised"
     },
     {
-      "text": "I recently won on a lottery ticket! I never win, so it was a pleasant shock.",
-      "true": "surprised",
-      "text_pred": "happy",
-      "face_pred": "surprised",
-      "fusion": "surprised",
-      "arbiter": "happy"
-    },
-    {
-      "text": "My husband and my friends planned a baby shower for me without me knowing. On the day of the shower, my husband took me out to lunch to give my friends time to set up. When we got back to my house, ev",
+      "text": "I was happy to see my dog returned home",
       "true": "surprised",
       "text_pred": "happy",
       "face_pred": "surprised",
@@ -78,15 +54,119 @@
       "arbiter": "happy"
     },
     {
-      "text": "I came home from work last night and my step dad scared me!",
+      "text": "I got One thousand dollars from my father for my birthday.",
       "true": "surprised",
-      "text_pred": "fearful",
+      "text_pred": "happy",
       "face_pred": "surprised",
+      "fusion": "happy",
+      "arbiter": "happy"
+    },
+    {
+      "text": "My little boy is starting Kindergarten in a few days",
+      "true": "sad",
+      "text_pred": "happy",
+      "face_pred": "sad",
+      "fusion": "sad",
+      "arbiter": "sad"
+    },
+    {
+      "text": "I can't believe my kid is starting 8th grade. I was just changing her diaper",
+      "true": "surprised",
+      "text_pred": "surprised",
+      "face_pred": "happy",
+      "fusion": "surprised",
+      "arbiter": "sad"
+    },
+    {
+      "text": "I got a check in the mail yesterday",
+      "true": "surprised",
+      "text_pred": "happy",
+      "face_pred": "fearful",
+      "fusion": "fearful",
+      "arbiter": "happy"
+    },
+    {
+      "text": "I got to relax today and sleep. I was off of work",
+      "true": "happy",
+      "text_pred": "sad",
+      "face_pred": "angry",
+      "fusion": "angry",
+      "arbiter": "neutral"
+    },
+    {
+      "text": "I saw my girlfriend with another man.",
+      "true": "sad",
+      "text_pred": "disgusted",
+      "face_pred": "sad",
+      "fusion": "disgusted",
+      "arbiter": "sad"
+    },
+    {
+      "text": "When I was in middle school there was this boy that sat in front of me in 8th, he was always trying to get me to kiss him before class started.",
+      "true": "angry",
+      "text_pred": "disgusted",
+      "face_pred": "angry",
+      "fusion": "angry",
+      "arbiter": "disgusted"
+    },
+    {
+      "text": "I would like to try skydiving.",
+      "true": "fearful",
+      "text_pred": "happy",
+      "face_pred": "fearful",
+      "fusion": "happy",
+      "arbiter": "happy"
+    },
+    {
+      "text": "my feelings might hurt me in the future",
+      "true": "fearful",
+      "text_pred": "sad",
+      "face_pred": "fearful",
+      "fusion": "sad",
+      "arbiter": "sad"
+    },
+    {
+      "text": "There is a new puppy in my home. I very much excited to see him. My husband bought it for me.",
+      "true": "surprised",
+      "text_pred": "happy",
+      "face_pred": "surprised",
+      "fusion": "surprised",
+      "arbiter": "happy"
+    },
+    {
+      "text": "I got in my car and my son left a note on my seat.",
+      "true": "surprised",
+      "text_pred": "angry",
+      "face_pred": "surprised",
+      "fusion": "angry",
+      "arbiter": "surprised"
+    },
+    {
+      "text": "I applied for a job recently and put loads of effort into polishing my CV. I really wanted the job because the salary was really good. I felt like the interview went really well but obviously not beca",
+      "true": "sad",
+      "text_pred": "happy",
+      "face_pred": "sad",
+      "fusion": "happy",
+      "arbiter": "sad"
+    },
+    {
+      "text": "i dont really enjoy when my wife and son go out alone, too many crazy azz people in the world",
+      "true": "fearful",
+      "text_pred": "happy",
+      "face_pred": "fearful",
+      "fusion": "happy",
+      "arbiter": "sad"
+    },
+    {
+      "text": "There was a guy at a place I worked at that was stalking me. He would write me creepy letters, come by to talk to me, and try to follow me home.",
+      "true": "fearful",
+      "text_pred": "disgusted",
+      "face_pred": "fearful",
       "fusion": "fearful",
       "arbiter": "fearful"
     },
     {
-      "text": "My dog has to have her teethe cleaned on ",
+      "text": "My friend's eyes keep hurting at night. She's been to the doctor, but they can't find anything wrong with her.",
       "true": "fearful",
       "text_pred": "sad",
       "face_pred": "fearful",
@@ -94,15 +174,111 @@
       "arbiter": "sad"
     },
     {
-      "text": "I thought I had paid all my daughter's band fees only to find out that I'm 10 dollars short.",
+      "text": "This maniac cut me off on my way to the doctor yesterday. I had to swerve around them and I wrecked into the ditch.",
       "true": "angry",
-      "text_pred": "surprised",
+      "text_pred": "fearful",
       "face_pred": "angry",
-      "fusion": "surprised",
+      "fusion": "angry",
       "arbiter": "angry"
     },
     {
-      "text": "I came home from work today and my wife had a new puppy waiting for me. ",
+      "text": "I wsa really upse when I found out my co-worker was fired",
+      "true": "angry",
+      "text_pred": "sad",
+      "face_pred": "angry",
+      "fusion": "angry",
+      "arbiter": "sad"
+    },
+    {
+      "text": "My daughter had the sweetest little hamster.  One day she went to feed it and it had died, she was crushed.",
+      "true": "sad",
+      "text_pred": "disgusted",
+      "face_pred": "sad",
+      "fusion": "sad",
+      "arbiter": "sad"
+    },
+    {
+      "text": "I almost hit a dog running down the road last night. It was scary",
+      "true": "fearful",
+      "text_pred": "fearful",
+      "face_pred": "angry",
+      "fusion": "fearful",
+      "arbiter": "fearful"
+    },
+    {
+      "text": "I was so mad when my dog got my dinner off the table.",
+      "true": "angry",
+      "text_pred": "angry",
+      "face_pred": "fearful",
+      "fusion": "angry",
+      "arbiter": "angry"
+    },
+    {
+      "text": "someone had pull a stick prank on me and slashed my car tires and bashed my windshield in at my apartment complex.",
+      "true": "sad",
+      "text_pred": "angry",
+      "face_pred": "sad",
+      "fusion": "sad",
+      "arbiter": "angry"
+    },
+    {
+      "text": "My out-of-town relatives are visiting, and there was on relative whom I really enjoy speaking with, that I didn't get to hang out with much while they were here. I won't get to seem them for a while, ",
+      "true": "sad",
+      "text_pred": "happy",
+      "face_pred": "fearful",
+      "fusion": "happy",
+      "arbiter": "sad"
+    },
+    {
+      "text": "lost my cat whisker he was the best pet i have ever had",
+      "true": "sad",
+      "text_pred": "surprised",
+      "face_pred": "sad",
+      "fusion": "sad",
+      "arbiter": "sad"
+    },
+    {
+      "text": "I couldn't take my bro out for his birthday this past weekend.",
+      "true": "sad",
+      "text_pred": "sad",
+      "face_pred": "fearful",
+      "fusion": "sad",
+      "arbiter": "sad"
+    },
+    {
+      "text": "When I was at college, some tenagers were extorting money from me.",
+      "true": "fearful",
+      "text_pred": "disgusted",
+      "face_pred": "fearful",
+      "fusion": "disgusted",
+      "arbiter": "sad"
+    },
+    {
+      "text": "My first pregnancy did not go to plan.  I developed Hellp syndrome and it was very touch and go there for awhile.  both of us came close to not surviving.",
+      "true": "fearful",
+      "text_pred": "sad",
+      "face_pred": "fearful",
+      "fusion": "sad",
+      "arbiter": "sad"
+    },
+    {
+      "text": "I cant believe my daughter is already procrastinating. school just started",
+      "true": "sad",
+      "text_pred": "surprised",
+      "face_pred": "sad",
+      "fusion": "surprised",
+      "arbiter": "sad"
+    },
+    {
+      "text": "when i heard someone fighting out of my apartment at night",
+      "true": "fearful",
+      "text_pred": "fearful",
+      "face_pred": "sad",
+      "fusion": "fearful",
+      "arbiter": "fearful"
+    },
+    {
+      "text": "I was happy when my mother gave me the gift",
       "true": "surprised",
       "text_pred": "happy",
       "face_pred": "surprised",
@@ -110,12 +286,28 @@
       "arbiter": "happy"
     },
     {
-      "text": "I had finally got to see a baseball game at a stadium. It was amazing how high up we were in the stadium and yet could still see everything perfectly.",
-      "true": "happy",
-      "text_pred": "surprised",
-      "face_pred": "happy",
-      "fusion": "happy",
-      "arbiter": "happy"
+      "text": "I miss my dog. I wish I would've spent more time with her when she was alive.",
+      "true": "fearful",
+      "text_pred": "sad",
+      "face_pred": "fearful",
+      "fusion": "fearful",
+      "arbiter": "sad"
+    },
+    {
+      "text": "My friend's girlfriend cheated on him. I've never seen him so destroyed.",
+      "true": "sad",
+      "text_pred": "disgusted",
+      "face_pred": "sad",
+      "fusion": "sad",
+      "arbiter": "sad"
+    },
+    {
+      "text": "In the queue at the supermarket",
+      "true": "angry",
+      "text_pred": "fearful",
+      "face_pred": "angry",
+      "fusion": "fearful",
+      "arbiter": "neutral"
     },
     {
       "text": "One time my friend played a prank on me where he acted dead. I came down stairs and there was a red substance on the ground near his head, but it was just ketchup!",
@@ -126,103 +318,15 @@
       "arbiter": "surprised"
     },
     {
-      "text": "I couldn't go to movies and my husband bought me that movie",
-      "true": "surprised",
-      "text_pred": "sad",
-      "face_pred": "surprised",
-      "fusion": "sad",
-      "arbiter": "surprised"
-    },
-    {
-      "text": "I feel mad when marketers try to con me",
-      "true": "angry",
+      "text": "I was mislead by a worker who wanted to undermine my work.",
+      "true": "sad",
       "text_pred": "angry",
       "face_pred": "sad",
       "fusion": "angry",
       "arbiter": "angry"
     },
     {
-      "text": "I was so upset when I failed my math test, I was only 1 percent off!",
-      "true": "sad",
-      "text_pred": "surprised",
-      "face_pred": "sad",
-      "fusion": "surprised",
-      "arbiter": "sad"
-    },
-    {
-      "text": "When my pet got badly injured a few months ago, I thought for sure that she would not make it.",
-      "true": "fearful",
-      "text_pred": "sad",
-      "face_pred": "fearful",
-      "fusion": "fearful",
-      "arbiter": "sad"
-    },
-    {
-      "text": "We had a trip planned and had to go by airplane. I was so nervous about getting on the plane I couldn't sleep at night. After actually flying, I have stopped worrying so much and we fly all the time n",
-      "true": "fearful",
-      "text_pred": "fearful",
-      "face_pred": "surprised",
-      "fusion": "fearful",
-      "arbiter": "sad"
-    },
-    {
-      "text": "I bought a cake from the store and it ended up tasting terrible. ",
-      "true": "sad",
-      "text_pred": "disgusted",
-      "face_pred": "sad",
-      "fusion": "disgusted",
-      "arbiter": "sad"
-    },
-    {
-      "text": "Felt helpless when my dog passed away.",
-      "true": "angry",
-      "text_pred": "sad",
-      "face_pred": "angry",
-      "fusion": "sad",
-      "arbiter": "sad"
-    },
-    {
-      "text": "anxious: I can't help feel stressed about money",
-      "true": "fearful",
-      "text_pred": "angry",
-      "face_pred": "fearful",
-      "fusion": "fearful",
-      "arbiter": "fearful"
-    },
-    {
-      "text": "My husband had to cancel a vacation for next month. It's because his other night manager is terriblke and they cant afford to let him go.",
-      "true": "sad",
-      "text_pred": "sad",
-      "face_pred": "angry",
-      "fusion": "sad",
-      "arbiter": "sad"
-    },
-    {
-      "text": "Having to give a presentation in front of the entire class",
-      "true": "fearful",
-      "text_pred": "disgusted",
-      "face_pred": "fearful",
-      "fusion": "fearful",
-      "arbiter": "fearful"
-    },
-    {
-      "text": "Having more work than I can handle",
-      "true": "happy",
-      "text_pred": "sad",
-      "face_pred": "happy",
-      "fusion": "happy",
-      "arbiter": "sad"
-    },
-    {
-      "text": "I lost my car keys. I'm furious with myself.",
-      "true": "angry",
-      "text_pred": "angry",
-      "face_pred": "sad",
-      "fusion": "sad",
-      "arbiter": "sad"
-    },
-    {
-      "text": "I won a lottery for a small amount of money. It's always nice to get something for free.",
+      "text": "I was so excited to see my kids when they came home!",
       "true": "surprised",
       "text_pred": "happy",
       "face_pred": "surprised",
@@ -230,7 +334,431 @@
       "arbiter": "happy"
     },
     {
-      "text": "My ex and I broke up because he decided that he would no longer be willing to leave his job from overwork, like 70 plus hours a week.",
+      "text": "i ate a food at a restaurant and could not finish it",
+      "true": "disgusted",
+      "text_pred": "sad",
+      "face_pred": "disgusted",
+      "fusion": "disgusted",
+      "arbiter": "sad"
+    },
+    {
+      "text": "Imagine,i started working out two months ago,only to weigh myself and i have gained some weight.",
+      "true": "sad",
+      "text_pred": "surprised",
+      "face_pred": "sad",
+      "fusion": "surprised",
+      "arbiter": "sad"
+    },
+    {
+      "text": "my close friend stole from me, so upset",
+      "true": "sad",
+      "text_pred": "angry",
+      "face_pred": "sad",
+      "fusion": "sad",
+      "arbiter": "sad"
+    },
+    {
+      "text": "I felt leftout when I was in a train yesterday",
+      "true": "sad",
+      "text_pred": "disgusted",
+      "face_pred": "angry",
+      "fusion": "angry",
+      "arbiter": "sad"
+    },
+    {
+      "text": "My son used to be so stubborn about getting up in the morning and gong to school. It would make me so angry. It was always a huge fight. I'm so glad he has grown out of that..",
+      "true": "angry",
+      "text_pred": "happy",
+      "face_pred": "angry",
+      "fusion": "happy",
+      "arbiter": "sad"
+    },
+    {
+      "text": "I am basking in my new found love even though my parent seem to see things differently",
+      "true": "sad",
+      "text_pred": "happy",
+      "face_pred": "sad",
+      "fusion": "happy",
+      "arbiter": "happy"
+    },
+    {
+      "text": "the rain today is frustrating",
+      "true": "angry",
+      "text_pred": "sad",
+      "face_pred": "angry",
+      "fusion": "angry",
+      "arbiter": "sad"
+    },
+    {
+      "text": "I was a little upset when I didnt get to leave work early",
+      "true": "sad",
+      "text_pred": "sad",
+      "face_pred": "happy",
+      "fusion": "happy",
+      "arbiter": "sad"
+    },
+    {
+      "text": "My cat ignores me sometimes and just stares into the distance",
+      "true": "sad",
+      "text_pred": "angry",
+      "face_pred": "sad",
+      "fusion": "sad",
+      "arbiter": "sad"
+    },
+    {
+      "text": "My dog pooped on the carpet yesterday.",
+      "true": "angry",
+      "text_pred": "disgusted",
+      "face_pred": "happy",
+      "fusion": "disgusted",
+      "arbiter": "sad"
+    },
+    {
+      "text": "I'm going to have a sub after work.",
+      "true": "happy",
+      "text_pred": "sad",
+      "face_pred": "happy",
+      "fusion": "happy",
+      "arbiter": "happy"
+    },
+    {
+      "text": "A couple years ago I got hospitalized and diagnosed with MS. The whole experience was terrible.",
+      "true": "fearful",
+      "text_pred": "sad",
+      "face_pred": "fearful",
+      "fusion": "fearful",
+      "arbiter": "sad"
+    },
+    {
+      "text": "I had to explain how something works at my job in front of a bunch of people. I'm not a fan of talking in front of a crowd.",
+      "true": "fearful",
+      "text_pred": "disgusted",
+      "face_pred": "sad",
+      "fusion": "sad",
+      "arbiter": "sad"
+    },
+    {
+      "text": "This guy at school follows me around.",
+      "true": "angry",
+      "text_pred": "disgusted",
+      "face_pred": "angry",
+      "fusion": "disgusted",
+      "arbiter": "disgusted"
+    },
+    {
+      "text": "I never drink milk anymore because it made me sick once.",
+      "true": "fearful",
+      "text_pred": "disgusted",
+      "face_pred": "angry",
+      "fusion": "disgusted",
+      "arbiter": "sad"
+    },
+    {
+      "text": "I am proud of my mom for being my grammas caregiver even after she has been mean at times",
+      "true": "happy",
+      "text_pred": "angry",
+      "face_pred": "happy",
+      "fusion": "happy",
+      "arbiter": "sad"
+    },
+    {
+      "text": "When my friends threw a party for my birthday.",
+      "true": "surprised",
+      "text_pred": "disgusted",
+      "face_pred": "surprised",
+      "fusion": "disgusted",
+      "arbiter": "surprised"
+    },
+    {
+      "text": "Today is the anniversary of my fathers death. He has been gone for 18 years now.",
+      "true": "sad",
+      "text_pred": "sad",
+      "face_pred": "angry",
+      "fusion": "sad",
+      "arbiter": "sad"
+    },
+    {
+      "text": "I pray every night North Korea doesn't bomb us.",
+      "true": "happy",
+      "text_pred": "fearful",
+      "face_pred": "happy",
+      "fusion": "fearful",
+      "arbiter": "fearful"
+    },
+    {
+      "text": "I am not sure about payday. It can be a stressful time and I really wish I didn't have to go through it this week.",
+      "true": "fearful",
+      "text_pred": "sad",
+      "face_pred": "fearful",
+      "fusion": "fearful",
+      "arbiter": "sad"
+    },
+    {
+      "text": "My son just left for college.",
+      "true": "sad",
+      "text_pred": "happy",
+      "face_pred": "surprised",
+      "fusion": "happy",
+      "arbiter": "sad"
+    },
+    {
+      "text": "My 8 year old German Shepherd had hip dysplasia.  He was my best friend.  I loved him so much",
+      "true": "sad",
+      "text_pred": "happy",
+      "face_pred": "sad",
+      "fusion": "sad",
+      "arbiter": "sad"
+    },
+    {
+      "text": "I had planned to take my daughters shopping a couple of weeks ago. We were all very excited about it, but the plans fell through. I was able to take them shopping later so that made me feel a little b",
+      "true": "sad",
+      "text_pred": "happy",
+      "face_pred": "sad",
+      "fusion": "sad",
+      "arbiter": "sad"
+    },
+    {
+      "text": "i was cared to walk home alone the other day",
+      "true": "fearful",
+      "text_pred": "sad",
+      "face_pred": "fearful",
+      "fusion": "sad",
+      "arbiter": "sad"
+    },
+    {
+      "text": "I have a cat with feline AIDS.  She is slowly wasting away and I will need to put her down.",
+      "true": "sad",
+      "text_pred": "sad",
+      "face_pred": "fearful",
+      "fusion": "sad",
+      "arbiter": "sad"
+    },
+    {
+      "text": "when my girl friend left me",
+      "true": "sad",
+      "text_pred": "angry",
+      "face_pred": "sad",
+      "fusion": "sad",
+      "arbiter": "sad"
+    },
+    {
+      "text": "My cat hasn't been feeling well this past week, I think there might be something really wrong.",
+      "true": "fearful",
+      "text_pred": "sad",
+      "face_pred": "fearful",
+      "fusion": "sad",
+      "arbiter": "sad"
+    },
+    {
+      "text": "In school, people would always bully me.",
+      "true": "sad",
+      "text_pred": "fearful",
+      "face_pred": "sad",
+      "fusion": "fearful",
+      "arbiter": "sad"
+    },
+    {
+      "text": "I was surprised when I thought I bought 5 packages of gluten free cookies. They weren't!",
+      "true": "surprised",
+      "text_pred": "surprised",
+      "face_pred": "fearful",
+      "fusion": "surprised",
+      "arbiter": "surprised"
+    },
+    {
+      "text": "My father is visiting me!",
+      "true": "surprised",
+      "text_pred": "surprised",
+      "face_pred": "happy",
+      "fusion": "surprised",
+      "arbiter": "happy"
+    },
+    {
+      "text": "when i spilled my coffee",
+      "true": "sad",
+      "text_pred": "angry",
+      "face_pred": "sad",
+      "fusion": "sad",
+      "arbiter": "sad"
+    },
+    {
+      "text": "I am expecting an express package tomorrow, but the tracking has not been updated correctly.",
+      "true": "fearful",
+      "text_pred": "sad",
+      "face_pred": "fearful",
+      "fusion": "sad",
+      "arbiter": "sad"
+    },
+    {
+      "text": "The printer at work is the worst thing ever",
+      "true": "angry",
+      "text_pred": "disgusted",
+      "face_pred": "angry",
+      "fusion": "disgusted",
+      "arbiter": "angry"
+    },
+    {
+      "text": "Customer service sent me two bad vacuums now. Well the second works but the stretcher pole thing that is metal doesn't work right. Sigh..",
+      "true": "angry",
+      "text_pred": "sad",
+      "face_pred": "happy",
+      "fusion": "happy",
+      "arbiter": "sad"
+    },
+    {
+      "text": "No one came to my party.",
+      "true": "sad",
+      "text_pred": "angry",
+      "face_pred": "sad",
+      "fusion": "sad",
+      "arbiter": "sad"
+    },
+    {
+      "text": "I got take out and when I got home I had an extra dessert. I was quite pleased.",
+      "true": "surprised",
+      "text_pred": "happy",
+      "face_pred": "fearful",
+      "fusion": "happy",
+      "arbiter": "happy"
+    },
+    {
+      "text": "I can't believe it took no time to get my kids back on school time. Everyone has been in bed for an hour",
+      "true": "surprised",
+      "text_pred": "surprised",
+      "face_pred": "fearful",
+      "fusion": "surprised",
+      "arbiter": "surprised"
+    },
+    {
+      "text": "Someone hit me in the mouth and I lost a tooth.  I am so upset over it.",
+      "true": "sad",
+      "text_pred": "angry",
+      "face_pred": "sad",
+      "fusion": "sad",
+      "arbiter": "sad"
+    },
+    {
+      "text": "I found $80 while I was cleaning out my truck.",
+      "true": "surprised",
+      "text_pred": "disgusted",
+      "face_pred": "angry",
+      "fusion": "disgusted",
+      "arbiter": "happy"
+    },
+    {
+      "text": "My girlfriend is moving in this weekend",
+      "true": "happy",
+      "text_pred": "sad",
+      "face_pred": "happy",
+      "fusion": "happy",
+      "arbiter": "happy"
+    },
+    {
+      "text": "I bought my very first videogame with my own money",
+      "true": "happy",
+      "text_pred": "happy",
+      "face_pred": "surprised",
+      "fusion": "happy",
+      "arbiter": "happy"
+    },
+    {
+      "text": "I had been laid off from a job I'd had for 25 years. I wasn't sure what would happen",
+      "true": "fearful",
+      "text_pred": "sad",
+      "face_pred": "fearful",
+      "fusion": "sad",
+      "arbiter": "sad"
+    },
+    {
+      "text": "Drunk guy puked on me",
+      "true": "angry",
+      "text_pred": "disgusted",
+      "face_pred": "angry",
+      "fusion": "disgusted",
+      "arbiter": "disgusted"
+    },
+    {
+      "text": "How can i not be how I am when my wife wasted all my retirement money",
+      "true": "angry",
+      "text_pred": "sad",
+      "face_pred": "angry",
+      "fusion": "sad",
+      "arbiter": "angry"
+    },
+    {
+      "text": "My friends want me to scuba diving with them. I really don't want to because I worry about sharks and other creatures.",
+      "true": "fearful",
+      "text_pred": "fearful",
+      "face_pred": "sad",
+      "fusion": "sad",
+      "arbiter": "sad"
+    },
+    {
+      "text": "when my daughter won an award at school",
+      "true": "surprised",
+      "text_pred": "happy",
+      "face_pred": "surprised",
+      "fusion": "happy",
+      "arbiter": "happy"
+    },
+    {
+      "text": "i was so mad.  I came home and my back door was left open.",
+      "true": "angry",
+      "text_pred": "angry",
+      "face_pred": "fearful",
+      "fusion": "angry",
+      "arbiter": "angry"
+    },
+    {
+      "text": "My teenager son almost got kicked out of school when he was 16, for getting caught with tobacco. It was his 5th offense",
+      "true": "sad",
+      "text_pred": "disgusted",
+      "face_pred": "sad",
+      "fusion": "angry",
+      "arbiter": "sad"
+    },
+    {
+      "text": "i felt so alone in my new apartment. I have just moved to a new city for a job",
+      "true": "sad",
+      "text_pred": "happy",
+      "face_pred": "fearful",
+      "fusion": "sad",
+      "arbiter": "sad"
+    },
+    {
+      "text": "I was in complete shock to receive the news of the demise of a bosom friend",
+      "true": "sad",
+      "text_pred": "surprised",
+      "face_pred": "sad",
+      "fusion": "surprised",
+      "arbiter": "sad"
+    },
+    {
+      "text": "it upset me when i couldnt leave work on time",
+      "true": "angry",
+      "text_pred": "sad",
+      "face_pred": "angry",
+      "fusion": "angry",
+      "arbiter": "sad"
+    },
+    {
+      "text": "in my birthday my friend will give i phone that is the most praising moment",
+      "true": "surprised",
+      "text_pred": "happy",
+      "face_pred": "surprised",
+      "fusion": "surprised",
+      "arbiter": "happy"
+    },
+    {
+      "text": "My favorite pizza joint went out of business.  I am so angry about it.",
+      "true": "sad",
+      "text_pred": "angry",
+      "face_pred": "sad",
+      "fusion": "sad",
+      "arbiter": "sad"
+    },
+    {
+      "text": "it makes me very unhappy when i let someone out in traffic and they dont acknowledge me",
       "true": "angry",
       "text_pred": "sad",
       "face_pred": "angry",
@@ -238,7 +766,103 @@
       "arbiter": "sad"
     },
     {
-      "text": "My family came to visit me recently. I always get nervous before having visitors. ",
+      "text": "I got crashed into this morning by another car who was texting while driving",
+      "true": "angry",
+      "text_pred": "fearful",
+      "face_pred": "angry",
+      "fusion": "fearful",
+      "arbiter": "angry"
+    },
+    {
+      "text": "i felt sick after eating too much ice cream last night",
+      "true": "disgusted",
+      "text_pred": "sad",
+      "face_pred": "disgusted",
+      "fusion": "sad",
+      "arbiter": "sad"
+    },
+    {
+      "text": "One time my sister kept playing a song I hated over and over again. I couldn't get it out of my head for a week",
+      "true": "angry",
+      "text_pred": "sad",
+      "face_pred": "angry",
+      "fusion": "angry",
+      "arbiter": "sad"
+    },
+    {
+      "text": "I recently won on a lottery ticket! I never win, so it was a pleasant shock.",
+      "true": "surprised",
+      "text_pred": "happy",
+      "face_pred": "surprised",
+      "fusion": "surprised",
+      "arbiter": "surprised"
+    },
+    {
+      "text": "I met this girl on Tinder and we really hit it off. Turns out she was crazy and led me on for a while and that made me upset.",
+      "true": "sad",
+      "text_pred": "happy",
+      "face_pred": "sad",
+      "fusion": "sad",
+      "arbiter": "sad"
+    },
+    {
+      "text": "My dog pooped on the carpet. I never felt so peeved in my life.",
+      "true": "angry",
+      "text_pred": "disgusted",
+      "face_pred": "angry",
+      "fusion": "disgusted",
+      "arbiter": "angry"
+    },
+    {
+      "text": "My brother is not coming home this weekend. I am a little upset about it",
+      "true": "sad",
+      "text_pred": "sad",
+      "face_pred": "angry",
+      "fusion": "angry",
+      "arbiter": "sad"
+    },
+    {
+      "text": "lazy workets bug me",
+      "true": "angry",
+      "text_pred": "sad",
+      "face_pred": "angry",
+      "fusion": "sad",
+      "arbiter": "sad"
+    },
+    {
+      "text": "i am trying to save up some money but i'm having such a hard time making it happen",
+      "true": "fearful",
+      "text_pred": "sad",
+      "face_pred": "fearful",
+      "fusion": "sad",
+      "arbiter": "sad"
+    },
+    {
+      "text": "I was startled by a snake in my yard a few days ago.",
+      "true": "surprised",
+      "text_pred": "fearful",
+      "face_pred": "surprised",
+      "fusion": "fearful",
+      "arbiter": "surprised"
+    },
+    {
+      "text": "My son got picked to be on the soccer team that he was on last year!",
+      "true": "surprised",
+      "text_pred": "happy",
+      "face_pred": "surprised",
+      "fusion": "surprised",
+      "arbiter": "happy"
+    },
+    {
+      "text": "I was at the grocery store and someone dinged my car with a shopping cart.",
+      "true": "angry",
+      "text_pred": "disgusted",
+      "face_pred": "sad",
+      "fusion": "sad",
+      "arbiter": "sad"
+    },
+    {
+      "text": "There is a little cat I tried to help last night. He ran when my dog charged at him though and I am scared of what has happened to him. A lot of cats get hit around here",
       "true": "fearful",
       "text_pred": "fearful",
       "face_pred": "sad",
@@ -246,11 +870,155 @@
       "arbiter": "sad"
     },
     {
-      "text": "I interviewed for a dream job of mine last week. I found out today that I didn't get it. ",
-      "true": "sad",
-      "text_pred": "surprised",
+      "text": "I can't wait for school to start back. A litlle quieter in the house.",
+      "true": "fearful",
+      "text_pred": "happy",
       "face_pred": "fearful",
       "fusion": "fearful",
+      "arbiter": "sad"
+    },
+    {
+      "text": "I get so annoyed at my husband when he leaves his dirty clothing on the floor.",
+      "true": "angry",
+      "text_pred": "disgusted",
+      "face_pred": "surprised",
+      "fusion": "surprised",
+      "arbiter": "disgusted"
+    },
+    {
+      "text": "I saw a car crash the other day",
+      "true": "surprised",
+      "text_pred": "fearful",
+      "face_pred": "surprised",
+      "fusion": "surprised",
+      "arbiter": "surprised"
+    },
+    {
+      "text": "My daughter stole liquor from my cabinent",
+      "true": "sad",
+      "text_pred": "angry",
+      "face_pred": "sad",
+      "fusion": "sad",
+      "arbiter": "angry"
+    },
+    {
+      "text": "I was startled to find a snake in my yard a few days ago.",
+      "true": "surprised",
+      "text_pred": "fearful",
+      "face_pred": "surprised",
+      "fusion": "fearful",
+      "arbiter": "surprised"
+    },
+    {
+      "text": "My girlfriend broke up with me yesterday. This place is so quiet without her.",
+      "true": "sad",
+      "text_pred": "sad",
+      "face_pred": "fearful",
+      "fusion": "sad",
+      "arbiter": "sad"
+    },
+    {
+      "text": "My neighbors left town and the weeds are so high, I'm afraid snakes might start living over there.",
+      "true": "angry",
+      "text_pred": "fearful",
+      "face_pred": "angry",
+      "fusion": "fearful",
+      "arbiter": "fearful"
+    },
+    {
+      "text": "My husband took me  to the mall to get a new wedding band since mine was breaking. It was a lovely thing for him to do, I had no idea he'd been saving up for it.",
+      "true": "surprised",
+      "text_pred": "happy",
+      "face_pred": "fearful",
+      "fusion": "fearful",
+      "arbiter": "happy"
+    },
+    {
+      "text": "WHy are gas prices so high!",
+      "true": "angry",
+      "text_pred": "surprised",
+      "face_pred": "angry",
+      "fusion": "surprised",
+      "arbiter": "surprised"
+    },
+    {
+      "text": "I've been getting really bad headaches recently",
+      "true": "angry",
+      "text_pred": "sad",
+      "face_pred": "angry",
+      "fusion": "sad",
+      "arbiter": "sad"
+    },
+    {
+      "text": "I found out my cat likes to eat food with rabbit meat",
+      "true": "surprised",
+      "text_pred": "disgusted",
+      "face_pred": "surprised",
+      "fusion": "disgusted",
+      "arbiter": "surprised"
+    },
+    {
+      "text": "When my aunt passed away, it was just bad. It was the worst thing to happen to me at that point",
+      "true": "sad",
+      "text_pred": "disgusted",
+      "face_pred": "sad",
+      "fusion": "sad",
+      "arbiter": "sad"
+    },
+    {
+      "text": "I found a brown recluse in my room this morning (a type of poisionous spider)",
+      "true": "fearful",
+      "text_pred": "disgusted",
+      "face_pred": "fearful",
+      "fusion": "disgusted",
+      "arbiter": "fearful"
+    },
+    {
+      "text": "when my sister wears me clothes",
+      "true": "angry",
+      "text_pred": "angry",
+      "face_pred": "sad",
+      "fusion": "angry",
+      "arbiter": "sad"
+    },
+    {
+      "text": "There was a mouse in my kitchen once. I am still afraid when I go in there",
+      "true": "fearful",
+      "text_pred": "fearful",
+      "face_pred": "sad",
+      "fusion": "sad",
+      "arbiter": "fearful"
+    },
+    {
+      "text": "I had to walk home by myself.",
+      "true": "sad",
+      "text_pred": "fearful",
+      "face_pred": "sad",
+      "fusion": "sad",
+      "arbiter": "sad"
+    },
+    {
+      "text": "I got a thank you note from a co-worker.",
+      "true": "surprised",
+      "text_pred": "happy",
+      "face_pred": "surprised",
+      "fusion": "surprised",
+      "arbiter": "happy"
+    },
+    {
+      "text": "I walking in the park when a stray dog chased after me.  I was absolutely scared for my life.",
+      "true": "fearful",
+      "text_pred": "fearful",
+      "face_pred": "sad",
+      "fusion": "fearful",
+      "arbiter": "fearful"
+    },
+    {
+      "text": "My boyfriend gets on my nerves so bad.  He can never throw anything in the trash.",
+      "true": "angry",
+      "text_pred": "angry",
+      "face_pred": "sad",
+      "fusion": "angry",
       "arbiter": "sad"
     }
   ]

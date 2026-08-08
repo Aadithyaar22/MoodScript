@@ -113,14 +113,22 @@ def main():
                 texts[u].append(ex["text"])
         text_source_desc = "GoEmotions test split (single-label, Ekman-mapped)"
     else:
-        print("Loading EmpatheticDialogues situations...")
-        ds_t = load_dataset("bdotloh/empathetic-dialogues-contexts", split="test")
-        for ex in ds_t:
-            u = EMPATHETIC_TO_UNIFIED.get(ex["emotion"])
-            if u:
-                texts[u].append(ex["situation"])
-        text_source_desc = ("EmpatheticDialogues situations (first-person narrative; "
-                            "ambiguous emotions dropped, no neutral class available)")
+        # All splits are used: this set is only ever a source of text for pairing,
+        # never used to train anything, so the original train/test boundary carries
+        # no meaning here. The calib/test split that matters is made below over the
+        # constructed pairs.
+        print("Loading EmpatheticDialogues situations (train+validation+test)...")
+        seen = set()
+        for sp in ["train", "validation", "test"]:
+            for ex in load_dataset("bdotloh/empathetic-dialogues-contexts", split=sp):
+                u = EMPATHETIC_TO_UNIFIED.get(ex["emotion"])
+                s = (ex["situation"] or "").strip()
+                if u and s and s not in seen:
+                    seen.add(s)
+                    texts[u].append(s)
+        text_source_desc = ("EmpatheticDialogues situations, all splits, de-duplicated "
+                            "(first-person narrative; ambiguous emotions dropped, "
+                            "no neutral class available)")
     print("  texts available:", {k: len(v) for k, v in texts.items()})
 
     # ---------- collect face images by unified label (FER2013 test) ----------

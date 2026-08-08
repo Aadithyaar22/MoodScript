@@ -12,6 +12,7 @@
     "face only": 0.7058823529411765,
     "numeric fusion (deployed)": 0.5294117647058824,
     "LLM arbitration (deployed extra call)": 0.5098039215686274,
-    "calibrated fusion (proposed)": 0.7647058823529411
+    "calibrated linear fusion": 0.7647058823529411,
+    "log-linear + class reliability (v2)": 0.803921568627451
   }
 }

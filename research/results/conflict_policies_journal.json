@@ -1,17 +1,18 @@
 {
   "paired_set": "paired_set_journal.json",
-  "text_source": "EmpatheticDialogues situations (first-person narrative; ambiguous emotions dropped, no neutral class available)",
-  "n_conflict": 30,
-  "n_test": 343,
+  "text_source": "EmpatheticDialogues situations, all splits, de-duplicated (first-person narrative; ambiguous emotions dropped, no neutral class available)",
+  "n_conflict": 126,
+  "n_test": 1056,
   "temperature": {
-    "text": 1.3245100930536813,
-    "face": 1.1190536182880182
+    "text": 1.5220040285206975,
+    "face": 1.0620243616726113
   },
   "policies": {
     "text only": 0.16666666666666666,
-    "face only": 0.7666666666666667,
-    "numeric fusion (deployed)": 0.4666666666666667,
-    "LLM arbitration (deployed extra call)": 0.43333333333333335,
-    "calibrated fusion (proposed)": 0.7
+    "face only": 0.7142857142857143,
+    "numeric fusion (deployed)": 0.48412698412698413,
+    "LLM arbitration (deployed extra call)": 0.46825396825396826,
+    "calibrated linear fusion": 0.6507936507936508,
+    "log-linear + class reliability (v2)": 0.7698412698412699
   }
 }
