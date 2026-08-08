@@ -1,0 +1,41 @@
+{
+  "paired_set": "paired_set_journal.json",
+  "n_conflicts": 126,
+  "oracle": 0.8809523809523809,
+  "designs": [
+    {
+      "design": "baseline: always face",
+      "accuracy": 0.7142857142857143
+    },
+    {
+      "design": "baseline: v2 fusion (no LLM)",
+      "accuracy": 0.7698412698412699
+    },
+    {
+      "design": "A: deployed arbiter (7-way classify)",
+      "accuracy": 0.46825396825396826
+    },
+    {
+      "design": "B: informed binary choice",
+      "accuracy": 0.5634920634920635
+    },
+    {
+      "design": "C: abstaining binary (override only if conf>=60)",
+      "accuracy": 0.5317460317460317
+    },
+    {
+      "design": "C: abstaining binary (override only if conf>=80)",
+      "accuracy": 0.5317460317460317
+    },
+    {
+      "design": "D: LLM trust score -> v2 text weight",
+      "accuracy": 0.753968253968254
+    },
+    {
+      "design": "D2: trust^2 -> v2 text weight",
+      "accuracy": 0.753968253968254
+    }
+  ],
+  "trust_when_text_right": 0.7380952380952381,
+  "trust_when_text_wrong": 0.7633333333333334
+}
