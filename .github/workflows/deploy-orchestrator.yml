@@ -54,6 +54,12 @@ jobs:
           DATABASE_URL: postgresql://u:p@localhost:5432/db
           JWT_SECRET: ci-dummy-secret
           INTERNAL_API_KEY: ci-dummy-key
+          # database/db.py constructs a Fernet at import time, so this must be a
+          # structurally valid key (32 url-safe-base64 bytes). Throwaway, encrypts
+          # nothing, decodes to "moodscript-ci-dummy-key-32bytes!" — never used
+          # against real data, and deliberately not a secret so the check stays
+          # runnable on forks.
+          MESSAGE_ENCRYPTION_KEY: bW9vZHNjcmlwdC1jaS1kdW1teS1rZXktMzJieXRlcyE=
         run: python -c "import main; print('app imported OK:', len(main.app.routes), 'routes')"
 
       - name: Check fusion constants match the fitted values
