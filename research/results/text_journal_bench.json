@@ -1,0 +1,36 @@
+{
+  "n": 1056,
+  "source": "EmpatheticDialogues situations, all splits, de-duplicated (first-person narrative; ambiguous emotions dropped, no neutral class available)",
+  "rows": [
+    {
+      "model": "MoodScript deployed pipeline",
+      "accuracy": 0.6003787878787878,
+      "macro_f1": 0.5301111971428819,
+      "neutral_preds": 107
+    },
+    {
+      "model": "j-hartmann/emotion-english-distilroberta-base",
+      "accuracy": 0.6448863636363636,
+      "macro_f1": 0.5545356629157205,
+      "neutral_preds": 57
+    },
+    {
+      "model": "j-hartmann/emotion-english-roberta-large",
+      "accuracy": 0.6732954545454546,
+      "macro_f1": 0.5748427353619121,
+      "neutral_preds": 28
+    },
+    {
+      "model": "SamLowe/roberta-base-go_emotions",
+      "accuracy": 0.5265151515151515,
+      "macro_f1": 0.47044398807938376,
+      "neutral_preds": 203
+    },
+    {
+      "model": "cirimus/modernbert-base-go-emotions",
+      "accuracy": 0.5227272727272727,
+      "macro_f1": 0.46850730654060246,
+      "neutral_preds": 242
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "n": 1056,
+  "variants": {
+    "A whole text, no wrapper": 0.6448863636363636,
+    "B sentence-split + weighted agg": 0.6079545454545454,
+    "C  + negation dampening (DEPLOYED)": 0.6013257575757576
+  }
+}

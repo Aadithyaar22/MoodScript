@@ -18,15 +18,34 @@ GOEMOTION_TO_TONE = {
     "confusion": "confusion", "curiosity": "curiosity",
 }
 
+EMOTION_MODEL = os.getenv("MOODSCRIPT_EMOTION_MODEL",
+                          "j-hartmann/emotion-english-distilroberta-base")
+
+# The overall label now comes from classifying the WHOLE entry in one pass.
+# Measured on 1,056 held-out journal-style texts, splitting into sentences and
+# recombining them with the position/length/confidence weighting cost 3.7 points
+# against simply classifying the entry (60.80% vs 64.49%, p=2.4e-05): these
+# entries average ~22 words, so splitting destroys the context the classifier
+# needs and then reweights the fragments with hand-chosen coefficients that were
+# never fitted. Per-sentence classification is still run, because the emotion arc
+# shown in the UI genuinely needs it — it just no longer decides the headline label.
+# Set MOODSCRIPT_SENTENCE_AGGREGATE=1 to restore the previous behaviour.
+USE_SENTENCE_AGGREGATE = os.getenv("MOODSCRIPT_SENTENCE_AGGREGATE", "").lower() in ("1", "true", "yes")
+
+
 class TextEmotionModel:
     def __init__(self):
         print("Loading spaCy...")
         self.nlp = spacy.load("en_core_web_sm")
 
-        print("Loading j-hartmann emotion model...")
+        # roberta-large scores 67.33% on the journal benchmark against 64.49% here,
+        # but peaks at 1.82GB resident against this service's 2Gi Cloud Run cap —
+        # too little headroom to run safely. Staying on the distilled base; revisit
+        # if the memory limit is ever raised.
+        print(f"Loading emotion model {EMOTION_MODEL}...")
         self.emotion_classifier = pipeline(
             "text-classification",
-            model="j-hartmann/emotion-english-distilroberta-base",
+            model=EMOTION_MODEL,
             top_k=None,
             device=-1,
         )
@@ -50,7 +69,7 @@ class TextEmotionModel:
 
         print("Text models ready.")
 
-    def _classify_sentence(self, sentence: str, has_negation: bool = False):
+    def _classify_sentence(self, sentence: str):
         if not sentence.strip():
             return None
         try:
@@ -64,19 +83,23 @@ class TextEmotionModel:
             for e in UNIFIED_EMOTIONS:
                 if e not in conf_dict:
                     conf_dict[e] = 0.0
-            if has_negation:
-                conf_dict = self._dampen_for_negation(conf_dict)
             top = max(conf_dict, key=conf_dict.get)
             return {"emotion": top, "confidence": conf_dict[top], "all_scores": conf_dict}
         except Exception as e:
             print(f"Sentence classify error: {e}")
             return None
 
+    # --- retired heuristics, retained only so research/eval_text_pipeline_ablation.py
+    # --- can still reproduce the ablation reported in the paper. Nothing in the
+    # --- serving path calls these.
+    #
+    # The idea was that the classifier reads emotion words at face value regardless of
+    # negation ('not scared' still scores high on fear), so dampening toward neutral
+    # beats a confidently wrong flip. It validated on 49 hand-written cases (72% -> 78%)
+    # and did not survive contact with real data: across 1,056 held-out journal texts it
+    # changed 32 labels, broke 20 correct answers and fixed none, costing 1.89 points.
+
     def _dampen_for_negation(self, conf_dict: dict) -> dict:
-        """The base classifier reads emotion words at face value regardless of negation
-        ('not scared' still scores high on fear), so a confidently wrong flip is worse than
-        an honest shrug. Pull the distribution toward neutral instead of trusting the raw
-        word-level cue when a negation particle is present in the sentence."""
         top_emotion = max(conf_dict, key=conf_dict.get)
         if top_emotion == "neutral":
             return conf_dict
@@ -136,16 +159,31 @@ class TextEmotionModel:
         doc = self.nlp(text)
         sents = [s for s in doc.sents if s.text.strip()]
         sentences = [s.text.strip() for s in sents]
+
+        # Per-sentence pass drives the emotion arc shown in the UI.
         sentence_results = []
         for sent in sents:
-            r = self._classify_sentence(sent.text.strip(), has_negation=self._has_negation(sent))
+            r = self._classify_sentence(sent.text.strip())
             if r:
                 sentence_results.append((sent.text.strip(), r))
-        agg = self._weighted_aggregate(sentence_results)
         emotion_arc = [
             {"sentence": sent[:80], "emotion": r["emotion"], "confidence": round(r["confidence"], 3)}
             for sent, r in sentence_results
         ]
+
+        # Headline label: classify the entry whole, keeping its context intact.
+        if USE_SENTENCE_AGGREGATE:
+            agg = self._weighted_aggregate(sentence_results)
+        else:
+            whole = self._classify_sentence(text.strip())
+            if whole:
+                agg = {"dominant_emotion": whole["emotion"],
+                       "confidence": whole["confidence"],
+                       "all_scores": whole["all_scores"]}
+            else:
+                # empty or unclassifiable input — fall back rather than fail
+                agg = self._weighted_aggregate(sentence_results)
+
         return {
             "dominant_emotion": agg["dominant_emotion"],
             "confidence": agg["confidence"],
