@@ -1,6 +1,86 @@
+"""Multimodal fusion of the text and face emotion signals.
+
+METHOD — calibration-aware log-linear fusion
+--------------------------------------------
+The previous rule was a confidence-weighted linear average: each modality's fixed
+prior scaled by its own top-class probability, then blended additively. Two
+measured problems with that (see research/ for the full evaluation):
+
+1. The two confidences were not on the same scale. Measured on a held-out paired
+   benchmark, the text model's expected calibration error was 0.217 (it claimed
+   0.66 confidence while being correct 0.44 of the time) against 0.015 for the
+   face model. Multiplying a prior by raw confidence therefore over-trusted the
+   worse-calibrated modality, and the linear rule scored *below* using the face
+   modality alone (87.97% vs 89.30%).
+
+2. A weighted average cannot veto. If one modality assigns ~0 probability to a
+   class, the other can still carry it, because a sum is dominated by its larger
+   term. Under conditional independence of the modalities given the label, the
+   product is the Bayesian combination; the sum is not.
+
+So each modality is now temperature-calibrated onto a common scale, weighted by a
+class-conditional reliability estimate rather than one scalar, and combined by
+log-linear (product-of-experts) pooling.
+
+Measured on held-out test splits of two independent paired benchmarks:
+
+    strategy                          set A     set B
+    face only                         88.39     89.30
+    linear + confidence (previous)    85.10     87.97
+    this method                       90.99     91.95
+
+Significant against both the previous rule and the stronger single modality
+(p = 7.7e-6 and p = 0.0019 on set A; p = 6.2e-10 and p = 2.6e-6 on set B).
+
+Set MOODSCRIPT_LEGACY_FUSION=1 to fall back to the previous linear rule.
+"""
+import math
+import os
+
 UNIFIED_EMOTIONS = ["angry", "disgusted", "fearful", "happy", "neutral", "sad", "surprised"]
 TEXT_WEIGHT = 0.55
 FACE_WEIGHT = 0.45
+_EPS = 1e-12
+
+# Fitted by minimising NLL on the pooled calibration splits of both paired
+# benchmarks (n=1631). Both sets are pooled so that every class has real support —
+# the journal-domain set contains no neutral examples on its own, which would have
+# left neutral's reliability as a smoothing artefact.
+# Reproduce: research/build_paired_set.py then research/eval_fusion_v2.py
+TEXT_TEMPERATURE = 1.6572
+FACE_TEMPERATURE = 1.0342
+
+# Smoothed per-class precision of each modality on the class it predicts. Text
+# reliability spans 0.19–0.74 across classes, which is why a single scalar weight
+# per modality is not adequate.
+TEXT_RELIABILITY = {
+    "angry": 0.6593, "disgusted": 0.3689, "fearful": 0.7357, "happy": 0.6321,
+    "neutral": 0.1921, "sad": 0.7053, "surprised": 0.5844,
+}
+FACE_RELIABILITY = {
+    "angry": 0.9183, "disgusted": 0.9750, "fearful": 0.8660, "happy": 0.9576,
+    "neutral": 0.6914, "sad": 0.8626, "surprised": 0.9559,
+}
+
+_LEGACY = os.getenv("MOODSCRIPT_LEGACY_FUSION", "").lower() in ("1", "true", "yes")
+
+
+def _normalise(scores: dict) -> dict:
+    total = sum(max(v, 0.0) for v in scores.values())
+    if total <= 0:
+        return {e: 1.0 / len(UNIFIED_EMOTIONS) for e in UNIFIED_EMOTIONS}
+    return {e: max(scores.get(e, 0.0), 0.0) / total for e in UNIFIED_EMOTIONS}
+
+
+def _temperature_scale(scores: dict, temperature: float) -> dict:
+    """Soften or sharpen a distribution. T>1 makes an over-confident model humbler.
+    Implemented on log-probabilities, which is equivalent to scaling the logits."""
+    logits = {e: math.log(max(v, _EPS)) / temperature for e, v in scores.items()}
+    top = max(logits.values())
+    exp = {e: math.exp(v - top) for e, v in logits.items()}
+    total = sum(exp.values()) or 1.0
+    return {e: v / total for e, v in exp.items()}
+
 
 class FusionLayer:
     def fuse(self, text_result: dict, face_result) -> dict:
@@ -14,25 +94,17 @@ class FusionLayer:
                 "text_weight": 1.0,
                 "face_weight": 0.0,
             }
-        text_scores = text_result["all_scores"]
-        face_scores = face_result["all_scores"]
 
-        # Confidence-weighted fusion: a modality that isn't sure about anything (a flat,
-        # near-uniform distribution) shouldn't get to pull the blend as hard as one that's
-        # genuinely confident. Each modality's own top-score confidence rescales its prior
-        # weight, then both are renormalized back to sum to 1 — recovering the original
-        # 55/45 prior when both are equally confident, but shrinking a modality's influence
-        # when it's uncertain rather than always applying it at full fixed strength.
-        text_w_raw = TEXT_WEIGHT * text_result["confidence"]
-        face_w_raw = FACE_WEIGHT * face_result["confidence"]
-        total_w = text_w_raw + face_w_raw
-        if total_w > 0:
-            text_w, face_w = text_w_raw / total_w, face_w_raw / total_w
+        text_scores = _normalise(text_result["all_scores"])
+        face_scores = _normalise(face_result["all_scores"])
+
+        if _LEGACY:
+            fused, text_w, face_w = self._fuse_linear(
+                text_scores, face_scores,
+                text_result["confidence"], face_result["confidence"])
         else:
-            text_w, face_w = TEXT_WEIGHT, FACE_WEIGHT
+            fused, text_w, face_w = self._fuse_loglinear(text_scores, face_scores)
 
-        fused = {e: text_w * text_scores.get(e, 0.0) + face_w * face_scores.get(e, 0.0)
-                 for e in UNIFIED_EMOTIONS}
         unified_emotion = max(fused, key=fused.get)
         resolution_reason = self._resolve(
             text_result["dominant_emotion"], face_result["emotion"],
@@ -47,6 +119,40 @@ class FusionLayer:
             "text_weight": float(text_w),
             "face_weight": float(face_w),
         }
+
+    def _fuse_loglinear(self, text_scores, face_scores):
+        """Calibrate, weight by class-conditional reliability, pool in log space."""
+        t_cal = _temperature_scale(text_scores, TEXT_TEMPERATURE)
+        f_cal = _temperature_scale(face_scores, FACE_TEMPERATURE)
+
+        t_top = max(t_cal, key=t_cal.get)
+        f_top = max(f_cal, key=f_cal.get)
+        a_text = TEXT_WEIGHT * TEXT_RELIABILITY.get(t_top, 0.5) * t_cal[t_top]
+        a_face = FACE_WEIGHT * FACE_RELIABILITY.get(f_top, 0.5) * f_cal[f_top]
+        total = a_text + a_face
+        if total <= 0:
+            a_text, a_face = TEXT_WEIGHT, FACE_WEIGHT
+        else:
+            a_text, a_face = a_text / total, a_face / total
+
+        log_fused = {
+            e: a_text * math.log(max(t_cal[e], _EPS)) + a_face * math.log(max(f_cal[e], _EPS))
+            for e in UNIFIED_EMOTIONS
+        }
+        top = max(log_fused.values())
+        exp = {e: math.exp(v - top) for e, v in log_fused.items()}
+        norm = sum(exp.values()) or 1.0
+        return {e: v / norm for e, v in exp.items()}, a_text, a_face
+
+    def _fuse_linear(self, text_scores, face_scores, text_conf, face_conf):
+        """Previous behaviour, retained behind MOODSCRIPT_LEGACY_FUSION."""
+        t_raw = TEXT_WEIGHT * text_conf
+        f_raw = FACE_WEIGHT * face_conf
+        total = t_raw + f_raw
+        text_w, face_w = (t_raw / total, f_raw / total) if total > 0 else (TEXT_WEIGHT, FACE_WEIGHT)
+        fused = {e: text_w * text_scores.get(e, 0.0) + face_w * face_scores.get(e, 0.0)
+                 for e in UNIFIED_EMOTIONS}
+        return fused, text_w, face_w
 
     def _resolve(self, text_em, face_em, text_conf, face_conf, final_em):
         if text_em == face_em:
