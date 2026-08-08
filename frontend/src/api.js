@@ -76,13 +76,13 @@ export async function fetchRating() {
   return data
 }
 
-export async function fetchConversations() {
-  const { data } = await client.get("/conversations")
+export async function fetchConversations(lang = "en") {
+  const { data } = await client.get("/conversations", { params: { lang } })
   return data
 }
 
-export async function fetchConversationMessages(conversationId) {
-  const { data } = await client.get(`/conversations/${conversationId}/messages`)
+export async function fetchConversationMessages(conversationId, lang = "en") {
+  const { data } = await client.get(`/conversations/${conversationId}/messages`, { params: { lang } })
   return data
 }
 
@@ -90,8 +90,8 @@ export async function deleteConversation(conversationId) {
   await client.delete(`/conversations/${conversationId}`)
 }
 
-export async function fetchReflection() {
-  const { data } = await client.get("/reflection")
+export async function fetchReflection(lang = "en") {
+  const { data } = await client.get("/reflection", { params: { lang } })
   return data
 }
 

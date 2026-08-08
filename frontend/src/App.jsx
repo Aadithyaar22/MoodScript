@@ -52,8 +52,10 @@ export default function App() {
   useEffect(() => {
     if (!authed) return
     fetchHistory().then(d => setHistory([...d].reverse())).catch(() => {})
-    fetchConversations().then(setConversations).catch(() => {})
-  }, [authed, lastAssistant?.id])
+    // lang is a dependency: conversation previews come from stored English text
+    // and are translated server-side, so they must be refetched on a switch.
+    fetchConversations(lang).then(setConversations).catch(() => {})
+  }, [authed, lastAssistant?.id, lang])
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme)
@@ -106,7 +108,7 @@ export default function App() {
     setError(null)
     setXaiTargetId(null)
     try {
-      const msgs = await fetchConversationMessages(id)
+      const msgs = await fetchConversationMessages(id, lang)
       let lastUserMsg = null
       setMessages(msgs.map(m => {
         if (m.role === "user") lastUserMsg = m

@@ -303,8 +303,16 @@ async def speak(req: SpeakRequest, user_id: int = Depends(get_current_user_id)):
 # ---------- conversations ----------
 
 @app.get("/conversations")
-async def conversations(user_id: int = Depends(get_current_user_id)):
-    return db.list_conversations(user_id)
+async def conversations(lang: str = "en", user_id: int = Depends(get_current_user_id)):
+    convos = db.list_conversations(user_id)
+    # opening_line is the stored (English) first message, shown as each
+    # conversation's preview in the sidebar — translate it with the rest of the UI.
+    if lang != "en" and convos:
+        lines = [c.get("opening_line") or "" for c in convos]
+        translated = await asyncio.to_thread(translate_texts, lines, lang)
+        for c, text in zip(convos, translated):
+            c["opening_line"] = text or None
+    return convos
 
 @app.delete("/conversations/{conversation_id}")
 async def delete_conversation(conversation_id: int, user_id: int = Depends(get_current_user_id)):
@@ -315,11 +323,22 @@ async def delete_conversation(conversation_id: int, user_id: int = Depends(get_c
     return {"deleted": True}
 
 @app.get("/conversations/{conversation_id}/messages")
-async def conversation_messages(conversation_id: int, user_id: int = Depends(get_current_user_id)):
+async def conversation_messages(conversation_id: int, lang: str = "en",
+                                user_id: int = Depends(get_current_user_id)):
     conversation = db.get_conversation(conversation_id, user_id)
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
-    return db.get_conversation_messages(conversation_id, user_id)
+    messages = db.get_conversation_messages(conversation_id, user_id)
+
+    # Message bodies are stored in English (see /chat). Reopening a past
+    # conversation while the UI is in another language would otherwise show the
+    # whole thread in English. One batched translate call covers the thread.
+    if lang != "en" and messages:
+        contents = [m.get("content") or "" for m in messages]
+        translated = await asyncio.to_thread(translate_texts, contents, lang)
+        for m, text in zip(messages, translated):
+            m["content"] = text
+    return messages
 
 # ---------- history & rating ----------
 
@@ -334,13 +353,22 @@ async def rating(user_id: int = Depends(get_current_user_id)):
 # ---------- weekly reflection ----------
 
 @app.get("/reflection")
-async def reflection(user_id: int = Depends(get_current_user_id)):
+async def reflection(lang: str = "en", user_id: int = Depends(get_current_user_id)):
     now = datetime.now(timezone.utc)
     week_key = now.strftime("%G-W%V")
 
+    # The reflection is always generated and stored in English (same as journal
+    # content) and translated on the way out, so switching language re-translates
+    # the same letter instead of regenerating a different one.
+    async def _out(content):
+        if content and lang != "en":
+            return await asyncio.to_thread(translate_text, content, lang)
+        return content
+
     cached = db.get_reflection(user_id, week_key)
     if cached:
-        return {"week_key": week_key, "content": cached["content"], "entry_count": cached["entry_count"], "cached": True}
+        return {"week_key": week_key, "content": await _out(cached["content"]),
+                "entry_count": cached["entry_count"], "cached": True}
 
     all_entries = db.get_user_journal_entries(user_id)
     cutoff = now - timedelta(days=7)
@@ -355,7 +383,8 @@ async def reflection(user_id: int = Depends(get_current_user_id)):
 
     content = await response_engine.generate_reflection(week_entries, week_rating, persona_id)
     db.save_reflection(user_id, week_key, content, len(week_entries))
-    return {"week_key": week_key, "content": content, "entry_count": len(week_entries), "cached": False}
+    return {"week_key": week_key, "content": await _out(content),
+            "entry_count": len(week_entries), "cached": False}
 
 # ---------- export & account ----------
 

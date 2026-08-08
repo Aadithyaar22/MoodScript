@@ -45,8 +45,13 @@ export default function Dashboard({ lang = "en" }) {
   useEffect(() => {
     fetchHistory().then(d => setHistory([...d].reverse())).catch(console.error).finally(() => setLoading(false))
     fetchRating().then(setRating).catch(console.error)
-    fetchReflection().then(setReflection).catch(console.error)
   }, [])
+
+  // Refetched on language change: the reflection is generated in English and
+  // translated server-side, so switching language must re-request it.
+  useEffect(() => {
+    fetchReflection(lang).then(setReflection).catch(console.error)
+  }, [lang])
 
   // stop any narration if the user navigates away mid-playback
   useEffect(() => () => stopSpeaking(), [])
