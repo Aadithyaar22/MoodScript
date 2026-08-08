@@ -46,8 +46,8 @@ III.  System Architecture
 IV.   Methodology
         A. Text Emotion Stage
         B. Facial Emotion Stage
-        C. Confidence-Weighted Fusion
-        D. LLM Arbitration
+        C. Modality Calibration
+        D. Reliability-Aware Log-Linear Fusion   <- the contribution
         E. Two-Pass Response Generation
         F. Explainability and Safety
 V.    Experimental Setup
@@ -82,12 +82,14 @@ VIII. Conclusion and Future Work
 
 ### Suggested paper titles
 
-1. *MoodScript: Confidence-Weighted Multimodal Emotion Recognition with LLM Arbitration for Explainable Mental-Health Journaling*
-2. *An Explainable Multimodal Emotion-Aware Journaling System with Selective Language-Model Conflict Arbitration*
-3. *Beyond Benchmark Accuracy: Domain-Validated Multimodal Emotion Recognition for Mental-Health Support*
+1. *Calibration-Aware Log-Linear Fusion for Multimodal Emotion Recognition in Mental-Health Journaling*
+2. *Why Confidence Weighting Fails Without Calibration: Reliability-Aware Multimodal Fusion for Emotion-Aware Journaling*
+3. *Beyond Benchmark Accuracy: Calibrated Multimodal Emotion Recognition for Mental-Health Support*
 
-Title 3 is worth serious consideration — the benchmark-versus-domain finding (§6.2) is
-arguably the paper's most novel and defensible contribution.
+Title 1 or 2 is recommended. The calibration result (§6.3) is the strongest and most
+defensible contribution — it is significant on two independent datasets and beats both
+the previous method and the best single modality. Do NOT put "LLM Arbitration" in the
+title: that component was tested and rejected (§6.5).
 
 ---
 
@@ -132,21 +134,34 @@ regional-language speakers who are already underserved.
 
 These are the claims the paper can defend with the evidence in §6.
 
-1. **A confidence-weighted late-fusion strategy** in which each modality's influence is
-   scaled by its own per-sample prediction confidence rather than a fixed prior, improving
-   the calibration of the fused confidence score (§6.3).
-2. **A selective LLM-arbitration layer** invoked only when numeric fusion reports an
-   unresolved conflict, so the expensive path handles the minority of ambiguous cases
-   while the deterministic path handles the rest (§4.4).
-3. **A two-pass response generation scheme** that extracts concrete facts before
-   generating, measurably increasing content-specificity (§6.4).
+1. **Reliability-aware log-linear multimodal fusion** — the headline method. Each
+   modality is temperature-calibrated onto a common confidence scale, weighted by a
+   *class-conditional* reliability estimate rather than a single scalar, and combined
+   by log-linear (product-of-experts) pooling instead of a weighted average. This is
+   the first configuration tested that significantly outperforms the stronger single
+   modality (92.90% vs 89.30%, p = 2.6×10⁻⁶) (§6.3).
+2. **The diagnosis that motivates it**: the two modalities' raw confidence scores are
+   not commensurable — text ECE 0.217 against face ECE 0.015 — so any rule that
+   multiplies a prior by raw confidence systematically over-trusts the worse-calibrated
+   modality. An ablation isolates calibration as the dominant factor (§6.4).
+3. **A negative result on LLM arbitration.** Four designs were tested — direct
+   classification, prior-informed binary choice, confidence-gated abstention, and
+   meta-linguistic trust scoring. None beat fusion without an LLM, and the failure
+   mechanism is measured, not speculated (§6.5).
 4. **An empirical demonstration that public-benchmark ranking can invert under
-   domain shift** for emotion classification — the candidate model that wins on
-   GoEmotions by 26 points loses on journal-style text (§6.2). This is a
-   methodological contribution generalisable beyond this system.
-5. **A complete, deployed, explainable system** integrating the above with
-   LIME explainability, rule-based crisis detection, multilingual support, and
+   domain shift** — the candidate model that wins on GoEmotions by 26 points loses on
+   journal-style text (§6.2). Generalisable beyond this system.
+5. **A two-pass response generation scheme** that extracts concrete facts before
+   generating, measurably increasing content-specificity (§6.6).
+6. **A complete, deployed, explainable system** integrating the above with LIME
+   explainability, rule-based crisis detection, multilingual support, and
    clinician-readable report generation.
+
+> **Note on framing.** Contributions 1–3 are the research core. The paper is
+> strongest if it presents the *sequence*: a measurement exposes a flaw (2), a
+> principled method fixes it (1), and an obvious-sounding alternative is tested and
+> rejected on evidence (3). Reviewers trust a paper that reports a component of its
+> own system failing.
 
 ---
 
@@ -262,6 +277,75 @@ recovered exactly; as one modality becomes uncertain its influence shrinks propo
 input modality (a face image is optional) and because entries are authored deliberately
 while a webcam frame is incidental. *This prior was not swept experimentally — see §8.1.*
 
+> **This is the DEPLOYED rule, and the paper's baseline — not its contribution.**
+> §4.4b replaces it. On the paired benchmark it scores 87.97%, i.e. *below* using the
+> face modality alone (89.30%).
+
+### 4.4b Reliability-aware log-linear fusion — THE PROPOSED METHOD
+
+Two structural defects in the rule above, both measured rather than assumed:
+
+**Defect 1 — the confidences are not on the same scale.** Measured per modality:
+text ECE = 0.217 (claims 0.66, correct 0.44 of the time); face ECE = 0.015 (claims
+0.87, correct 0.88). Multiplying each prior by its own raw confidence therefore
+compares two numbers that do not mean the same thing, and systematically over-trusts
+the worse-calibrated modality.
+
+**Defect 2 — a weighted average cannot veto.** If one modality assigns ≈0 probability
+to a class, the other can still carry it, because a sum is dominated by its larger
+term. Under conditional independence of the modalities given the label, the *product*
+is the Bayesian combination; the sum is not.
+
+**Method.** Let `T`, `F` be the two distributions, and `y_T = argmax T`, `y_F = argmax F`.
+
+```
+(a) Calibrate each modality with temperature scaling, fitted on a held-out
+    calibration split by minimising negative log-likelihood:
+
+        T̃ = softmax( log T / τ_T )        F̃ = softmax( log F / τ_F )
+
+(b) Class-conditional reliability r_m(c) = smoothed precision of modality m
+    when it predicts class c, estimated on the calibration split:
+
+        r_m(c) = ( hits_m(c) + λ·acc_m ) / ( n_m(c) + λ ),    λ = 5
+
+    Laplace smoothing toward the modality's overall accuracy stops a rare class
+    with a handful of predictions producing a reliability of exactly 0 or 1.
+
+(c) Per-sample weights combine prior, class reliability and calibrated confidence:
+
+        a_T = w_T · r_T(y_T) · max(T̃)       a_F = w_F · r_F(y_F) · max(F̃)
+        â_T = a_T /(a_T+a_F)                 â_F = a_F /(a_T+a_F)
+
+(d) Log-linear (product-of-experts) pooling:
+
+        log Fused(e) ∝ â_T · log T̃(e) + â_F · log F̃(e)
+
+    renormalised over the 7 classes.
+```
+
+Everything in (a) and (b) is estimated on the calibration split only; every reported
+figure is on the held-out test split.
+
+**Measured class-conditional reliability** (GoEmotions calibration split) — the
+evidence that a single scalar weight per modality is inadequate:
+
+| Class | Text | Face |
+|---|---|---|
+| angry | 0.474 | 0.910 |
+| disgusted | 0.345 | 0.989 |
+| fearful | 0.577 | 0.773 |
+| happy | 0.693 | 0.930 |
+| neutral | 0.274 | 0.894 |
+| sad | 0.674 | 0.856 |
+| surprised | 0.436 | 0.976 |
+
+Text reliability spans 0.274–0.693 — a 2.5× range. A scalar weight cannot express that.
+
+**Side benefit.** Averaging two distributions flattens the peak, so linear pooling
+produces an *under*-confident fused output (ECE 0.205). Log-linear pooling does not:
+ECE 0.029, essentially matching the best single modality, with no extra correction step.
+
 **Resolution reasoning.** Every fusion decision records why it was reached:
 
 | `resolution_reason` | Condition |
@@ -289,6 +373,18 @@ On override, `all_scores` is rewritten so the explainability panel remains consi
 the final decision. The design intent is that a language model can read *context* — sarcasm,
 masked affect — that a score blend cannot, while the cheap deterministic path handles the
 majority of samples.
+
+> **This intent is NOT supported by measurement.** See §6.5. Four arbitration designs
+> were tested and none beat fusion without an LLM. Present this component as a
+> hypothesis that was tested and rejected, not as a contribution. It is still present
+> in the deployed system; the paper should say so plainly.
+
+**Why it fails (measured, §6.5).** On the conflict cases where arbitration fires, the
+text modality is worth ~17% accuracy while the face modality is worth ~71%. The arbiter
+decides by reading the *text* and never sees the face image — only the face model's
+label. It is adjudicating a dispute while able to examine only one side's evidence, and
+that side is the unreliable one. No prompt phrasing repairs a structural information
+asymmetry.
 
 ### 4.6 Two-pass response generation
 
@@ -354,6 +450,47 @@ when actually triggered.
 | Significance test | McNemar's paired test with continuity correction (`statsmodels`) |
 | Hardware | CPU inference (`device=-1`) throughout |
 | Reproducibility | All harnesses in `research/`; raw predictions and confusion matrices persisted in `research/results/` |
+
+### 5.1 The paired multimodal benchmark (needed for every fusion result)
+
+No public dataset provides paired journal-text + facial-image emotion labels, so one
+was constructed. **This construction is the most important methodological choice in the
+paper and must be described carefully — a reviewer will scrutinise it.**
+
+**Construction.** A text item labelled *X* is paired with a face image labelled *X*, so
+the pair's ground truth is unambiguously *X*. Disagreement between the two modalities is
+therefore **not synthesised** — it arises naturally when one of the two models is simply
+wrong, which is exactly the situation fusion is meant to repair. This avoids the
+circularity of manufacturing a conflict and then declaring which modality "should" win.
+
+**Two independent sets**, so no finding rests on one text domain:
+
+| | Set A | Set B |
+|---|---|---|
+| Text source | GoEmotions test split, single-label, Ekman-mapped | EmpatheticDialogues *situations*, all splits, de-duplicated |
+| Text character | short Reddit comments, mean 12.9 words | first-person narrative, mean 22.4 words — closer to journalling |
+| Pairs | 1,153 | 2,111 |
+| Calibration / test | 576 / 577 | 1,055 / 1,056 |
+| Modalities agree | 39.9% | 54.5% |
+| Classes | all 7 | 6 — **no neutral examples exist** |
+
+Face images for both come from the FER2013 test split.
+
+**Protocol.** Both models' full 7-class distributions are computed once and cached, so
+every downstream experiment reuses identical predictions. Pairs are split
+calibration/test stratified by label; temperatures and reliability estimates are fitted
+on the calibration half **only**, and all reported numbers are on the held-out half.
+
+**Constraints to state honestly:**
+- Set B has **no neutral class**, so neutral ground truth is untested there.
+- `disgusted` is capped at 111 pairs in Set B by the number of FER2013 disgust *images*,
+  not by text availability — an inherited class imbalance.
+- EmpatheticDialogues emotions that could not be mapped unambiguously (nostalgic,
+  sentimental, guilty, jealous, caring, anticipating, …) were **dropped rather than
+  force-mapped**, to keep ground truth clean.
+- The face modality is evaluated on FER2013, which is close to its fine-tuning
+  distribution, so its 88–89% is an in-domain figure and flatters it relative to
+  real webcam input.
 
 **Important methodological note the paper should state explicitly:** during the FER2013
 evaluation, the label ordering of the `clip-benchmark/wds_fer2013` mirror was found to
@@ -445,37 +582,145 @@ the text stage, and as motivation for the arbitration layer.
 | sad | 42.1 | 64.9 |
 | surprised | 32.7 | 56.1 |
 
-### 6.3 Fusion strategy comparison
+### 6.3 Fusion strategy comparison — THE HEADLINE RESULT
 
-Evaluated on 8 constructed conflict scenarios (`research/results/fusion_comparison.json`).
+Held-out test splits of the paired benchmark (§5.1). Set A = GoEmotions text
+(n=577), Set B = EmpatheticDialogues journal-style text (n=1,056).
 
-**Result — state this precisely and honestly:** confidence-weighted fusion and naive
-fixed-weight fusion select the **same top-1 emotion in every scenario tested**. The
-difference is in the **confidence value assigned**:
+| Strategy | Set A acc | Set A F1 | Set A ECE | Set B acc | Set B F1 | Set B ECE |
+|---|---|---|---|---|---|---|
+| Text only | 45.06 | 47.63 | 0.217 | 60.04 | 53.01 | 0.077 |
+| Face only | 88.39 | 87.90 | 0.029 | 89.30 | 78.37 | 0.018 |
+| Linear, fixed weights (naive) | 81.11 | 81.11 | 0.191 | 87.59 | 75.54 | 0.205 |
+| **Linear + confidence (DEPLOYED)** | **85.10** | 84.38 | 0.173 | **87.97** | 76.03 | 0.155 |
+| Linear + confidence + calibration | 89.95 | 89.15 | 0.205 | 90.15 | 78.25 | 0.200 |
+| **Log-linear + class reliability (PROPOSED)** | **90.64** | **90.05** | **0.029** | **92.90** | **80.27** | **0.094** |
+| Learned logistic regression (reference) | 90.29 | 89.96 | 0.038 | 58.14 | 53.94 | 0.323 |
+| *Oracle ceiling (either modality correct)* | *93.41* | | | *95.17* | | |
 
-| Scenario | Naive confidence | Confidence-weighted | Effect |
+**Significance (McNemar, paired, continuity-corrected):**
+
+| Comparison | Set A | Set B |
+|---|---|---|
+| Proposed vs deployed | χ²=20.02, **p = 7.7×10⁻⁶** | χ²=38.25, **p = 6.2×10⁻¹⁰** |
+| Proposed vs calibrated-linear | χ²=1.50, p = 0.221 (ns) | χ²=19.12, **p = 1.2×10⁻⁵** |
+| **Proposed vs face-only** | χ²=9.60, **p = 0.0019** | χ²=22.08, **p = 2.6×10⁻⁶** |
+
+**The four claims this table supports:**
+
+1. **The deployed rule is worse than ignoring text entirely** — 85.10/87.97 against
+   89.30 for face alone. Uncalibrated confidence weighting actively degrades the
+   stronger modality. This is the problem the paper solves.
+2. **The proposed method significantly beats the deployed one** on both sets.
+3. **The proposed method significantly beats the best single modality** on both sets.
+   This is the claim multimodal papers must make and the earlier design could not.
+4. **It also beats a learned combiner.** Multinomial logistic regression on the
+   concatenated calibrated distributions is included as a reference for how much of
+   the ceiling is capturable; the proposed method wins on both sets and LR collapses
+   on Set B (58.14%), so the gain is not simply "any trained model would find this".
+
+**Headroom captured over face-only:** 44.8% (Set A), 61.3% (Set B).
+
+**Calibration effect, measured separately (test split):**
+
+| | raw ECE | calibrated ECE | fitted temperature |
 |---|---|---|---|
-| Confident text, flat/uncertain face | 0.548 | **0.732** | Confident reading preserved rather than diluted |
-| Flat/uncertain text, confident face | 0.474 | **0.704** | Confident reading preserved rather than diluted |
-| Both confident, agree | 0.936 | 0.937 | Unchanged (as designed) |
-| Both confident, disagree | 0.504 | 0.509 | Essentially unchanged |
+| Text (Set A) | 0.217 | 0.052 | τ = 1.93 |
+| Face (Set A) | 0.029 | 0.040 | τ = 0.90 |
+| Text (Set B) | 0.097 | 0.076 | τ = 1.33 |
+| Face (Set B) | 0.038 | 0.025 | τ = 1.12 |
 
-**Why this matters despite unchanged top-1:** downstream behaviour keys off the confidence
-value, not just the label — the arbitration trigger, and the low-confidence hedging mode in
-response generation (threshold 0.45). Better-calibrated confidence therefore changes system
-behaviour even when the label is identical.
+τ > 1 softens an over-confident model. The text model needs heavy softening; the face
+model is already close to calibrated — the asymmetry that motivates the whole method.
 
-**Do not overclaim this.** The honest statement is: *"confidence-weighted fusion improves
-the calibration of the fused confidence score without altering top-1 accuracy on the
-constructed conflict cases; a larger labelled multimodal set would be required to
-demonstrate a top-1 accuracy effect."*
+### 6.4 Ablation over the fusion pipeline
 
-One scenario is instructive: a real captured case where the face model returned Happy 42% /
-Fearful 41% / Angry 0% for an exaggerated angry expression. **Neither** fusion strategy
-recovers the correct label — confirming that fusion cannot repair a confidently wrong
-modality, which is precisely why the face-model swap (§6.1) was a separate necessary fix.
+All 16 on/off combinations, Set A test split (n=577). Components: **TC** text
+calibration, **FC** face calibration, **CW** confidence weighting, **PC** post-fusion
+calibration. Marginal effect = mean over all settings of the other three.
 
-### 6.4 Two-pass response generation
+| Component | Δ accuracy | Δ ECE |
+|---|---|---|
+| **Text calibration** | **+6.54 pp** | +0.039 |
+| Confidence weighting | +1.86 pp | −0.041 |
+| Face calibration | +0.39 pp | −0.002 |
+| Post-fusion calibration | +0.00 pp | **−0.190** |
+
+**Readings to report:**
+- **Text calibration dominates** — it is the single change that matters.
+- **Face calibration is negligible (+0.39 pp)** *because that model was already
+  calibrated* (ECE 0.015). The ablation independently confirms the diagnosis.
+- **Post-fusion calibration moves accuracy by exactly zero while cutting ECE 0.19.**
+  A monotone temperature cannot reorder classes, so this is the expected behaviour and
+  a useful sanity check that the harness is correct.
+- Once calibration is applied, **confidence weighting is worth one sample in 577**
+  (520 vs 519 correct). The benefit originally attributed to confidence weighting was
+  largely a crude proxy for calibration. Say this plainly — it is a more interesting
+  finding than defending the original design.
+
+Full grid in `research/results/ablation.json`.
+
+### 6.5 LLM arbitration — a tested and rejected hypothesis
+
+Arbitration fires when numeric fusion reports `conflict_resolved_to_*`: 8.8% of Set A
+test pairs (n=51) and 11.9% of Set B (n=126). Ground truth on those cases is known from
+the pair's shared source label.
+
+**Deployed design (LLM names the emotion):**
+
+| Method, on conflict cases only | Set A | Set B |
+|---|---|---|
+| Text only | 15.69 | 16.67 |
+| Face only | 70.59 | 71.43 |
+| Numeric fusion (what arbitration overrides) | 52.94 | 48.41 |
+| **LLM arbitration** | **50.98** | **46.83** |
+| **Proposed fusion (no LLM)** | **80.39** | **76.98** |
+
+Arbitration is *below* the fusion it overrides on both sets. Change accounting: Set A
+changed 28 of 51 labels — 11 became correct, 12 became wrong, **net −1**. Set B changed
+61 of 126 — 23 correct, 25 wrong, **net −2**.
+
+**Three redesigns, Set B (n=126), to test whether this is an implementation problem:**
+
+| Design | Accuracy |
+|---|---|
+| Baseline: always trust face | 71.43 |
+| **Baseline: proposed fusion, no LLM** | **76.98** |
+| A — deployed: LLM names the emotion | 46.83 |
+| B — informed binary: LLM picks text-or-face, *told* the 71%/17% reliability prior | 56.35 |
+| C — abstaining binary: B, overrides only above a confidence floor | 53.17 |
+| D — trust-weighted: LLM scores how literally the text means its wording; that score scales the text weight inside the fusion. The LLM never names an emotion. | 75.40 |
+| *Oracle (perfect chooser)* | *88.10* |
+
+**Design D was the strongest hypothesis** — it asks the model for meta-linguistic
+judgement (is this sarcastic, negated, vague?), which language models are good at,
+rather than 7-way affect classification, which they are not. It still loses to no LLM.
+
+**Why, measured:**
+
+| Mean LLM "trust the text" score | Value |
+|---|---|
+| When the text prediction was **right** | 0.738 |
+| When the text prediction was **wrong** | 0.763 |
+
+The score is marginally *higher* when the text is wrong — it carries no usable signal.
+Design B chose text on 61 of 126 cases where text was right only 21 times, a 3×
+over-trust, **despite the correct prior being stated explicitly in the prompt**.
+
+**The structural explanation:** the arbiter reads the text and receives only the face
+model's *label*, never the image. It adjudicates while able to inspect one side's
+evidence, and on these cases that side is worth ~17% accuracy. Prompt engineering
+cannot repair an information asymmetry.
+
+**How to present this.** Not as a failure — as a tested hypothesis with a measured
+mechanism, and as evidence that calibrated fusion *subsumes* the function arbitration
+was added to perform, at zero inference cost. It is directly relevant to current
+practice of attaching LLMs to decisions they cannot observe.
+
+Reproduce: `research/eval_arbiter_paired.py`, `research/eval_arbiter_v2.py`,
+`research/eval_conflict_policies.py`.
+
+### 6.6 Two-pass response generation
 
 Entity-hit-rate = fraction of concrete entities from the input referenced in the reply.
 
@@ -486,7 +731,7 @@ Entity-hit-rate = fraction of concrete entities from the input referenced in the
 
 A 71% relative improvement in content-specificity.
 
-### 6.5 Conversational LLM selection
+### 6.7 Conversational LLM selection
 
 A/B on the production prompt, n = 4 cases per model.
 
@@ -506,7 +751,7 @@ grounding. The cheaper-looking model was measurably the worse choice.
 > **Caveat to state in the paper:** n = 4 is a small sample. Present this as an
 > engineering-selection observation, not a rigorous model comparison.
 
-### 6.6 System engineering results
+### 6.8 System engineering results
 
 Optimisations applied to the request path (each verified):
 
@@ -525,7 +770,7 @@ two sequential Groq LLM calls plus shared-tier CPU. Cold start (all services idl
 > pre-optimisation path was not instrumented. Report the optimisations as engineering work
 > with described mechanisms, **not** as a measured speedup with a specific multiplier.
 
-### 6.7 Accessibility
+### 6.9 Accessibility
 
 All interface text meets **WCAG 2.1 AA** (≥4.5:1 contrast) in both themes. The audit found
 and corrected a value at **2.53:1** — below even the 3:1 large-text minimum — used for
@@ -593,39 +838,47 @@ DELETE /account                 GET /health
 
 ## 8. Limitations (state these — reviewers will find them anyway)
 
-1. **No human evaluation.** No clinical validation study, no counsellor agreement study,
-   no user trial. The system's therapeutic value is **unevaluated**. This is the single
+1. **No human evaluation.** No clinical validation, no counsellor agreement study, no
+   user trial. The system's therapeutic value is **unevaluated**. This is the single
    largest limitation and must be stated plainly.
-2. **Fusion evaluated on constructed cases.** The 8 fusion scenarios are hand-built, not
-   drawn from a labelled multimodal corpus. No public dataset provides paired
-   journal-text + facial-image emotion labels, which is why this was done — but it limits
-   the strength of the fusion claim.
-3. **Arbitration not quantitatively evaluated.** The LLM arbitration layer's accuracy on
-   conflict cases has not been measured against ground truth.
-4. **Sarcasm unhandled.** 0/2 on sarcastic cases for both text models tested.
-5. **Modality priors not swept.** The 0.55/0.45 split is reasoned, not optimised.
-6. **Small LLM A/B sample.** n = 4.
-7. **FER2013 ceiling.** Human accuracy on FER2013 is ≈65 ± 5%; the 88.35% figure reflects
-   agreement with dataset labels, which are themselves noisy. Do not claim
+2. **Pairing is synthetic.** Text and face come from different sources and different
+   people; a congruent pair is a construction, not a recording of one person expressing
+   one emotion in both channels simultaneously. It is the best available design given
+   that no paired corpus exists, but it is not the same as real paired data.
+3. **The face modality is evaluated in-domain.** FER2013 is close to the face model's
+   fine-tuning distribution, so its 88–89% flatters it relative to real webcam input.
+   The fusion gain over face-only might be larger in deployment, but this is untested.
+4. **No neutral class in Set B**, and `disgusted` is capped at 111 pairs by FER2013
+   image availability.
+5. **Sarcasm unhandled** — 0/2 on sarcastic cases for both text models tested.
+6. **Modality priors not swept.** 0.55/0.45 is reasoned, not optimised. Note that the
+   ablation shows calibration dominates, so the prior matters less than it appears.
+7. **Conflict subsets are small** — n=51 (Set A) and n=126 (Set B). The arbitration
+   findings are consistent across both but rest on modest samples.
+8. **A vision-language arbiter was not evaluated.** Every arbiter tested reads text
+   only. Whether a model that can see the face image would do better is an open
+   question and is stated as future work.
+9. **FER2013 label ceiling.** Human accuracy on FER2013 is ≈65 ± 5%; the 88.35% figure
+   reflects agreement with dataset labels, which are themselves noisy. Do not claim
    "super-human" performance.
-8. **Translation round-trip.** Non-English input is translated to English for analysis;
-   emotional nuance may be lost in translation, and this effect was not measured.
-9. **No formal latency benchmark.** See §6.6.
-10. **Single-face assumption.** Only the largest detected face is used.
+10. **Translation round-trip.** Non-English input is translated to English for analysis;
+    nuance may be lost, and this was not measured.
+11. **No controlled latency benchmark** — see §6.8.
+12. **Single-face assumption.** Only the largest detected face is used.
+13. **The proposed fusion is not deployed.** It exists on the `research/calibrated-fusion`
+    branch; production still runs the linear confidence-weighted rule. The paper must
+    not describe the improved method as the live system unless it is merged first.
 
 ### 8.1 Experiments that would strengthen the paper (if time permits)
 
-Roughly in order of value per effort:
-
 | Experiment | Effort | Value |
 |---|---|---|
-| Crop ablation: run FER2013 composites with/without detect-and-crop for an aggregate number | Low | High — turns an anecdote into a result |
-| Arbitration accuracy on labelled conflict cases | Medium | High — currently unquantified |
-| Modality-prior sweep (vary 0.55/0.45, plot accuracy/calibration) | Low | Medium — makes the prior defensible |
-| Expand the journal benchmark from 49 to ~150 cases | Medium | High — strengthens the headline finding |
+| Merge the proposed fusion into production and re-verify live | Low | High — lets the paper describe a deployed method |
+| Crop ablation: FER2013 with/without detect-and-crop for an aggregate number | Low | High — turns an anecdote into a result |
+| Modality-prior sweep (vary 0.55/0.45) | Low | Medium — makes the prior defensible |
+| Expand the journal benchmark from 49 to ~150 cases | Medium | High — strengthens §6.2 |
+| Vision-language arbiter on higher-resolution face data (RAF-DB, AffectNet) | High | Medium — closes the one untested arbiter design |
 | Small user study (even n = 10–15) on perceived response quality | High | Very high — addresses limitation 1 |
-
----
 
 ## 9. Related work — what to cite
 
@@ -638,6 +891,12 @@ Search and cite properly; do **not** fabricate references. Target categories:
 3. **Multimodal fusion** — surveys on early vs late fusion; Baltrušaitis et al. (2019),
    "Multimodal Machine Learning: A Survey and Taxonomy"; confidence/uncertainty-aware
    fusion literature.
+3b. **Calibration — essential, this is the paper's core** — Guo et al. (2017), "On
+   Calibration of Modern Neural Networks" (temperature scaling, ECE); Naeini et al.
+   (2015) for ECE; Platt (1999) for the scaling precedent. For the pooling rule:
+   Hinton (2002) "Training Products of Experts by Minimizing Contrastive Divergence",
+   and the opinion-pool literature (Genest & Zidek, 1986) for linear vs logarithmic
+   pooling — the theoretical grounding for §4.4b's product combination.
 4. **Explainable AI** — LIME (Ribeiro et al., 2016, "Why Should I Trust You?").
 5. **Mental-health technology** — Woebot / Wysa trial literature; conversational-agent
    reviews in digital mental health.
@@ -656,57 +915,72 @@ demonstrates that (b) can invert a model-selection decision.
 
 | # | Content | Source |
 |---|---|---|
-| Fig. 1 | Three-service system architecture | §4.1 diagram; regenerate as a clean vector figure |
-| Fig. 2 | Confidence-weighted fusion data flow | §4.4 equations |
-| Fig. 3 | Per-class F1: baseline vs deployed face model | §6.1 table |
-| Fig. 4 | Benchmark/domain inversion (grouped bars: GoEmotions vs journal) | §6.2 — **the paper's key figure** |
-| Fig. 5 | Confusion matrix, deployed face model | `research/results/dima806_fer2013.json` |
-| Fig. 6 | Screenshot: explainability panel | Live app |
-| Fig. 7 | Screenshot: clinician PDF report | Live app |
+| Fig. 1 | Three-service system architecture | §4.1; redraw as clean vector |
+| Fig. 2 | Reliability-aware log-linear fusion pipeline (calibrate → reliability weight → log-pool) | §4.4b |
+| Fig. 3 | **Reliability diagram: text vs face before and after calibration** | §6.3 — the diagnosis in one picture |
+| Fig. 4 | Strategy comparison bar chart on both paired sets | §6.3 |
+| Fig. 5 | Benchmark/domain inversion (GoEmotions vs journal, grouped bars) | §6.2 |
+| Fig. 6 | Ablation: marginal effect of each component | §6.4 |
+| Fig. 7 | Per-class F1: baseline vs deployed face model | §6.1 |
+| Fig. 8 | Confusion matrix, deployed face model | `research/results/dima806_fer2013.json` |
+| Fig. 9 | Screenshot: explainability panel | Live app |
+| Fig. 10 | Screenshot: clinician PDF report | Live app |
 | TABLE I | Face model comparison + McNemar | §6.1 |
 | TABLE II | Text model benchmark vs domain | §6.2 |
-| TABLE III | Fusion calibration comparison | §6.3 |
-| TABLE IV | LLM A/B | §6.5 |
+| TABLE III | **Fusion strategies, both sets, with significance** | §6.3 |
+| TABLE IV | Class-conditional reliability matrix | §4.4b |
+| TABLE V | Ablation grid | §6.4 |
+| TABLE VI | Arbitration designs A–D | §6.5 |
 
-Confusion-matrix data is already persisted in the results JSON — plot directly from it.
-
----
+Figures 3, 4 and 6 carry the paper's core argument. Confusion-matrix and per-class data
+are already persisted as JSON — plot directly from `research/results/`.
 
 ## 11. Reproducing every result
 
 ```bash
 git clone https://github.com/Aadithyaar22/MoodScript
 cd MoodScript
+git checkout research/calibrated-fusion      # fusion/calibration work lives here
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 
-# Face model benchmark (FER2013 test split, ~10 min CPU per model)
+# ---- face model selection (§6.1) ----
 python research/eval_face_models.py --model dima806/facial_emotions_image_detection \
        --out research/results/dima806_fer2013.json
 python research/eval_face_models.py --model trpakov/vit-face-expression \
        --out research/results/trpakov_fer2013.json
-
-# Paired significance test
 python research/compare_models.py --a research/results/dima806_fer2013.json \
                                   --b research/results/trpakov_fer2013.json
 
-# Text: public benchmark and domain benchmark
-python research/eval_text_model.py          # GoEmotions, deployed pipeline
-python research/eval_text_candidates.py     # GoEmotions, candidates
-python research/eval_deployed_journal.py    # 49 journal cases, deployed
-python research/eval_samlowe_journal.py     # 49 journal cases, candidate
+# ---- text model selection (§6.2) ----
+python research/eval_text_model.py           # GoEmotions, deployed pipeline
+python research/eval_text_candidates.py      # GoEmotions, candidates
+python research/eval_deployed_journal.py     # 49 journal cases, deployed
+python research/eval_samlowe_journal.py      # 49 journal cases, candidate
 
-# Fusion, arbitration, two-pass, LLM A/B
-python research/eval_fusion.py
-python research/eval_arbiter.py
+# ---- build the paired benchmarks (§5.1) — run these first for §6.3-6.5 ----
+python research/build_paired_set.py --per-class 200 \
+       --out research/results/paired_set.json                        # Set A
+python research/build_paired_set.py --text-source empathetic --per-class 400 \
+       --out research/results/paired_set_journal.json                # Set B
+
+# ---- fusion, ablation, arbitration (§6.3-6.5) ----
+python research/eval_fusion_v2.py --paired-set paired_set.json          # Set A
+python research/eval_fusion_v2.py --paired-set paired_set_journal.json  # Set B
+python research/eval_ablation.py
+python research/eval_arbiter_paired.py --paired-set paired_set_journal.json \
+       --out arbiter_paired_journal.json                             # needs GROQ_API_KEY
+python research/eval_arbiter_v2.py --paired-set paired_set_journal.json
+python research/eval_conflict_policies.py --paired-set paired_set_journal.json
+
+# ---- response generation and LLM choice (§6.6-6.7) ----
 python research/eval_two_pass.py
-python research/eval_llm_ab.py              # needs GROQ_API_KEY
+python research/eval_llm_ab.py
 ```
 
-Raw predictions, per-class metrics, and confusion matrices for every run are written to
-`research/results/`.
-
----
+Building a paired set runs both models over every pair and takes roughly 5–15 minutes on
+CPU; results are cached to JSON so all downstream experiments are near-instant. Raw
+predictions, per-class metrics and confusion matrices are written to `research/results/`.
 
 ## 12. Team and attribution
 
