@@ -47,7 +47,7 @@ It's not a chatbot wrapper. Every emotional read is a real model inference (text
 
 **Emotion intelligence**
 - Sentence-level text emotion classification (position/length/confidence-weighted aggregation), with negation-aware dampening so "I'm not scared, I've got this" doesn't get read as fear
-- Optional face-image emotion detection (photo upload or webcam)
+- Optional face-image emotion detection (photo upload or webcam), with the face located and cropped before classification — the classifier is trained on close-up faces, and feeding it a full frame with background measurably degrades it
 - Confidence-weighted fusion — a modality that isn't sure about anything doesn't get to pull the blended result as hard as one that's genuinely confident
 - LLM arbitration for the cases numeric fusion can't resolve cleanly — when text and face disagree with comparable confidence, a fast LLM call reads the actual text (catching things like sarcasm a pure score blend can't) instead of just averaging two numbers
 - LIME explainability — see exactly which words drove the detected emotion, and a full text/face/fused confidence breakdown on every message
@@ -61,12 +61,14 @@ It's not a chatbot wrapper. Every emotional read is a real model inference (text
 **Multilingual & voice**
 - Full UI and conversation support in English, Hindi, and Kannada — the backend pipeline (emotion detection, crisis checks, storage) always runs in English; your message is translated in and the reply translated back out, so nothing about the underlying analysis changes with language
 - Voice input via the Web Speech API — continuous listening with a live recording timer, so it doesn't cut off after one sentence
-- Voice output — have Aria's replies read back to you, language-aware
+- Voice output via Google Cloud Text-to-Speech (Neural2 for English/Hindi, WaveNet for Kannada), with speaking rate and pitch conditioned on the detected emotion, so a reply to a sad entry is delivered slower and lower than one to a happy entry. Falls back to the browser voice if the request fails
+- Stored content follows the language switch too — the weekly reflection, conversation previews and reopened threads are all translated on read, since journal text is stored canonically in English
 
 **Insight & reflection**
 - Recency-weighted wellbeing score (0–100) with trend detection (improving / steady / declining)
 - Auto-generated weekly reflection letter, cached per ISO week
-- Mood-over-time and emotion-distribution charts on the dashboard
+- Mood-over-time and emotion-distribution charts on the dashboard, each expandable to full screen; the same panels in the right rail (emotion radar, wellness tips, quote) expand too
+- The weekly reflection can be read aloud, and the doctor PDF embeds the mood-over-time graph using the same emotion ranking as the on-screen chart
 - Two export options: a full raw journal transcript, or a structured **doctor report** — mood score/trend, emotion distribution, language-pattern signals, safety flags with dates, and a chronological entry list, explicitly framed as a self-reported summary to bring to a healthcare provider, not a diagnosis
 
 **Safety, built deliberately conservative**
@@ -76,7 +78,8 @@ It's not a chatbot wrapper. Every emotional read is a real model inference (text
 
 **Account & data**
 - JWT auth with PBKDF2-hashed passwords, plus optional Google OAuth
-- Light and dark theme, full UI parity in both
+- Light and dark theme, full UI parity in both, every text colour meeting WCAG AA (4.5:1) against its background in each theme
+- Responsive down to phone width: the right rail folds under at 1100px and the whole shell stacks with the journal first at 760px
 - Full journal export (plain text) and one-click account deletion, cascading through all tables
 - Per-user, persistent Postgres storage — not a demo toy that forgets you on restart
 
@@ -251,6 +254,8 @@ Paired McNemar's test: p = 8.5×10⁻²⁰⁶ — not remotely due to chance. Th
 | `j-hartmann/emotion-english-roberta-large` | 47.34% | — |
 
 SamLowe wins big on GoEmotions (expected — it's trained directly on it) but loses on the benchmark that resembles real usage. Kept the current model.
+
+The 49 journal-style cases are checked into the repo at `research/data/journal_tests_49.json` (labelled by category: clear, negation, sarcasm, mixed, short, long-arc), and both sides of that comparison are re-runnable — `research/eval_deployed_journal.py` for the shipped pipeline and `research/eval_samlowe_journal.py` for the candidate. Neither model handles sarcasm at all (0/2 for both), which is the clearest known limitation of the text stage and part of why LLM arbitration exists downstream.
 
 **LLM choice: kept Llama 3.3 70B, not `gpt-oss-120b`.** A/B tested on the real production prompt: `gpt-oss-120b`'s cheaper headline per-token price was misleading once measured — it's a reasoning model that burns hidden tokens before answering, making it ~2.8x more expensive per response in practice (415.75 avg completion tokens vs. 113.5) and ~57% slower.
 

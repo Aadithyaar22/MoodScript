@@ -7,7 +7,14 @@ from transformers import pipeline
 
 from eval_text_candidates import FINE_TO_UNIFIED
 
-TESTS = json.load(open("/tmp/tests49.json"))
+import os
+
+# The 49 journal-style cases this project validates on. Lives in the repo so the
+# comparison stays reproducible — it previously read from /tmp, which meant the
+# evidence for rejecting SamLowe could not be re-derived after a reboot.
+_HERE = os.path.dirname(os.path.abspath(__file__))
+TESTS = [(c["text"], c["expected"], c["category"])
+         for c in json.load(open(os.path.join(_HERE, "data", "journal_tests_49.json")))]
 
 print("Loading SamLowe/roberta-base-go_emotions...")
 clf = pipeline("text-classification", model="SamLowe/roberta-base-go_emotions", top_k=None, device=-1)

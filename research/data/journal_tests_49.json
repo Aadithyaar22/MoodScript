@@ -1,0 +1,247 @@
+[
+  {
+    "text": "I got the promotion today! I can't stop smiling, this is the best news I've had all year.",
+    "expected": "happy",
+    "category": "clear"
+  },
+  {
+    "text": "We had such a wonderful time at the beach, laughing until our stomachs hurt.",
+    "expected": "happy",
+    "category": "clear"
+  },
+  {
+    "text": "I just found out I'm going to be an aunt! I'm overjoyed.",
+    "expected": "happy",
+    "category": "clear"
+  },
+  {
+    "text": "Finally finished my degree after five years of hard work. I feel amazing.",
+    "expected": "happy",
+    "category": "clear"
+  },
+  {
+    "text": "My best friend surprised me with a visit today and it made my whole week.",
+    "expected": "happy",
+    "category": "clear"
+  },
+  {
+    "text": "I miss my grandmother so much, it's been a year since she passed and it still hurts every day.",
+    "expected": "sad",
+    "category": "clear"
+  },
+  {
+    "text": "I feel so empty lately, like nothing really matters anymore.",
+    "expected": "sad",
+    "category": "clear"
+  },
+  {
+    "text": "My dog died this morning and I can't stop crying.",
+    "expected": "sad",
+    "category": "clear"
+  },
+  {
+    "text": "Everyone left the party early and I just sat there alone, feeling forgotten.",
+    "expected": "sad",
+    "category": "clear"
+  },
+  {
+    "text": "I failed the exam I studied so hard for and I don't know how to tell my parents.",
+    "expected": "sad",
+    "category": "clear"
+  },
+  {
+    "text": "My coworker took credit for my project in front of the whole team and I am furious.",
+    "expected": "angry",
+    "category": "clear"
+  },
+  {
+    "text": "I can't believe they cancelled my flight with no warning, this is absolutely infuriating.",
+    "expected": "angry",
+    "category": "clear"
+  },
+  {
+    "text": "He broke his promise again and I'm sick of being lied to.",
+    "expected": "angry",
+    "category": "clear"
+  },
+  {
+    "text": "Someone scratched my brand new car in the parking lot and just drove off.",
+    "expected": "angry",
+    "category": "clear"
+  },
+  {
+    "text": "I've asked him three times to stop and he still won't listen, it's driving me insane.",
+    "expected": "angry",
+    "category": "clear"
+  },
+  {
+    "text": "I have a job interview tomorrow and my hands won't stop shaking, what if I mess it up.",
+    "expected": "fearful",
+    "category": "clear"
+  },
+  {
+    "text": "I heard a strange noise downstairs at 3am and I was too scared to move.",
+    "expected": "fearful",
+    "category": "clear"
+  },
+  {
+    "text": "The doctor said they need to run more tests and now I can't stop thinking the worst.",
+    "expected": "fearful",
+    "category": "clear"
+  },
+  {
+    "text": "I'm terrified of flying and my flight is in two hours.",
+    "expected": "fearful",
+    "category": "clear"
+  },
+  {
+    "text": "My heart is racing, I think something bad is about to happen.",
+    "expected": "fearful",
+    "category": "clear"
+  },
+  {
+    "text": "I walked into the room and everyone jumped out yelling surprise, I had no idea.",
+    "expected": "surprised",
+    "category": "clear"
+  },
+  {
+    "text": "I never expected to win the lottery, I'm still in shock.",
+    "expected": "surprised",
+    "category": "clear"
+  },
+  {
+    "text": "Wait, you're telling me they got married last week? I had absolutely no idea.",
+    "expected": "surprised",
+    "category": "clear"
+  },
+  {
+    "text": "I opened the box and couldn't believe what was inside.",
+    "expected": "surprised",
+    "category": "clear"
+  },
+  {
+    "text": "Out of nowhere my old best friend from high school messaged me after ten years.",
+    "expected": "surprised",
+    "category": "clear"
+  },
+  {
+    "text": "I opened the fridge and the smell almost made me throw up.",
+    "expected": "disgusted",
+    "category": "clear"
+  },
+  {
+    "text": "The way he treated the waiter was disgusting, I lost all respect for him.",
+    "expected": "disgusted",
+    "category": "clear"
+  },
+  {
+    "text": "I found a cockroach in my food at the restaurant and I immediately lost my appetite.",
+    "expected": "disgusted",
+    "category": "clear"
+  },
+  {
+    "text": "Reading about how they treated those animals made me feel sick.",
+    "expected": "disgusted",
+    "category": "clear"
+  },
+  {
+    "text": "The bathroom was absolutely filthy, I couldn't even bring myself to touch anything.",
+    "expected": "disgusted",
+    "category": "clear"
+  },
+  {
+    "text": "I went to the grocery store and picked up some things for dinner.",
+    "expected": "neutral",
+    "category": "clear"
+  },
+  {
+    "text": "The meeting is scheduled for 3pm tomorrow in the main conference room.",
+    "expected": "neutral",
+    "category": "clear"
+  },
+  {
+    "text": "I've been reading a book about history lately, it's fairly informative.",
+    "expected": "neutral",
+    "category": "clear"
+  },
+  {
+    "text": "Today was pretty normal, nothing much happened.",
+    "expected": "neutral",
+    "category": "clear"
+  },
+  {
+    "text": "I need to pay the electricity bill before the end of the month.",
+    "expected": "neutral",
+    "category": "clear"
+  },
+  {
+    "text": "I am not happy about this decision at all.",
+    "expected": "angry",
+    "category": "negation"
+  },
+  {
+    "text": "I'm not scared, I've got this.",
+    "expected": "neutral",
+    "category": "negation"
+  },
+  {
+    "text": "This isn't as bad as I thought it would be.",
+    "expected": "neutral",
+    "category": "negation"
+  },
+  {
+    "text": "Oh great, another Monday, I'm just thrilled.",
+    "expected": "angry",
+    "category": "sarcasm"
+  },
+  {
+    "text": "Wow, losing my job right before the holidays, what a wonderful surprise.",
+    "expected": "sad",
+    "category": "sarcasm"
+  },
+  {
+    "text": "I'm happy for my friend's success but also a little jealous, it's complicated.",
+    "expected": "happy",
+    "category": "mixed"
+  },
+  {
+    "text": "I'm relieved the surgery is over but terrified about the recovery.",
+    "expected": "fearful",
+    "category": "mixed"
+  },
+  {
+    "text": "I'm fine.",
+    "expected": "neutral",
+    "category": "short"
+  },
+  {
+    "text": "I hate this.",
+    "expected": "angry",
+    "category": "short"
+  },
+  {
+    "text": "hello hi how are you",
+    "expected": "neutral",
+    "category": "short"
+  },
+  {
+    "text": "So scared.",
+    "expected": "fearful",
+    "category": "short"
+  },
+  {
+    "text": "This sucks.",
+    "expected": "angry",
+    "category": "short"
+  },
+  {
+    "text": "I am furious.",
+    "expected": "angry",
+    "category": "short"
+  },
+  {
+    "text": "Today started off rough, I woke up late and spilled coffee everywhere, but then a friend called just to check in and by the end of the day I actually felt pretty okay about things.",
+    "expected": "happy",
+    "category": "long-arc"
+  }
+]
