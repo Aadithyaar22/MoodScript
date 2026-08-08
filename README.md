@@ -35,7 +35,7 @@ pinned: false
 MoodScript is a full-stack emotional journaling app. You write (or speak, or show your face) how you're feeling, and it:
 
 1. **Detects your emotion** — from your words, sentence by sentence, and optionally from a photo/webcam frame
-2. **Fuses both signals**, weighted by how confident each one actually is — and escalates to an LLM arbiter when they genuinely disagree
+2. **Fuses both signals** after calibrating each onto a common confidence scale, weighting each by its measured per-class reliability, and combining them multiplicatively rather than by averaging
 3. **Responds as Aria** — a therapist-persona LLM companion that extracts the specific things you actually said before replying, and remembers your last conversation, your last week, and your long-term patterns
 4. **Watches for real crisis signals** — and only surfaces helpline resources when something is genuinely serious, never as a reflex
 5. **Tracks your wellbeing over time** — a recency-weighted score, trend direction, a weekly reflection letter, and a doctor-ready clinical summary you can export and bring to an appointment
@@ -48,8 +48,8 @@ It's not a chatbot wrapper. Every emotional read is a real model inference (text
 **Emotion intelligence**
 - Sentence-level text emotion classification (position/length/confidence-weighted aggregation), with negation-aware dampening so "I'm not scared, I've got this" doesn't get read as fear
 - Optional face-image emotion detection (photo upload or webcam), with the face located and cropped before classification — the classifier is trained on close-up faces, and feeding it a full frame with background measurably degrades it
-- Confidence-weighted fusion — a modality that isn't sure about anything doesn't get to pull the blended result as hard as one that's genuinely confident
-- LLM arbitration for the cases numeric fusion can't resolve cleanly — when text and face disagree with comparable confidence, a fast LLM call reads the actual text (catching things like sarcasm a pure score blend can't) instead of just averaging two numbers
+- Calibration-aware log-linear fusion — each modality is first calibrated onto a common confidence scale (the text model was measured to be badly over-confident, ECE 0.217, against 0.015 for the face model, so their raw confidences were never comparable), weighted by a per-class reliability estimate rather than one number, and combined by multiplying rather than averaging so a confident "definitely not this" can actually rule a class out. On a held-out paired benchmark this scores 91.95% against 87.97% for the previous confidence-weighted average — which was itself *below* using the face modality alone (89.30%)
+- LLM arbitration on unresolved conflicts — retained in the pipeline, but measured and reported honestly: it does **not** improve accuracy (see [Research & evaluation](#research--evaluation)), because it adjudicates by reading the text while never seeing the face image, and text is the weaker signal on exactly those cases
 - LIME explainability — see exactly which words drove the detected emotion, and a full text/face/fused confidence breakdown on every message
 
 **Conversation & memory**
@@ -245,6 +245,18 @@ Every model swap and architecture change in this project was independently bench
 | `dima806/facial_emotions_image_detection` (current) | **88.35%** | **87.0% / 87.9%** |
 
 Paired McNemar's test: p = 8.5×10⁻²⁰⁶ — not remotely due to chance. The angry-class gap directly explains a real failure caught during manual testing (an exaggerated angry expression scoring 0% angry on the old model, split between happy and fearful instead).
+
+**Fusion: the previous rule was measurably worse than one modality alone.** Evaluated on a purpose-built paired benchmark — a GoEmotions or EmpatheticDialogues text labelled *X* paired with a FER2013 face labelled *X*, so ground truth is unambiguous and disagreement arises from real model error rather than manufactured conflict:
+
+| Strategy | Set A (n=577) | Set B (n=1,056) |
+|---|---|---|
+| Face only | 88.39% | 89.30% |
+| Confidence-weighted average (previous) | 85.10% | 87.97% |
+| **Calibration-aware log-linear (current)** | **90.99%** | **91.95%** |
+
+Significant against the previous rule (p = 7.7×10⁻⁶ / 6.2×10⁻¹⁰) and against the stronger single modality (p = 0.0019 / 2.6×10⁻⁶). An ablation isolates text calibration as the dominant factor (+6.54 pp); face calibration contributes +0.39 pp because that model was already calibrated.
+
+**LLM arbitration: tested and does not help.** Four designs — direct classification, binary choice given the correct reliability prior, confidence-gated abstention, and meta-linguistic trust scoring — all scored below fusion without an LLM on the conflict cases where arbitration fires (best 75.40% against 76.98%). The arbiter reads the *text* and only ever receives the face model's label, never the image, and text is worth ~17% accuracy on exactly those cases. Its trust estimates were uncorrelated with whether the text was actually right (0.738 when right, 0.763 when wrong). Retained in the pipeline but reported honestly; see `research/eval_arbiter_v2.py`.
 
 **Text model: kept, not swapped.** Two candidates were tested on GoEmotions *and* cross-checked against a 49-case journal-style benchmark, since a model's benchmark win doesn't necessarily generalize to the product's actual input distribution:
 
