@@ -1,0 +1,17 @@
+{
+  "paired_set": "paired_set_journal.json",
+  "text_source": "EmpatheticDialogues situations (first-person narrative; ambiguous emotions dropped, no neutral class available)",
+  "n_conflict": 30,
+  "n_test": 343,
+  "temperature": {
+    "text": 1.3245100930536813,
+    "face": 1.1190536182880182
+  },
+  "policies": {
+    "text only": 0.16666666666666666,
+    "face only": 0.7666666666666667,
+    "numeric fusion (deployed)": 0.4666666666666667,
+    "LLM arbitration (deployed extra call)": 0.43333333333333335,
+    "calibrated fusion (proposed)": 0.7
+  }
+}

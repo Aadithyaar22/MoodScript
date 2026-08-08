@@ -62,11 +62,33 @@ def build_fine_to_unified(label_names):
     return out
 
 
+# EmpatheticDialogues "situation" text is first-person emotional narrative
+# ("I felt guilty when I was driving home one night and..."), averaging 22.4 words
+# against GoEmotions' 12.9 — far closer to a journal entry than a Reddit comment.
+# Only unambiguous emotions are mapped; anything whose mapping would be a judgement
+# call (nostalgic, sentimental, guilty, jealous, caring, anticipating, ...) is
+# DROPPED rather than forced, so the pair's ground truth stays clean.
+EMPATHETIC_TO_UNIFIED = {
+    "angry": "angry", "furious": "angry", "annoyed": "angry",
+    "disgusted": "disgusted",
+    "afraid": "fearful", "terrified": "fearful", "anxious": "fearful",
+    "apprehensive": "fearful",
+    "joyful": "happy", "excited": "happy", "proud": "happy",
+    "grateful": "happy", "content": "happy", "hopeful": "happy",
+    "sad": "sad", "devastated": "sad", "disappointed": "sad", "lonely": "sad",
+    "surprised": "surprised",
+}
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--per-class", type=int, default=200,
                     help="pairs per emotion class (7 classes)")
     ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--text-source", choices=["goemotions", "empathetic"],
+                    default="goemotions",
+                    help="goemotions = short Reddit comments; empathetic = first-person "
+                         "narrative situations, much closer to journal writing")
     ap.add_argument("--out", default=os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                                   "results", "paired_set.json"))
     args = ap.parse_args()
@@ -77,17 +99,28 @@ def main():
     from PIL import Image
     from text_model import TextEmotionModel
 
-    # ---------- collect texts by unified label (GoEmotions test, single-label) ----------
-    print("Loading GoEmotions test split...")
-    ds_t = load_dataset("go_emotions", "simplified", split="test")
-    f2u = build_fine_to_unified(ds_t.features["labels"].feature.names)
+    # ---------- collect texts by unified label ----------
     texts = {e: [] for e in UNIFIED}
-    for ex in ds_t:
-        if len(ex["labels"]) != 1:
-            continue                      # single-label only, keeps ground truth clean
-        u = f2u.get(ex["labels"][0])
-        if u:
-            texts[u].append(ex["text"])
+    if args.text_source == "goemotions":
+        print("Loading GoEmotions test split...")
+        ds_t = load_dataset("go_emotions", "simplified", split="test")
+        f2u = build_fine_to_unified(ds_t.features["labels"].feature.names)
+        for ex in ds_t:
+            if len(ex["labels"]) != 1:
+                continue                  # single-label only, keeps ground truth clean
+            u = f2u.get(ex["labels"][0])
+            if u:
+                texts[u].append(ex["text"])
+        text_source_desc = "GoEmotions test split (single-label, Ekman-mapped)"
+    else:
+        print("Loading EmpatheticDialogues situations...")
+        ds_t = load_dataset("bdotloh/empathetic-dialogues-contexts", split="test")
+        for ex in ds_t:
+            u = EMPATHETIC_TO_UNIFIED.get(ex["emotion"])
+            if u:
+                texts[u].append(ex["situation"])
+        text_source_desc = ("EmpatheticDialogues situations (first-person narrative; "
+                            "ambiguous emotions dropped, no neutral class available)")
     print("  texts available:", {k: len(v) for k, v in texts.items()})
 
     # ---------- collect face images by unified label (FER2013 test) ----------
@@ -160,7 +193,7 @@ def main():
         "n_calib": n_cal,
         "n_test": len(pairs) - n_cal,
         "n_modalities_agree": agree,
-        "text_source": "GoEmotions test split (single-label, Ekman-mapped)",
+        "text_source": text_source_desc,
         "face_source": "FER2013 test split (clip-benchmark/wds_fer2013)",
         "pairs": pairs,
     }

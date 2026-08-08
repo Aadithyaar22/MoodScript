@@ -13,6 +13,7 @@ alternatives it replaces rather than in isolation:
     - face only
     - always-pick-text  (a trivial policy, since text is the primary modality)
 """
+import argparse
 import json
 import os
 import sys
@@ -28,12 +29,19 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 
 
 def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--paired-set", default="paired_set.json",
+                    help="filename under research/results/")
+    ap.add_argument("--out", default="arbiter_paired.json")
+    args = ap.parse_args()
+
     import asyncio
     from dotenv import load_dotenv
     load_dotenv(os.path.join(_HERE, "..", ".env"))
     from models.arbiter import Arbiter
 
-    data = json.load(open(os.path.join(_HERE, "results", "paired_set.json")))
+    data = json.load(open(os.path.join(_HERE, "results", args.paired_set)))
+    print(f"paired set: {args.paired_set}  ({data.get('text_source','?')})")
     pairs = [p for p in data["pairs"] if p["split"] == "test"]
     fusion = FusionLayer()
     arbiter = Arbiter()
@@ -96,7 +104,7 @@ def main():
     print(f"  changed and became wrong   : {hurt}")
     print(f"  net                        : {helped - hurt:+d}")
 
-    path = os.path.join(_HERE, "results", "arbiter_paired.json")
+    path = os.path.join(_HERE, "results", args.out)
     with open(path, "w") as f:
         json.dump({
             "n_test_pairs": len(pairs),

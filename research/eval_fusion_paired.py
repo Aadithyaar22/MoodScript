@@ -23,6 +23,7 @@ honest scale with temperature scaling, then applies the same confidence weightin
 Temperature is fitted on the calibration split ONLY and every number reported below
 comes from the held-out test split.
 """
+import argparse
 import json
 import os
 
@@ -100,7 +101,13 @@ def report(name, P, y, rows):
 
 
 def main():
-    data = json.load(open(os.path.join(_HERE, "results", "paired_set.json")))
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--paired-set", default="paired_set.json")
+    ap.add_argument("--out", default="fusion_paired.json")
+    args = ap.parse_args()
+
+    data = json.load(open(os.path.join(_HERE, "results", args.paired_set)))
+    print(f"paired set: {args.paired_set}  ({data.get('text_source','?')})")
     pairs = data["pairs"]
 
     def pack(split):
@@ -178,7 +185,7 @@ def main():
         "mcnemar_calibrated_vs_deployed": sig_vs_deployed,
         "mcnemar_calibrated_vs_face_only": sig_vs_face,
     }
-    path = os.path.join(_HERE, "results", "fusion_paired.json")
+    path = os.path.join(_HERE, "results", args.out)
     with open(path, "w") as f:
         json.dump(out, f, indent=2)
     print(f"\nSaved -> {path}")
