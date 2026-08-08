@@ -22,15 +22,21 @@ So each modality is now temperature-calibrated onto a common scale, weighted by 
 class-conditional reliability estimate rather than one scalar, and combined by
 log-linear (product-of-experts) pooling.
 
-Measured on held-out test splits of two independent paired benchmarks:
+Measured on held-out test splits of two independent paired benchmarks, by running
+THIS module (research/verify_production_fusion.py) — not a research reimplementation,
+and using the frozen pooled constants below rather than per-set fitted ones:
 
     strategy                          set A     set B
+    text only                         49.74     64.49
     face only                         88.39     89.30
-    linear + confidence (previous)    85.10     87.97
-    this method                       90.99     91.95
+    linear + confidence (previous)    83.36     86.27
+    this method                       91.51     93.18
 
 Significant against both the previous rule and the stronger single modality
-(p = 7.7e-6 and p = 0.0019 on set A; p = 6.2e-10 and p = 2.6e-6 on set B).
+(p = 3.1e-8 and p = 0.0013 on set A; p = 1.5e-13 and p = 7.0e-7 on set B).
+
+Beating face-only is the result that matters: the face model is the stronger
+modality, so a fusion rule that cannot outperform it is not earning its complexity.
 
 Set MOODSCRIPT_LEGACY_FUSION=1 to fall back to the previous linear rule.
 """
@@ -46,16 +52,22 @@ _EPS = 1e-12
 # benchmarks (n=1631). Both sets are pooled so that every class has real support —
 # the journal-domain set contains no neutral examples on its own, which would have
 # left neutral's reliability as a smoothing artefact.
-# Reproduce: research/build_paired_set.py then research/eval_fusion_v2.py
-TEXT_TEMPERATURE = 1.6572
+# Reproduce: research/fit_fusion_constants.py (which refuses to emit a constant for
+# any class with under 25 calibration examples — the guard exists because fitting on
+# the journal set alone once produced a neutral reliability of 0.029 out of thin air).
+#
+# Re-fitted after the text pipeline changed to whole-entry classification; the face
+# constants below re-derived byte-identical, confirming that change touched only the
+# text branch.
+TEXT_TEMPERATURE = 1.7565
 FACE_TEMPERATURE = 1.0342
 
 # Smoothed per-class precision of each modality on the class it predicts. Text
-# reliability spans 0.19–0.74 across classes, which is why a single scalar weight
+# reliability spans 0.24–0.73 across classes, which is why a single scalar weight
 # per modality is not adequate.
 TEXT_RELIABILITY = {
-    "angry": 0.6593, "disgusted": 0.3689, "fearful": 0.7357, "happy": 0.6321,
-    "neutral": 0.1921, "sad": 0.7053, "surprised": 0.5844,
+    "angry": 0.6925, "disgusted": 0.3721, "fearful": 0.7331, "happy": 0.6981,
+    "neutral": 0.2356, "sad": 0.6908, "surprised": 0.5908,
 }
 FACE_RELIABILITY = {
     "angry": 0.9183, "disgusted": 0.9750, "fearful": 0.8660, "happy": 0.9576,

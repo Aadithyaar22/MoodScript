@@ -1,6 +1,6 @@
 {
   "temperature": {
-    "text": 1.9343298829426612,
+    "text": 2.00308976416403,
     "face": 0.9001609624252959
   },
   "n_test": 577,
@@ -10,144 +10,144 @@
       "face_calibration": false,
       "confidence_weighting": false,
       "post_fusion_calibration": false,
-      "accuracy": 0.8110918544194108,
-      "macro_f1": 0.811078265292222,
-      "ece": 0.19074147136837294
+      "accuracy": 0.7833622183708839,
+      "macro_f1": 0.781421898505431,
+      "ece": 0.13785326612064377
     },
     {
       "text_calibration": false,
       "face_calibration": false,
       "confidence_weighting": false,
       "post_fusion_calibration": true,
-      "accuracy": 0.8110918544194108,
-      "macro_f1": 0.811078265292222,
-      "ece": 0.054094610657733994
+      "accuracy": 0.7833622183708839,
+      "macro_f1": 0.781421898505431,
+      "ece": 0.07231361581578367
     },
     {
       "text_calibration": false,
       "face_calibration": false,
       "confidence_weighting": true,
       "post_fusion_calibration": false,
-      "accuracy": 0.8509532062391681,
-      "macro_f1": 0.8438147365179801,
-      "ece": 0.1725752396840545
+      "accuracy": 0.8336221837088388,
+      "macro_f1": 0.8237384895863752,
+      "ece": 0.13864061730768382
     },
     {
       "text_calibration": false,
       "face_calibration": false,
       "confidence_weighting": true,
       "post_fusion_calibration": true,
-      "accuracy": 0.8509532062391681,
-      "macro_f1": 0.8438147365179801,
-      "ece": 0.025935465859676564
+      "accuracy": 0.8336221837088388,
+      "macro_f1": 0.8237384895863752,
+      "ece": 0.01959037363543111
     },
     {
       "text_calibration": false,
       "face_calibration": true,
       "confidence_weighting": false,
       "post_fusion_calibration": false,
-      "accuracy": 0.8197573656845754,
-      "macro_f1": 0.8183157499780483,
-      "ece": 0.18949477353067562
+      "accuracy": 0.7868284228769498,
+      "macro_f1": 0.782863383477765,
+      "ece": 0.13325258569459525
     },
     {
       "text_calibration": false,
       "face_calibration": true,
       "confidence_weighting": false,
       "post_fusion_calibration": true,
-      "accuracy": 0.8197573656845754,
-      "macro_f1": 0.8183157499780483,
-      "ece": 0.06154999708482611
+      "accuracy": 0.7868284228769498,
+      "macro_f1": 0.782863383477765,
+      "ece": 0.08170838134614494
     },
     {
       "text_calibration": false,
       "face_calibration": true,
       "confidence_weighting": true,
       "post_fusion_calibration": false,
-      "accuracy": 0.8578856152512998,
-      "macro_f1": 0.8503157847624397,
-      "ece": 0.16605324520335035
+      "accuracy": 0.8440207972270364,
+      "macro_f1": 0.833654711602347,
+      "ece": 0.14279829808800587
     },
     {
       "text_calibration": false,
       "face_calibration": true,
       "confidence_weighting": true,
       "post_fusion_calibration": true,
-      "accuracy": 0.8578856152512998,
-      "macro_f1": 0.8503157847624397,
-      "ece": 0.024095498422913468
+      "accuracy": 0.8440207972270364,
+      "macro_f1": 0.833654711602347,
+      "ece": 0.025482070124012705
     },
     {
       "text_calibration": true,
       "face_calibration": false,
       "confidence_weighting": false,
       "post_fusion_calibration": false,
-      "accuracy": 0.901213171577123,
-      "macro_f1": 0.8920838731941482,
-      "ece": 0.33374125996060616
+      "accuracy": 0.8977469670710572,
+      "macro_f1": 0.887098011571004,
+      "ece": 0.3208697567054613
     },
     {
       "text_calibration": true,
       "face_calibration": false,
       "confidence_weighting": false,
       "post_fusion_calibration": true,
-      "accuracy": 0.901213171577123,
-      "macro_f1": 0.8920838731941482,
-      "ece": 0.021451039015652172
+      "accuracy": 0.8977469670710572,
+      "macro_f1": 0.887098011571004,
+      "ece": 0.03127830449145472
     },
     {
       "text_calibration": true,
       "face_calibration": false,
       "confidence_weighting": true,
       "post_fusion_calibration": false,
-      "accuracy": 0.8994800693240901,
-      "macro_f1": 0.8909665885587671,
-      "ece": 0.21799635390016486
+      "accuracy": 0.8960138648180243,
+      "macro_f1": 0.8863883846417819,
+      "ece": 0.22142705559267345
     },
     {
       "text_calibration": true,
       "face_calibration": false,
       "confidence_weighting": true,
       "post_fusion_calibration": true,
-      "accuracy": 0.8994800693240901,
-      "macro_f1": 0.8909665885587671,
-      "ece": 0.030817944647307423
+      "accuracy": 0.8960138648180243,
+      "macro_f1": 0.8863883846417819,
+      "ece": 0.026903832210923198
     },
     {
       "text_calibration": true,
       "face_calibration": true,
       "confidence_weighting": false,
       "post_fusion_calibration": false,
-      "accuracy": 0.901213171577123,
-      "macro_f1": 0.8932383637901092,
-      "ece": 0.32623994084519226
+      "accuracy": 0.8977469670710572,
+      "macro_f1": 0.8886824912270436,
+      "ece": 0.3134508058534552
     },
     {
       "text_calibration": true,
       "face_calibration": true,
       "confidence_weighting": false,
       "post_fusion_calibration": true,
-      "accuracy": 0.901213171577123,
-      "macro_f1": 0.8932383637901092,
-      "ece": 0.02536829223788118
+      "accuracy": 0.8977469670710572,
+      "macro_f1": 0.8886824912270436,
+      "ece": 0.02987701666550249
     },
     {
       "text_calibration": true,
       "face_calibration": true,
       "confidence_weighting": true,
       "post_fusion_calibration": false,
-      "accuracy": 0.8994800693240901,
-      "macro_f1": 0.8914611517674919,
-      "ece": 0.20536642788837625
+      "accuracy": 0.8977469670710572,
+      "macro_f1": 0.8898845190614972,
+      "ece": 0.20753664464848914
     },
     {
       "text_calibration": true,
       "face_calibration": true,
       "confidence_weighting": true,
       "post_fusion_calibration": true,
-      "accuracy": 0.8994800693240901,
-      "macro_f1": 0.8914611517674919,
-      "ece": 0.03591478171255235
+      "accuracy": 0.8977469670710572,
+      "macro_f1": 0.8898845190614972,
+      "ece": 0.024520601599796223
     }
   ]
 }

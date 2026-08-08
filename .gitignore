@@ -5,3 +5,6 @@ __pycache__/
 .DS_Store
 moodscript.db
 .secrets/
+
+# local backups from refresh_text_preds.py (v1 preds are kept inline as text_pred_v1)
+research/results/*.v1.bak
