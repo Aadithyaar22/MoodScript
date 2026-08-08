@@ -250,7 +250,7 @@ Paired McNemar's test: p = 8.5×10⁻²⁰⁶ — not remotely due to chance. Th
 
 | Strategy | Set A (n=577) | Set B (n=1,056) |
 |---|---|---|
-| Face only | 88.39% | 89.30% |
+| Face only | 88.39% | 88.69% |
 | Confidence-weighted average (previous) | 83.36% | 85.83% |
 | **Calibration-aware log-linear (current)** | **91.51%** | **92.83%** |
 

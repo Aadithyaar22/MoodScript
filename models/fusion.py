@@ -11,7 +11,7 @@ measured problems with that (see research/ for the full evaluation):
    0.66 confidence while being correct 0.44 of the time) against 0.015 for the
    face model. Multiplying a prior by raw confidence therefore over-trusted the
    worse-calibrated modality, and the linear rule scored *below* using the face
-   modality alone (87.97% vs 89.30%).
+   modality alone (85.83% vs 88.69%).
 
 2. A weighted average cannot veto. If one modality assigns ~0 probability to a
    class, the other can still carry it, because a sum is dominated by its larger
@@ -56,16 +56,12 @@ FACE_WEIGHT = 0.45
 _EPS = 1e-12
 
 # Fitted by minimising NLL on the pooled calibration splits of both paired
-# benchmarks (n=1631). Both sets are pooled so that every class has real support —
-# the journal-domain set contains no neutral examples on its own, which would have
-# left neutral's reliability as a smoothing artefact.
+# benchmarks (n=1831). Both sets are pooled so every class has real support from
+# more than one text domain.
 # Reproduce: research/fit_fusion_constants.py (which refuses to emit a constant for
 # any class with under 25 calibration examples — the guard exists because fitting on
-# the journal set alone once produced a neutral reliability of 0.029 out of thin air).
-#
-# Re-fitted after the text pipeline changed to whole-entry classification; the face
-# constants below re-derived byte-identical, confirming that change touched only the
-# text branch.
+# the journal set alone, before it had a neutral class, once produced a neutral
+# reliability of 0.029 out of thin air).
 TEXT_TEMPERATURE = 1.6990
 FACE_TEMPERATURE = 0.9171
 

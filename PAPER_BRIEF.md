@@ -139,8 +139,8 @@ These are the claims the paper can defend with the evidence in §6.
    *class-conditional* reliability estimate rather than a single scalar, and combined
    by log-linear (product-of-experts) pooling instead of a weighted average. This is
    the first configuration tested that significantly outperforms the stronger single
-   modality — 93.18% vs 89.30% (p = 7.0×10⁻⁷) on Set B and 91.51% vs 88.39%
-   (p = 1.3×10⁻³) on Set A, measured by running the deployed code itself (§6.3b).
+   modality — 92.83% vs 88.69% (p = 7.7×10⁻⁹) on Set B and 91.51% vs 88.39%
+   (p = 5.2×10⁻⁴) on Set A, measured by running the deployed code itself (§6.3b).
 2. **The diagnosis that motivates it**: the two modalities' raw confidence scores are
    not commensurable — text ECE 0.217 against face ECE 0.015 — so any rule that
    multiplies a prior by raw confidence systematically over-trusts the worse-calibrated
@@ -306,8 +306,8 @@ while a webcam frame is incidental. *This prior was not swept experimentally —
 
 > **This is the PREVIOUS rule, and the paper's baseline — not its contribution.**
 > §4.4b replaced it in production; it survives behind `MOODSCRIPT_LEGACY_FUSION=1`.
-> On the paired benchmark it scores 86.27%, i.e. *below* using the face modality
-> alone (89.30%).
+> On the paired benchmark it scores 85.83%, i.e. *below* using the face modality
+> alone (88.69%).
 
 ### 4.4b Reliability-aware log-linear fusion — THE PROPOSED METHOD
 
@@ -776,14 +776,16 @@ Held-out test splits of the paired benchmark (§5.1). Set A = GoEmotions text
 
 | Strategy | Set A acc | Set A F1 | Set A ECE | Set B acc | Set B F1 | Set B ECE |
 |---|---|---|---|---|---|---|
-| Text only | 49.74 | 52.05 | 0.235 | 64.49 | 55.45 | 0.153 |
-| Face only | 88.39 | 87.90 | 0.029 | 89.30 | 78.37 | 0.018 |
-| Linear, fixed weights (naive) | 78.34 | 78.14 | 0.138 | 84.94 | 72.70 | 0.128 |
-| **Linear + confidence (PREVIOUS)** | **83.36** | 82.37 | 0.139 | **86.27** | 74.04 | 0.104 |
-| Linear + confidence + calibration | 89.77 | 88.99 | 0.208 | 91.67 | 79.01 | 0.197 |
-| **Log-linear + class reliability (PROPOSED)** | **90.47** | **89.91** | **0.037** | **93.84** | **80.86** | **0.100** |
-| Learned logistic regression (reference) | 90.81 | 90.52 | 0.051 | 58.52 | 54.26 | 0.325 |
-| *Oracle ceiling (either modality correct)* | *94.45* | | | *96.12* | | |
+| Text only | 49.74 | 52.05 | 0.235 | 64.57 | 63.13 | 0.145 |
+| Face only | 88.39 | 87.90 | 0.029 | 88.69 | 89.64 | 0.018 |
+| Linear, fixed weights (naive) | 78.34 | 78.14 | 0.138 | 84.55 | 83.90 | 0.130 |
+| **Linear + confidence (PREVIOUS)** | **83.36** | 82.37 | 0.139 | **85.83** | 85.28 | 0.106 |
+| Linear + confidence + calibration | 89.77 | 88.99 | 0.208 | 90.92 | 90.93 | 0.183 |
+| **Log-linear + class reliability (PROPOSED)** | **90.47** | **89.91** | **0.037** | **92.83** | **93.39** | **0.077** |
+| Learned logistic regression (reference) | 90.81 | 90.52 | 0.051 | 92.28 | 92.99 | 0.027 |
+| *Oracle ceiling (either modality correct)* | *94.45* | | | *96.02* | | |
+
+*(Set B re-measured after the neutral class was added — §5.1b. Set A is unchanged.)*
 
 **These are research numbers, fitted per set.** `eval_fusion_v2.py` fits temperature and
 reliability on each set's *own* calibration split. Production cannot do that — it carries
@@ -843,18 +845,22 @@ and must not be presented as a regression.
 
 **The four claims this table supports:**
 
-1. **The previous rule is worse than ignoring text entirely** — 83.36/86.27 against
-   88.39/89.30 for face alone. Uncalibrated confidence weighting actively degrades the
+1. **The previous rule is worse than ignoring text entirely** — 83.36/85.83 against
+   88.39/88.69 for face alone. Uncalibrated confidence weighting actively degrades the
    stronger modality. This is the problem the paper solves.
 2. **The proposed method significantly beats the previous one** on both sets.
 3. **The proposed method significantly beats the best single modality** on both sets.
    This is the claim multimodal papers must make and the earlier design could not.
-4. **It also beats a learned combiner.** Multinomial logistic regression on the
-   concatenated calibrated distributions is included as a reference for how much of
-   the ceiling is capturable; the proposed method wins on both sets and LR collapses
-   on Set B (58.14%), so the gain is not simply "any trained model would find this".
+4. **It edges out a learned combiner.** Multinomial logistic regression on the
+   concatenated calibrated distributions is included as a reference for how much of the
+   ceiling is capturable. The proposed method wins on both sets, but narrowly on Set B
+   (92.83 vs 92.28) — state it that way. **Do not repeat the earlier claim that LR
+   "collapses" on Set B.** It scored 58.14% only because Set B then had no neutral class;
+   with the class present it reaches 92.28%. That collapse was a benchmark artefact, and
+   the honest reading is that a hand-designed calibrated rule *matches* a learned one
+   without needing labelled pairs to fit — which is a fair claim, and enough.
 
-**Headroom captured over face-only:** 44.8% (Set A), 61.3% (Set B).
+**Headroom captured over face-only:** 34.3% (Set A), 56.5% (Set B).
 
 **Calibration effect, measured separately (test split):**
 
