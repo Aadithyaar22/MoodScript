@@ -152,14 +152,15 @@ These are the claims the paper can defend with the evidence in §6.
 4. **An empirical demonstration that public-benchmark ranking can invert under
    domain shift** — the candidate model that wins on GoEmotions by 26 points loses on
    journal-style text (§6.2). Generalisable beyond this system.
-5. **A second negative result, on hand-engineered NLP preprocessing.** Two intuitive,
-   linguistically-motivated components of our own text pipeline — sentence-level
-   segmentation with weighted aggregation, and syntax-aware negation dampening — were
-   each shown to *reduce* accuracy on 1,056 held-out in-domain texts (combined −4.45
-   points, p = 1.08×10⁻⁶). The negation rule had validated at +6 points on the 49
-   hand-written cases it was tuned against, and reversed sign on real data, breaking 20
-   correct predictions while fixing none (§6.2b). Removing both improved accuracy *and*
-   cut latency 4.3×.
+5. **A second negative result, on hand-engineered NLP preprocessing — and a lesson about
+   the benchmark that measured it.** Sentence-level segmentation with weighted aggregation
+   plus syntax-aware negation dampening together reduced accuracy by 1.99 points
+   (p = 0.0265) on 1,256 held-out in-domain texts; removing both also cut latency 4.3×.
+   Neither component is individually significant once the benchmark includes neutral —
+   and the far more dramatic effect measured *before* neutral was added (−4.45 points,
+   "broke 20 predictions and fixed 0") turned out to be inflated by the absence of the
+   very class the negation rule pushes toward (§6.2b, §5.1b). The methodological point is
+   the contribution: an incomplete benchmark made a mediocre heuristic look catastrophic.
 6. **A two-pass response generation scheme** that extracts concrete facts before
    generating, measurably increasing content-specificity (§6.6).
 7. **A complete, deployed, explainable system** integrating the above with LIME
@@ -536,6 +537,52 @@ invalidated every per-class result.
 
 ---
 
+### 5.1b Adding the neutral class to Set B (do not skip this in the paper)
+
+Set B was originally built from EmpatheticDialogues, which has **no neutral category**.
+Every number measured on it therefore excluded the class both modalities are worst at, and
+neutral is plausibly the most common label in real journaling. A 7-class benchmark
+containing 6 classes overstates the system.
+
+400 neutral pairs were added (`research/add_neutral_pairs.py`):
+
+| | |
+|---|---|
+| Neutral text | DailyDialog utterances labelled *no emotion*, via the parquet mirror `pixelsandpointers/better_daily_dialog` |
+| Filter | ≥ 18 words, de-duplicated, punctuation de-tokenised |
+| Neutral faces | FER2013 test split, neutral class (1,233 available) |
+| Result | Set B: 2,111 → **2,511** pairs, all 7 classes; test split 1,056 → 1,256 |
+
+Existing pairs were **appended to, not rebuilt** — their text, face distributions and
+calibration/test assignment are untouched, so previously reported numbers remain
+reproducible from the same file and the only variable introduced is the presence of neutral.
+
+**The caveat that must appear in the paper.** DailyDialog is *dialogue turns*;
+EmpatheticDialogues is *first-person narrative*. The ≥18-word filter narrows the register
+gap (unfiltered DailyDialog averages 13.8 words against EmpatheticDialogues' 22.4) but does
+not close it. The neutral subset is therefore drawn from a slightly different distribution
+than the other six classes. State this explicitly; do not let a reviewer find it first.
+
+**What it changed.**
+
+1. *A production bug surfaced.* Neutral reliability had been fitted from 100 calibration
+   examples, all GoEmotions Reddit comments, giving 0.2356 (text) and 0.6914 (face). With
+   300 examples including journal-domain neutral the values are **0.5161** and **0.8674**.
+   The deployed system had been under-trusting neutral by roughly half on the text side.
+   This is a correction to model behaviour, not merely to a benchmark number.
+2. *Accuracy barely moved; macro-F1 moved a lot.* Fused accuracy on Set B went 93.18 →
+   92.83 (−0.35 pp) while macro-F1 went 80.66 → **93.39**. The old macro-F1 was being
+   dragged down by neutral scoring zero by construction — the model was predicting a class
+   the benchmark could never credit.
+3. *Significance improved on both sets* despite the harder benchmark: vs face-only,
+   p = 1.3e-03 → 5.2e-04 (Set A) and 7.0e-07 → 7.7e-09 (Set B).
+
+**Difficulty of the added class**, on the 400 new pairs: text predicts neutral correctly
+265/400 (66.2%), face 341/400 (85.2%). It is genuinely the hardest class for both
+modalities, which is precisely why excluding it flattered the earlier results.
+
+---
+
 ## 6. Results (all measured — use these exact numbers)
 
 ### 6.1 Facial emotion model selection
@@ -630,28 +677,49 @@ hand-written wrapper around it, on the **1,056 held-out journal-domain texts** o
 Set B — 21× the 49-case set the wrapper was originally tuned on. All variants use the
 identical checkpoint and the identical split, so McNemar's paired test applies.
 
+> **This section was re-measured after Set B gained its neutral class (§5.1b), and the
+> result weakened substantially. Both versions are given, because the difference between
+> them is itself the most instructive thing here.**
+
+**On the neutral-inclusive test set (n=1,256) — use these numbers:**
+
 | Variant | Acc % | Macro-F1 | neutral preds |
 |---|---|---|---|
-| **A** whole text, no wrapper | **64.49** | **55.45** | 57 |
-| **B** sentence-split + weighted aggregation | 60.80 | — | — |
-| **C** B + negation dampening (*originally deployed*) | 60.13 | 53.01 | 107 |
+| **A** whole text, no wrapper | **64.57** | **63.13** | 187 |
+| **B** sentence-split + weighted aggregation | 62.98 | 61.62 | 246 |
+| **C** B + negation dampening (*originally deployed*) | 62.58 | 61.20 | 258 |
 
 | Comparison | p (McNemar) | Verdict |
 |---|---|---|
-| A vs C | 2.1e-06 | A significantly better |
-| A vs B | 2.4e-05 | A significantly better |
-| B vs C | 0.0455 | B significantly better |
+| A vs C | 0.0265 | A significantly better |
+| A vs B | 0.0650 | **not significant** |
+| B vs C | 0.2278 | **not significant** |
 
-**Two independent hand-engineered components each made the system worse.**
+**On the earlier 6-class set (n=1,056, no neutral) — what was previously reported:**
 
-1. **Sentence splitting + weighted aggregation cost 3.7 points** (64.49 → 60.80). These
-   entries average ~22 words, so segmentation discards the very context the classifier
-   needs, and the fragments are then recombined using position/length/confidence
-   coefficients that were chosen by hand and never fitted to any data.
-2. **Negation dampening cost a further 1.89 points** and, isolated on its own, changed 32
-   of 1,056 labels: **20 previously-correct answers broken, 0 wrong answers fixed.** Its
-   signature is visible in the neutral column — it inflates neutral predictions from 57 to
-   107, which is exactly what a rule that pushes mass toward neutral would do.
+| Variant | Acc % | A vs C | A vs B | B vs C |
+|---|---|---|---|---|
+| A 64.49 / B 60.80 / C 60.13 | | 2.1e-06 | 2.4e-05 | 0.0455 |
+
+**What survives and what does not.**
+
+1. **Removing the whole wrapper is still justified** — A beats C by 1.99 pp, p = 0.0265.
+   That conclusion holds on both benchmarks and the production change stands.
+2. **Neither component is individually significant any more.** Sentence splitting alone
+   (A vs B, p = 0.065) and negation dampening alone (B vs C, p = 0.228) both fall below
+   significance once neutral is present. The paper must not claim two independent
+   significant effects; it can claim one significant combined effect.
+3. **The "broke 20, fixed 0" figure was an artefact of the missing neutral class.** On the
+   neutral-inclusive set, negation dampening breaks 8 and fixes 3. This is mechanically
+   obvious in hindsight: the rule moves probability mass toward neutral, so a benchmark
+   containing no neutral examples could only ever score that as damage. Some of that
+   movement is genuinely correct once the class exists.
+
+**This is the honest version, and it is a better story than the original.** A heuristic
+looked catastrophic on a benchmark that structurally could not reward it, and looked merely
+unhelpful once the benchmark was complete. That is a sharper cautionary result about
+benchmark construction than "our heuristic was bad" — and it is a mistake this project made
+and then caught itself. Write it that way.
 
 **End-to-end effect of removing both** (verified by running the production `predict()`
 over the same split, not a reimplementation):
@@ -728,17 +796,19 @@ Produced by `verify_production_fusion.py`, which imports `models/fusion.py` and 
 real `FusionLayer.fuse()` with the frozen constants fitted on the **pooled** calibration
 splits of both sets (n=1,631).
 
+Set B now contains all 7 classes (n=2,511; test n=1,256) — see §5.1b.
+
 | Strategy | Set A acc | Set A F1 | Set B acc | Set B F1 |
 |---|---|---|---|---|
-| Text only | 49.74 | 52.05 | 64.49 | 55.45 |
-| Face only | 88.39 | 87.90 | 89.30 | 78.37 |
-| Legacy linear (`MOODSCRIPT_LEGACY_FUSION=1`) | 83.36 | 82.37 | 86.27 | 74.04 |
-| **Production log-linear** | **91.51** | **90.90** | **93.18** | **80.66** |
+| Text only | 49.74 | 52.05 | 64.57 | 63.13 |
+| Face only | 88.39 | 87.90 | 88.69 | 89.64 |
+| Legacy linear (`MOODSCRIPT_LEGACY_FUSION=1`) | 83.36 | 82.37 | 85.83 | 85.28 |
+| **Production log-linear** | **91.51** | **90.96** | **92.83** | **93.39** |
 
 | Comparison | Set A | Set B |
 |---|---|---|
-| vs face-only | +3.12 pp, p = 1.3e-03 | +3.88 pp, p = 7.0e-07 |
-| vs legacy linear | +8.15 pp, p = 3.1e-08 | +6.91 pp, p = 1.5e-13 |
+| vs face-only | +3.12 pp, p = 5.2e-04 | +4.14 pp, p = 7.7e-09 |
+| vs legacy linear | +8.15 pp, p = 4.8e-08 | +6.99 pp, p = 9.1e-15 |
 
 **Beating face-only is the result that matters.** The face model is the stronger modality;
 a fusion rule that cannot outperform it is not earning its complexity. This one does, on
@@ -753,13 +823,15 @@ an accident.
 **Effect of the §6.2b text improvement on fused accuracy** (production code, same splits,
 same face predictions — only the text branch differs):
 
-| | Set A | Set B |
+| | Set A | Set B (6-class, as measured then) |
 |---|---|---|
 | with v1 text pipeline | 90.99 | 91.95 |
 | **with current text pipeline** | **91.51** | **93.18** |
 
-This closes limitation 14 as previously written: the text-stage improvement does carry
-through to fused accuracy, by +0.52 pp on Set A and +1.23 pp on Set B.
+The text-stage improvement does carry through to fused accuracy, by +0.52 pp on Set A and
++1.23 pp on Set B. Set B has since gained its neutral class, which is why §6.3b above
+reports 92.83 rather than 93.18 — those two numbers are measured on different benchmarks
+and must not be presented as a regression.
 
 **Significance (McNemar, paired, continuity-corrected):**
 
@@ -1015,8 +1087,9 @@ DELETE /account                 GET /health
 3. **The face modality is evaluated in-domain.** FER2013 is close to the face model's
    fine-tuning distribution, so its 88–89% flatters it relative to real webcam input.
    The fusion gain over face-only might be larger in deployment, but this is untested.
-4. **No neutral class in Set B**, and `disgusted` is capped at 111 pairs by FER2013
-   image availability.
+4. **`disgusted` is capped at 111 pairs** by FER2013 image availability — the smallest
+   class in both sets by a wide margin, so its per-class numbers carry the least weight.
+   (Set B's earlier lack of a neutral class was resolved in §5.1b.)
 5. **Sarcasm unhandled** — 0/2 on sarcastic cases for both text models tested.
 6. **Modality priors not swept.** 0.55/0.45 is reasoned, not optimised. Note that the
    ablation shows calibration dominates, so the prior matters less than it appears.
@@ -1048,11 +1121,13 @@ DELETE /account                 GET /health
     structurally impossible under the previous design, where the headline was an
     aggregation of the arc. It is a user-visible consistency regression that the accuracy
     gain does not by itself justify ignoring, and it is not captured by any metric in §6.2b.
-15. **Neutral behaviour is effectively unmeasured.** Set B contains no neutral examples
-    (limitation 4), so every §6.2b number is blind to the class that is probably the most
-    common in real journaling. The first live probe above — a plainly neutral entry
-    labelled `sad` at 0.542 confidence — is exactly the failure this blind spot would
-    hide. Any claim about neutral performance requires a benchmark that contains it.
+15. **The neutral subset comes from a different text distribution.** Set B's neutral
+    class was added from DailyDialog (dialogue turns) while its other six classes come
+    from EmpatheticDialogues (first-person narrative); see §5.1b. The ≥18-word filter
+    narrows but does not remove the register gap, so neutral performance on Set B is
+    measured under a mild domain shift the other classes do not experience.
+    *(This supersedes the earlier, more serious limitation that neutral was absent
+    entirely and therefore wholly unmeasured.)*
 16. **Sentence-level aggregation was removed but not replaced with a fitted alternative.**
     A learned aggregator over sentence distributions might outperform whole-entry
     classification on long entries; only the hand-weighted version was tested and

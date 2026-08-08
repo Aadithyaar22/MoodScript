@@ -27,13 +27,20 @@ THIS module (research/verify_production_fusion.py) — not a research reimplemen
 and using the frozen pooled constants below rather than per-set fitted ones:
 
     strategy                          set A     set B
-    text only                         49.74     64.49
-    face only                         88.39     89.30
-    linear + confidence (previous)    83.36     86.27
-    this method                       91.51     93.18
+    text only                         49.74     64.57
+    face only                         88.39     88.69
+    linear + confidence (previous)    83.36     85.83
+    this method                       91.51     92.83
 
 Significant against both the previous rule and the stronger single modality
-(p = 3.1e-8 and p = 0.0013 on set A; p = 1.5e-13 and p = 7.0e-7 on set B).
+(p = 4.8e-8 and p = 5.2e-4 on set A; p = 9.1e-15 and p = 7.7e-9 on set B).
+
+Set B now includes 400 neutral pairs (DailyDialog "no emotion" text + FER2013
+neutral faces), added because the EmpatheticDialogues source has no neutral
+category and its absence was inflating every number measured on it. Including the
+class both modalities are worst at cost 0.35 points of accuracy and raised macro-F1
+from 80.66 to 93.39 — the old macro-F1 was dragged down by neutral scoring zero by
+construction.
 
 Beating face-only is the result that matters: the face model is the stronger
 modality, so a fusion rule that cannot outperform it is not earning its complexity.
@@ -59,19 +66,26 @@ _EPS = 1e-12
 # Re-fitted after the text pipeline changed to whole-entry classification; the face
 # constants below re-derived byte-identical, confirming that change touched only the
 # text branch.
-TEXT_TEMPERATURE = 1.7565
-FACE_TEMPERATURE = 1.0342
+TEXT_TEMPERATURE = 1.6990
+FACE_TEMPERATURE = 0.9171
 
 # Smoothed per-class precision of each modality on the class it predicts. Text
-# reliability spans 0.24–0.73 across classes, which is why a single scalar weight
+# reliability spans 0.36–0.71 across classes, which is why a single scalar weight
 # per modality is not adequate.
+#
+# Neutral was previously estimated from 100 calibration examples, all of them
+# GoEmotions Reddit comments, and came out at 0.2356 (text) / 0.6914 (face). With
+# 300 examples including journal-domain neutral the true values are 0.5161 and
+# 0.8674 — the old constants had production under-trusting neutral by roughly half
+# on the text side. That is a correction to the model's behaviour, not just to a
+# benchmark number.
 TEXT_RELIABILITY = {
-    "angry": 0.6925, "disgusted": 0.3721, "fearful": 0.7331, "happy": 0.6981,
-    "neutral": 0.2356, "sad": 0.6908, "surprised": 0.5908,
+    "angry": 0.6784, "disgusted": 0.3556, "fearful": 0.7069, "happy": 0.6505,
+    "neutral": 0.5161, "sad": 0.6594, "surprised": 0.5702,
 }
 FACE_RELIABILITY = {
-    "angry": 0.9183, "disgusted": 0.9750, "fearful": 0.8660, "happy": 0.9576,
-    "neutral": 0.6914, "sad": 0.8626, "surprised": 0.9559,
+    "angry": 0.9122, "disgusted": 0.9748, "fearful": 0.8443, "happy": 0.9323,
+    "neutral": 0.8674, "sad": 0.8243, "surprised": 0.9558,
 }
 
 _LEGACY = os.getenv("MOODSCRIPT_LEGACY_FUSION", "").lower() in ("1", "true", "yes")

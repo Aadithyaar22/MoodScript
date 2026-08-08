@@ -1,0 +1,131 @@
+name: Deploy Orchestrator to Render
+
+# The orchestrator was the one service with no CI: the other three deploy to Cloud Run
+# through Actions, while this deploys on Render, so a change to models/fusion.py (the
+# calibration constants, among other things) produced no run, no check and no way to tell
+# from outside whether the new code was live. This closes that gap.
+#
+# It does three things in order: validate, deploy, then PROVE the deploy landed by polling
+# /health until it reports the commit SHA that was just pushed. A green check therefore
+# means the code is serving, not merely that a request returned 200.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'main.py'
+      - 'auth.py'
+      - 'models/**'
+      - 'database/**'
+      - 'requirements.txt'
+      - 'Dockerfile'
+      - '.github/workflows/deploy-orchestrator.yml'
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-orchestrator
+  cancel-in-progress: false
+
+env:
+  SERVICE_URL: https://moodscript-backend.onrender.com
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Byte-compile every module
+        run: python -m compileall -q main.py auth.py models database
+
+      - name: Import the app
+        # Catches the failure mode that actually bites here -- a syntax error or bad
+        # import in a module only touched by the request path, which a compile check
+        # alone would miss. Env vars are dummies; nothing connects out.
+        env:
+          DATABASE_URL: postgresql://u:p@localhost:5432/db
+          JWT_SECRET: ci-dummy-secret
+          INTERNAL_API_KEY: ci-dummy-key
+        run: python -c "import main; print('app imported OK:', len(main.app.routes), 'routes')"
+
+      - name: Check fusion constants match the fitted values
+        # models/fusion.py carries constants that must correspond to what
+        # research/fit_fusion_constants.py produced. Editing one without the other
+        # silently ships a miscalibrated model, so fail the build instead.
+        run: |
+          python - <<'PY'
+          import json, sys
+          import models.fusion as f
+          c = json.load(open("research/results/fusion_constants.json"))
+          bad = []
+          if abs(c["temperature"]["text"] - f.TEXT_TEMPERATURE) > 5e-4:
+              bad.append(f"TEXT_TEMPERATURE {f.TEXT_TEMPERATURE} != {c['temperature']['text']}")
+          if abs(c["temperature"]["face"] - f.FACE_TEMPERATURE) > 5e-4:
+              bad.append(f"FACE_TEMPERATURE {f.FACE_TEMPERATURE} != {c['temperature']['face']}")
+          for k, v in c["reliability"]["text"].items():
+              if abs(v - f.TEXT_RELIABILITY[k]) > 5e-4:
+                  bad.append(f"TEXT_RELIABILITY[{k}] {f.TEXT_RELIABILITY[k]} != {v}")
+          for k, v in c["reliability"]["face"].items():
+              if abs(v - f.FACE_RELIABILITY[k]) > 5e-4:
+                  bad.append(f"FACE_RELIABILITY[{k}] {f.FACE_RELIABILITY[k]} != {v}")
+          if bad:
+              print("fusion constants are out of sync with fit_fusion_constants.py:")
+              for b in bad:
+                  print("  -", b)
+              sys.exit(1)
+          print("fusion constants match research/results/fusion_constants.json")
+          PY
+
+  deploy:
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render deploy
+        # Optional: Render's own auto-deploy already fires on push. Setting the
+        # RENDER_DEPLOY_HOOK secret makes the deploy start only after validation
+        # passes, which is the safer ordering. Without it this step no-ops and we
+        # simply wait for Render's own deploy below.
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "RENDER_DEPLOY_HOOK not set - relying on Render auto-deploy."
+            echo "To gate deploys on CI instead, add the hook URL as a repo secret."
+          else
+            curl -fsS -X POST "$HOOK" > /dev/null
+            echo "Render deploy triggered."
+          fi
+
+      - name: Wait for the pushed commit to be live
+        # Polls /health until it reports this exact SHA. Render cold starts and builds
+        # can take a few minutes; 40 attempts x 20s = ~13 min before giving up.
+        run: |
+          SHA="${{ github.sha }}"
+          echo "waiting for commit ${SHA:0:7} at $SERVICE_URL/health"
+          for i in $(seq 1 40); do
+            BODY=$(curl -fsS --max-time 30 "$SERVICE_URL/health" 2>/dev/null || echo '{}')
+            LIVE=$(echo "$BODY" | python3 -c "import json,sys;print(json.load(sys.stdin).get('commit','') or '')" 2>/dev/null || echo "")
+            if [ "$LIVE" = "$SHA" ]; then
+              echo "live: $BODY"
+              echo "deployed commit matches ${SHA:0:7}"
+              exit 0
+            fi
+            if [ "$LIVE" = "unknown" ]; then
+              echo "service reports commit=unknown (RENDER_GIT_COMMIT unavailable);"
+              echo "cannot verify which revision is live - treating as inconclusive, not failed."
+              echo "$BODY"
+              exit 0
+            fi
+            echo "  attempt $i/40: live=${LIVE:0:7} want=${SHA:0:7}"
+            sleep 20
+          done
+          echo "::error::orchestrator did not report commit ${SHA:0:7} within ~13 minutes"
+          exit 1

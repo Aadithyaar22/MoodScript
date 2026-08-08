@@ -48,7 +48,7 @@ It's not a chatbot wrapper. Every emotional read is a real model inference (text
 **Emotion intelligence**
 - Whole-entry text emotion classification, with a second per-sentence pass that drives the emotion-arc view. Both sentence-level aggregation and a syntax-aware negation rule were shipped earlier and later **removed**: measured on 1,056 held-out journal texts they cost 4.45 points combined, and the negation rule broke 20 correct predictions while fixing none (see [Research & evaluation](#research--evaluation))
 - Optional face-image emotion detection (photo upload or webcam), with the face located and cropped before classification — the classifier is trained on close-up faces, and feeding it a full frame with background measurably degrades it
-- Calibration-aware log-linear fusion — each modality is first calibrated onto a common confidence scale (the text model was measured to be badly over-confident, ECE 0.217, against 0.015 for the face model, so their raw confidences were never comparable), weighted by a per-class reliability estimate rather than one number, and combined by multiplying rather than averaging so a confident "definitely not this" can actually rule a class out. On a held-out paired benchmark this scores 93.18% against 86.27% for the previous confidence-weighted average — which was itself *below* using the face modality alone (89.30%)
+- Calibration-aware log-linear fusion — each modality is first calibrated onto a common confidence scale (the text model was measured to be badly over-confident, ECE 0.217, against 0.015 for the face model, so their raw confidences were never comparable), weighted by a per-class reliability estimate rather than one number, and combined by multiplying rather than averaging so a confident "definitely not this" can actually rule a class out. On a held-out paired benchmark this scores 92.83% against 85.83% for the previous confidence-weighted average — which was itself *below* using the face modality alone (88.69%)
 - LLM arbitration on unresolved conflicts — implemented, measured, and now **disabled by default**, because it did not improve accuracy (see [Research & evaluation](#research--evaluation)): it adjudicates by reading the text while never seeing the face image, and text is the weaker signal on exactly those cases. Re-enable with `MOODSCRIPT_ENABLE_ARBITER=1`
 - LIME explainability — see exactly which words drove the detected emotion, and a full text/face/fused confidence breakdown on every message
 
@@ -251,10 +251,16 @@ Paired McNemar's test: p = 8.5×10⁻²⁰⁶ — not remotely due to chance. Th
 | Strategy | Set A (n=577) | Set B (n=1,056) |
 |---|---|---|
 | Face only | 88.39% | 89.30% |
-| Confidence-weighted average (previous) | 83.36% | 86.27% |
-| **Calibration-aware log-linear (current)** | **91.51%** | **93.18%** |
+| Confidence-weighted average (previous) | 83.36% | 85.83% |
+| **Calibration-aware log-linear (current)** | **91.51%** | **92.83%** |
 
-Significant against the previous rule (p = 3.1×10⁻⁸ / 1.5×10⁻¹³) and against the stronger single modality (p = 0.0013 / 7.0×10⁻⁷). These numbers come from running the shipped `models/fusion.py` itself (`research/verify_production_fusion.py`), not a research reimplementation. An ablation isolates text calibration as the dominant factor (+8.54 pp); face calibration contributes +0.39 pp because that model was already calibrated.
+Significant against the previous rule (p = 4.8×10⁻⁸ / 9.1×10⁻¹⁵) and against the stronger single modality (p = 5.2×10⁻⁴ / 7.7×10⁻⁹). These numbers come from running the shipped `models/fusion.py` itself (`research/verify_production_fusion.py`), not a research reimplementation. An ablation isolates text calibration as the dominant factor (+8.54 pp); face calibration contributes +0.39 pp because that model was already calibrated.
+
+**The neutral class was missing, and fixing it exposed a real bug.** Set B was built from EmpatheticDialogues, which has no neutral category — so every number measured on it excluded the class both models are worst at, and neutral is plausibly the most common label in real journaling. 400 neutral pairs were added (DailyDialog *no emotion* text ≥18 words + FER2013 neutral faces), taking Set B to 2,511 pairs across all 7 classes.
+
+Two things fell out of it. First, neutral reliability had been fitted from only 100 calibration examples, all Reddit comments, giving 0.2356 for text and 0.6914 for face; with 300 examples including journal-domain neutral the real values are **0.5161** and **0.8674** — production had been under-trusting neutral by roughly half on the text side, which is a behaviour bug, not just a benchmark artefact. Second, adding the hardest class cost only 0.35 points of accuracy (93.18% → 92.83%) while macro-F1 rose from 80.66 to **93.39**, because neutral had previously been scoring zero by construction. Significance improved on both benchmarks despite the harder test.
+
+The caveat, stated rather than buried: DailyDialog is dialogue turns while the rest of Set B is first-person narrative, so the neutral subset sits under a mild domain shift the other six classes don't. Reproduce with `research/add_neutral_pairs.py`.
 
 **LLM arbitration: tested and does not help.** Four designs — direct classification, binary choice given the correct reliability prior, confidence-gated abstention, and meta-linguistic trust scoring — all scored below fusion without an LLM on the conflict cases where arbitration fires (best 75.40% against 76.98%). The arbiter reads the *text* and only ever receives the face model's label, never the image, and text is worth ~17% accuracy on exactly those cases. Its trust estimates were uncorrelated with whether the text was actually right (0.738 when right, 0.763 when wrong). Now disabled by default (`MOODSCRIPT_ENABLE_ARBITER=1` re-enables it); the code and the evaluation both remain in the repo. See `research/eval_arbiter_v2.py`.
 
@@ -268,15 +274,17 @@ Significant against the previous rule (p = 3.1×10⁻⁸ / 1.5×10⁻¹³) and a
 
 SamLowe wins big on GoEmotions (expected — it's trained directly on it) but loses on the benchmark that resembles real usage. Kept the current model.
 
-**Text pipeline: two of our own ideas, both removed on evidence.** The checkpoint above was the right choice; the hand-written wrapper around it was not. Re-measured on 1,056 held-out journal-domain texts — 21× the 49-case set the wrapper was tuned against:
+**Text pipeline: two of our own ideas, both removed on evidence.** The checkpoint above was the right choice; the hand-written wrapper around it was not. Re-measured on 1,256 held-out journal-domain texts — 25× the 49-case set the wrapper was tuned against:
 
 | Variant | Accuracy |
 |---|---|
-| Whole entry, no wrapper | **64.49%** |
-| Sentence-split + position/length/confidence-weighted aggregation | 60.80% |
-| The above + syntax-aware negation dampening (previously shipped) | 60.13% |
+| Whole entry, no wrapper | **64.57%** |
+| Sentence-split + position/length/confidence-weighted aggregation | 62.98% |
+| The above + syntax-aware negation dampening (previously shipped) | 62.58% |
 
-Sentence splitting cost 3.7 points — these entries average ~22 words, so segmentation discards the context the classifier needs and then recombines the fragments with coefficients never fitted to anything. Negation dampening cost a further 1.89 points: it changed 32 labels, **broke 20 correct predictions and fixed zero**, having validated at +6 points on the 49 hand-written cases it was both tuned and tested on. Removing both improved accuracy 60.04% → 64.49% (McNemar p = 1.1×10⁻⁶) *and* cut latency from 174 ms to 40 ms per entry, since the whole-entry pass replaces the per-sentence work rather than adding to it. Re-runnable via `research/eval_text_pipeline_ablation.py` and `research/eval_text_model_v2.py`.
+Removing both is worth 1.99 points (p = 0.0265) and cuts latency from 174 ms to 40 ms per entry, since the whole-entry pass replaces the per-sentence work rather than adding to it. Sentence splitting discards the context the classifier needs — these entries average ~22 words — and then recombines the fragments with coefficients never fitted to anything.
+
+**A caveat I'd rather state than have someone find.** These numbers are weaker than the ones this README carried earlier. The first version of this ablation ran before Set B had a neutral class, and reported the negation rule as breaking 20 correct predictions while fixing zero. That was inflated: a rule whose whole mechanism is pushing probability toward neutral can only ever score as damage on a benchmark with no neutral examples. Re-measured with neutral present, it breaks 8 and fixes 3, and neither component is individually significant any more (sentence splitting p = 0.065, negation p = 0.228) — only their combined effect is. The conclusion to remove them stands; the strength of the evidence does not. Re-runnable via `research/eval_text_pipeline_ablation.py` and `research/eval_text_model_v2.py`.
 
 A larger checkpoint (`j-hartmann/emotion-english-roberta-large`) reaches 67.33% on the same split but peaks at 1.82 GB resident against the text service's 2 GiB Cloud Run cap, so it was measured and rejected on memory grounds rather than quietly ignored.
 

@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List
 
-from models.fusion import FusionLayer
+from models.fusion import FusionLayer, _LEGACY as fusion_legacy
 from models.arbiter import Arbiter
 from models.response import ResponseEngine
 from models.crisis import assess_crisis
@@ -457,4 +457,13 @@ async def delete_account(user_id: int = Depends(get_current_user_id)):
 
 @app.get("/health")
 async def health():
-    return {"status": "ok"}
+    # Render injects RENDER_GIT_COMMIT at build time. Reporting it makes a deploy
+    # verifiable from outside: CI polls this until the SHA matches the commit it
+    # pushed, so "the service returns 200" can no longer be mistaken for "the new
+    # code is live". Falls back to "unknown" off-Render (local, Docker, tests).
+    return {
+        "status": "ok",
+        "commit": os.getenv("RENDER_GIT_COMMIT", os.getenv("GIT_COMMIT", "unknown"))[:40],
+        "fusion": "legacy-linear" if fusion_legacy else "log-linear",
+        "arbiter": "enabled" if ARBITER_ENABLED else "disabled",
+    }

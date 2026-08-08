@@ -41,11 +41,19 @@ def main():
     os.environ.setdefault("ENABLE_CLINICAL_TONE", "false")  # matches Cloud Run env
 
     data = json.load(open(os.path.join(_HERE, "results", "paired_set_journal.json")))
+    # The old pipeline's predictions live in text_pred_v1; text_pred was overwritten
+    # in place by refresh_text_preds.py and now holds the CURRENT pipeline's output.
+    # Reading text_pred here would silently compare the new pipeline against itself.
+    #
+    # Neutral pairs added later by add_neutral_pairs.py never ran through the old
+    # pipeline, so they have no v1 and are excluded from the paired comparison only.
+    # They are still scored in the standalone accuracy of the current pipeline below.
     tst = [p for p in data["pairs"] if p["split"] == "test"]
+    paired = [p for p in tst if "text_pred_v1" in p]
     texts = [p["text"] for p in tst]
     y = [p["true"] for p in tst]
-    old = [p["text_pred"] for p in tst]  # cached predictions of the old pipeline
-    print(f"journal-domain test texts: {len(texts)}", flush=True)
+    print(f"journal-domain test texts: {len(texts)}  "
+          f"({len(paired)} with a v1 prediction for the paired test)", flush=True)
 
     print(f"RSS before load: {rss_gb():.2f} GB", flush=True)
     from text_model import EMOTION_MODEL, USE_SENTENCE_AGGREGATE, TextEmotionModel
@@ -69,18 +77,31 @@ def main():
 
     print(f"{'PIPELINE':<34}{'ACC %':>8}{'MACRO-F1':>10}{'NEUTRAL':>9}")
     print("-" * 61)
-    for name, p in (("old (deployed until now)", old), ("new (this change)", new)):
-        print(f"{name:<34}{np.mean([a == b for a, b in zip(p, y)])*100:>8.2f}"
-              f"{f1_score(y, p, average='macro', zero_division=0)*100:>10.2f}"
-              f"{sum(1 for x in p if x == 'neutral'):>9}")
+    print(f"{'current (full test set)':<34}{np.mean([a == b for a, b in zip(new, y)])*100:>8.2f}"
+          f"{f1_score(y, new, average='macro', zero_division=0)*100:>10.2f}"
+          f"{sum(1 for x in new if x == 'neutral'):>9}")
 
-    a = np.array([x == t for x, t in zip(new, y)])
-    b = np.array([x == t for x, t in zip(old, y)])
-    n10, n01 = int((a & ~b).sum()), int((~a & b).sum())
-    r = mcnemar([[int((a & b).sum()), n10], [n01, int((~a & ~b).sum())]],
-                exact=False, correction=True)
-    print(f"\nMcNemar: new-only correct {n10}, old-only correct {n01}, p={r.pvalue:.4g}"
-          f" -> {'significant' if r.pvalue < 0.05 else 'NOT significant'}")
+    # paired old-vs-new, restricted to the pairs that actually have a v1 prediction
+    idx = [i for i, pp in enumerate(tst) if "text_pred_v1" in pp]
+    if not idx:
+        print("\n(no v1 predictions present - skipping the paired comparison)")
+        r = None
+    else:
+        yv = [y[i] for i in idx]
+        oldv = [tst[i]["text_pred_v1"] for i in idx]
+        newv = [new[i] for i in idx]
+        print(f"\npaired subset with a v1 prediction (n={len(idx)}):")
+        for name, pr in (("  old pipeline", oldv), ("  current pipeline", newv)):
+            print(f"{name:<34}{np.mean([a == b for a, b in zip(pr, yv)])*100:>8.2f}"
+                  f"{f1_score(yv, pr, average='macro', zero_division=0)*100:>10.2f}"
+                  f"{sum(1 for x in pr if x == 'neutral'):>9}")
+        a = np.array([x == t for x, t in zip(newv, yv)])
+        b = np.array([x == t for x, t in zip(oldv, yv)])
+        n10, n01 = int((a & ~b).sum()), int((~a & b).sum())
+        r = mcnemar([[int((a & b).sum()), n10], [n01, int((~a & ~b).sum())]],
+                    exact=False, correction=True)
+        print(f"\nMcNemar: new-only correct {n10}, old-only correct {n01}, p={r.pvalue:.4g}"
+              f" -> {'significant' if r.pvalue < 0.05 else 'NOT significant'}")
 
     # coarser groupings, for the product question of how often the VALENCE is right
     groups = {"positive": {"happy", "surprised"},
@@ -95,9 +116,9 @@ def main():
     with open(out, "w") as f:
         json.dump({"n": len(texts), "model": EMOTION_MODEL, "ms_per_entry": ms,
                    "rss_gb": rss_gb(),
-                   "old_acc": float(np.mean([x == t for x, t in zip(old, y)])),
                    "new_acc": float(np.mean([x == t for x, t in zip(new, y)])),
-                   "mcnemar_p": float(r.pvalue), "preds": new}, f, indent=2)
+                   "mcnemar_p": float(r.pvalue) if r is not None else None,
+                   "preds": new}, f, indent=2)
     print(f"\nSaved -> {out}")
 
 
