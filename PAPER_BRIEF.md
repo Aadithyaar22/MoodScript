@@ -386,8 +386,16 @@ ECE 0.029, essentially matching the best single modality, with no extra correcti
 
 ### 4.5 LLM arbitration
 
-Triggered **only** when `resolution_reason` starts with `conflict_resolved_to_` — i.e.
-both modalities disagree with comparable confidence and numeric blending cannot settle it.
+> **STATUS: implemented, evaluated, and DISABLED IN PRODUCTION.** `main.py` gates it behind
+> `ARBITER_ENABLED`, which reads `MOODSCRIPT_ENABLE_ARBITER` and defaults to off. The code
+> below describes how it works when enabled; §6.5 is why it is not. **Write it in the paper
+> as a tested-and-rejected component, never as part of the live pipeline.** If the paper
+> needs a system diagram, the arbiter belongs in the "evaluated alternatives" box, not the
+> data path.
+
+When enabled, it is triggered **only** when `resolution_reason` starts with
+`conflict_resolved_to_` — i.e. both modalities disagree with comparable confidence and
+numeric blending cannot settle it.
 
 | Property | Value |
 |---|---|
@@ -575,7 +583,7 @@ between happy and fearful.
 |---|---|---|
 | **Deployed at the time** (`j-hartmann` distilroberta + negation dampening) | 43.75% | **77.6% (38/49)** |
 | `SamLowe/roberta-base-go_emotions` | **69.65%** | 71.4% (35/49) |
-| `j-hartmann/emotion-english-roberta-large` | 47.34% | not evaluated |
+| `j-hartmann/emotion-english-roberta-large` | 47.34% | not evaluated on these 49; **67.33%** on the 1,056-text set (§6.2b) |
 
 > Note: the "journal-style" column here is the **49 hand-written cases**, which is what was
 > available when the checkpoint was chosen. §6.2b later re-ran this comparison on 1,056
