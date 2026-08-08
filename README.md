@@ -211,6 +211,7 @@ npm run dev
 | `POST /auth/signup`, `POST /auth/login`, `POST /auth/google` | Account auth, returns a JWT |
 | `POST /chat` | Send a message (+ optional image, + `lang`), get emotion + Aria's reply |
 | `POST /translate` | Batch-translate arbitrary UI/dynamic content (used for wellness tips, quotes) |
+| `POST /speak` | Synthesize speech for a reply (`text`, `lang`, `emotion`), returns MP3 with emotion-conditioned prosody |
 | `GET /conversations`, `GET /conversations/{id}/messages` | Past conversations |
 | `GET /history`, `GET /rating` | Mood log, wellbeing score + trend |
 | `GET /reflection` | This week's auto-generated reflection letter |
