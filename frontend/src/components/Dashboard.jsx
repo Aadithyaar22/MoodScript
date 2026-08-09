@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
-import { fetchHistory, fetchRating, fetchReflection } from "../api"
+import { fetchHistory, fetchRating, fetchReflection, fetchWeeklySoundtrack } from "../api"
+import Soundtrack from "./Soundtrack"
 import FullscreenModal, { ExpandButton } from "./Expandable"
 import { speak, stopSpeaking } from "../useSpeechRecognition"
 import { t } from "../i18n"
@@ -37,6 +38,23 @@ export default function Dashboard({ lang = "en" }) {
   const [history, setHistory] = useState([])
   const [rating, setRating] = useState(null)
   const [reflection, setReflection] = useState(null)
+
+  // On demand, same as the per-entry soundtrack — the dashboard does not fetch music
+  // every time it mounts.
+  const [weekMusic, setWeekMusic] = useState(null)
+  const [loadingWeekMusic, setLoadingWeekMusic] = useState(false)
+
+  const loadWeekMusic = async () => {
+    if (loadingWeekMusic) return
+    setLoadingWeekMusic(true)
+    try {
+      setWeekMusic(await fetchWeeklySoundtrack())
+    } catch {
+      setWeekMusic({ stages: [], available: false, entry_count: 0 })
+    } finally {
+      setLoadingWeekMusic(false)
+    }
+  }
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState(null)          // 'line' | 'pie'
   const [speaking, setSpeaking] = useState(false)
@@ -209,6 +227,40 @@ export default function Dashboard({ lang = "en" }) {
           </p>
         </div>
       )}
+
+      {/* The week in music — companion to the reflection letter above. Weekly cadence
+          is the point: it notices a pattern rather than reacting to every entry. */}
+      <div style={{
+        borderRadius: 18, padding: '22px 24px',
+        background: 'linear-gradient(135deg, rgba(61,217,200,0.08), rgba(139,111,212,0.06))',
+        border: '1px solid rgba(61,217,200,0.22)',
+      }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, marginBottom: 14 }}>
+          <p className="mono" style={{ fontSize: 12, color: 'var(--text-muted)', letterSpacing: '0.1em' }}>
+            ♪ {t(lang, "soundtrackWeekly")}
+            {weekMusic?.entry_count ? ` · ${weekMusic.entry_count} ${t(lang, "entries")}` : ''}
+          </p>
+          {!weekMusic && (
+            <button
+              onClick={loadWeekMusic}
+              disabled={loadingWeekMusic}
+              style={{
+                background:'none', border:'1px solid var(--border)', borderRadius:8,
+                color:'var(--text-muted)', cursor: loadingWeekMusic ? 'default' : 'pointer',
+                fontSize:12, padding:'4px 10px', fontFamily:'DM Mono, monospace',
+                opacity: loadingWeekMusic ? 0.5 : 1, flexShrink:0,
+              }}
+            >
+              {loadingWeekMusic ? t(lang, "buildingSoundtrack") : t(lang, "makeSoundtrack")}
+            </button>
+          )}
+        </div>
+        {weekMusic
+          ? (weekMusic.entry_count === 0
+              ? <p style={{ fontSize:13.5, color:'var(--text-muted)', fontStyle:'italic' }}>{t(lang, "soundtrackWeeklyEmpty")}</p>
+              : <Soundtrack data={weekMusic} color="#3dd9c8" lang={lang} big/>)
+          : <p style={{ fontSize:13.5, color:'var(--text-muted)', fontStyle:'italic' }}>{t(lang, "soundtrackWeeklyEmpty")}</p>}
+      </div>
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
