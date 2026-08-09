@@ -527,4 +527,8 @@ async def health():
         "commit": os.getenv("RENDER_GIT_COMMIT", os.getenv("GIT_COMMIT", "unknown"))[:40],
         "fusion": "legacy-linear" if fusion_legacy else "log-linear",
         "arbiter": "enabled" if ARBITER_ENABLED else "disabled",
+        # Presence only, never the value. Without this the only way to tell whether the
+        # soundtrack key reached the deployed environment is to log in and press the
+        # button, because a missing key degrades silently by design.
+        "jamendo": "configured" if jamendo.configured() else "missing",
     }
