@@ -1,8 +1,9 @@
 import { useState, useMemo, useEffect } from "react"
 import MoodGame from "./MoodGame"
 import FullscreenModal, { ExpandButton } from "./Expandable"
+import Soundtrack from "./Soundtrack"
 import { t } from "../i18n"
-import { translateBatch } from "../api"
+import { translateBatch, fetchSoundtrack } from "../api"
 
 const EMOTION_COLORS = {
   happy:"#e2b94b", sad:"#4d8de8", angry:"#e06b6b",
@@ -170,10 +171,30 @@ function RadarRing({ emotion, score, color, size=88 }) {
   )
 }
 
-export default function RightPanel({ result, loading, history, lang = "en" }) {
+export default function RightPanel({ result, loading, history, lang = "en", lastEntry = null }) {
   const [openTip, setOpenTip] = useState(null)
   const [showGame, setShowGame] = useState(false)
-  const [expanded, setExpanded] = useState(null)   // 'radar' | 'tips' | 'quote'
+  const [expanded, setExpanded] = useState(null)   // 'radar' | 'tips' | 'quote' | 'music'
+
+  // On demand only — the app does not answer every private entry with music unasked.
+  const [track, setTrack] = useState(null)
+  const [trackLoading, setTrackLoading] = useState(false)
+
+  const makeSoundtrack = async () => {
+    if (!lastEntry || trackLoading) return
+    setTrackLoading(true)
+    try {
+      setTrack(await fetchSoundtrack(lastEntry.text, lastEntry.emotion_arc, lastEntry.emotion))
+    } catch {
+      setTrack({ stages: [], available: false })   // Soundtrack renders the empty state
+    } finally {
+      setTrackLoading(false)
+    }
+  }
+
+  // A new entry invalidates the previous soundtrack — otherwise the panel keeps
+  // showing music built for an entry the user has already moved on from.
+  useEffect(() => { setTrack(null) }, [lastEntry?.text])
 
   const emotion = result?.unified_emotion || 'neutral'
   const confidence = result?.unified_confidence || 0
@@ -279,8 +300,34 @@ export default function RightPanel({ result, loading, history, lang = "en" }) {
     </>
   )
 
+  const musicBody = (big = false) => {
+    if (track) return <Soundtrack data={track} color={color} lang={lang} big={big}/>
+    return (
+      <div style={{ width:'100%', display:'flex', flexDirection:'column', gap: big ? 14 : 9 }}>
+        <p style={{ fontSize: big ? 15 : 12.5, color:'var(--text-muted)', fontStyle:'italic', lineHeight:1.6 }}>
+          {lastEntry ? t(lang, "soundtrackFor") : t(lang, "analyseFirstEntry")}
+        </p>
+        <button
+          onClick={makeSoundtrack}
+          disabled={!lastEntry || trackLoading}
+          style={{
+            padding: big ? '12px 18px' : '9px 12px', borderRadius:10,
+            border:`1px solid ${lastEntry ? color + '55' : 'rgba(var(--surface-tint),0.1)'}`,
+            background: lastEntry ? `${color}18` : 'rgba(var(--surface-tint),0.03)',
+            color: lastEntry ? color : 'var(--text-muted)',
+            fontFamily:'DM Mono', fontSize: big ? 14 : 12, letterSpacing:'0.06em',
+            cursor: lastEntry && !trackLoading ? 'pointer' : 'not-allowed',
+          }}
+        >
+          {trackLoading ? t(lang, "buildingSoundtrack") : t(lang, "makeSoundtrack")}
+        </button>
+      </div>
+    )
+  }
+
   const EXPANDED = {
     radar: { title: t(lang, "emotionRadar"), body: () => radarBody(true), maxWidth: 620 },
+    music: { title: `♪ ${t(lang, "soundtrack")}`, body: () => musicBody(true), maxWidth: 680 },
     tips:  { title: result ? t(lang, emotion).toUpperCase() : t(lang, "wellnessTips"), body: () => tipsBody(true), maxWidth: 760 },
     quote: { title: `✦ ${t(lang, "quoteOfTheDay")}`, body: () => quoteBody(true), maxWidth: 760 },
   }
@@ -342,6 +389,15 @@ export default function RightPanel({ result, loading, history, lang = "en" }) {
             </div>
           </div>
           {tipsBody(false)}
+        </div>
+
+        {/* Mood-arc soundtrack — on demand, never automatic */}
+        <div className="glass" style={{ borderRadius:18, padding:'16px 14px', border:`1px solid ${color}25` }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8, marginBottom:12 }}>
+            <p className="mono" style={{ fontSize:11, color:'var(--text-muted)', letterSpacing:'0.12em' }}>♪ {t(lang, "soundtrack")}</p>
+            <ExpandButton onClick={() => setExpanded('music')} label={t(lang, "expand")}/>
+          </div>
+          {musicBody(false)}
         </div>
 
         {/* Daily quote */}

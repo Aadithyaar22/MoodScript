@@ -29,6 +29,21 @@ export default function App() {
   const lastAssistant = [...messages].reverse().find(m => m.role === "assistant")
   const xaiTarget = messages.find(m => m.id === xaiTargetId)
 
+  /* The soundtrack scores ONE entry's trajectory, so it needs that entry's arc and its
+     original text — not `conversationMood`, which is an average across the whole
+     conversation and has no arc. Walks back to the most recent analysed exchange and
+     pairs the assistant's analysis with the user message that produced it. */
+  const lastEntry = (() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const arc = messages[i].analysis?.emotion_arc
+      if (!arc?.length) continue
+      const user = messages.slice(0, i).reverse().find(m => m.role === "user")
+      if (!user?.text) continue
+      return { text: user.text, emotion_arc: arc, emotion: messages[i].analysis.unified_emotion }
+    }
+    return null
+  })()
+
   const conversationMood = (() => {
     const scores = {}
     let total = 0
@@ -337,7 +352,7 @@ export default function App() {
           )}
         </main>
 
-        <RightPanel result={conversationMood} loading={loading} history={history} lang={lang}/>
+        <RightPanel result={conversationMood} loading={loading} history={history} lang={lang} lastEntry={lastEntry}/>
       </div>
     </>
   )

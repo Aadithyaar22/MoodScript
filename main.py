@@ -11,6 +11,7 @@ from models.fusion import FusionLayer, _LEGACY as fusion_legacy
 from models.arbiter import Arbiter
 from models.response import ResponseEngine
 from models.crisis import assess_crisis
+from models import jamendo, music
 from models.rating import compute_rating, summarize_history
 from models.report import build_doctor_report, build_doctor_report_pdf
 from models.translate import translate_text, translate_texts
@@ -354,6 +355,66 @@ async def history(user_id: int = Depends(get_current_user_id)):
 @app.get("/rating")
 async def rating(user_id: int = Depends(get_current_user_id)):
     return compute_rating(db.get_user_journal_entries(user_id))
+
+# ---------- mood-arc soundtrack ----------
+
+class SoundtrackRequest(BaseModel):
+    text: str
+    emotion_arc: list = []
+    overall_emotion: str = "neutral"
+
+
+@app.post("/soundtrack")
+async def soundtrack(req: SoundtrackRequest,
+                     user_id: int = Depends(get_current_user_id)):
+    """A track sequence following the entry's emotional trajectory (models/music.py).
+
+    On demand only — never called from /chat. The user asks for it; the app does not
+    respond musically to every private thought unprompted.
+
+    The crisis check is re-run HERE from the entry text rather than trusting anything
+    the client sends. A safety gate the caller can switch off by omitting a flag is not
+    a safety gate. On a crisis entry this returns no tracks at all.
+    """
+    entries = await asyncio.to_thread(db.get_user_journal_entries, user_id)
+    crisis = assess_crisis(req.text or "", entries)
+    if music.is_suppressed(crisis):
+        return {"suppressed": True, "reason": "crisis", "stages": [], "available": False}
+
+    arc = music.build_arc(req.emotion_arc or [], req.overall_emotion or "neutral")
+    resolved = await jamendo.resolve(arc)
+    return {"suppressed": False, "from_emotion": arc[0]["from_emotion"], **resolved}
+
+
+@app.get("/soundtrack/weekly")
+async def soundtrack_weekly(user_id: int = Depends(get_current_user_id)):
+    """The week in music — same engine, fed the week's emotions instead of one entry's arc.
+
+    Pairs with the weekly reflection letter. A weekly cadence is deliberate: it is the
+    difference between an app that notices a pattern and one that reacts to every entry.
+    """
+    entries = await asyncio.to_thread(db.get_user_journal_entries, user_id)
+    cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+    week = [e for e in entries
+            if e.get("created_at") and datetime.fromisoformat(e["created_at"]) >= cutoff]
+    if not week:
+        return {"stages": [], "available": False, "entry_count": 0,
+                "reason": "no entries in the last 7 days"}
+
+    # A week containing a flagged entry is not a week to score with music.
+    if any(e.get("crisis_flag") for e in week):
+        return {"suppressed": True, "reason": "crisis", "stages": [],
+                "available": False, "entry_count": len(week)}
+
+    counts: dict = {}
+    for e in week:
+        if e.get("emotion"):
+            counts[e["emotion"]] = counts.get(e["emotion"], 0) + 1
+    arc = music.build_week_arc(counts)
+    resolved = await jamendo.resolve(arc)
+    return {"suppressed": False, "entry_count": len(week),
+            "emotion_counts": counts, "from_emotion": arc[0]["from_emotion"],
+            **resolved}
 
 # ---------- weekly reflection ----------
 

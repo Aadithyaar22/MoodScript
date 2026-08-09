@@ -95,6 +95,23 @@ export async function fetchReflection(lang = "en") {
   return data
 }
 
+// The entry text is sent so the SERVER can re-run its own crisis check. It is
+// deliberately not trusted to send a crisis flag — a safety gate the client can
+// switch off by omitting a field is not a gate.
+export async function fetchSoundtrack(text, emotionArc, overallEmotion) {
+  const { data } = await client.post("/soundtrack", {
+    text,
+    emotion_arc: emotionArc || [],
+    overall_emotion: overallEmotion || "neutral",
+  })
+  return data
+}
+
+export async function fetchWeeklySoundtrack() {
+  const { data } = await client.get("/soundtrack/weekly")
+  return data
+}
+
 async function _downloadFile(endpoint, fallbackFilename) {
   const response = await client.get(endpoint, { responseType: "blob" })
   const match = response.headers["content-disposition"]?.match(/filename=(.+)$/)
