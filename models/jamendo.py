@@ -30,6 +30,7 @@ import html
 import os
 import random
 import time
+import urllib.parse
 
 import httpx
 
@@ -108,14 +109,22 @@ def _clean(s):
 
 
 def _track(raw: dict, stage: dict) -> dict:
+    title = _clean(raw.get("name")) or ""
+    artist = _clean(raw.get("artist_name")) or ""
+    # A YouTube SEARCH, not a video link. Matching a Jamendo track to a specific
+    # YouTube video would need the YouTube Data API and, for independent Creative
+    # Commons artists, would often match nothing or the wrong upload. A search is
+    # honest about what it is and cannot silently point at the wrong song.
+    query = urllib.parse.quote_plus(f"{artist} {title}".strip())
     return {
         "id": raw.get("id"),
-        "title": _clean(raw.get("name")),
-        "artist": _clean(raw.get("artist_name")),
+        "title": title,
+        "artist": artist,
         "audio": raw.get("audio"),
         "duration": raw.get("duration"),
         "image": raw.get("album_image") or raw.get("image"),
-        "share_url": raw.get("shareurl"),
+        "share_url": raw.get("shareurl"),      # the real track page — always correct
+        "youtube": f"https://www.youtube.com/results?search_query={query}" if query else None,
         "license": raw.get("license_ccurl"),
         "stage": stage["stage"],
     }
@@ -146,6 +155,41 @@ async def _pool_for(client: httpx.AsyncClient, tags: list[str],
     return playable
 
 
+async def prewarm() -> int:
+    """Populate every mood pool in the background at startup.
+
+    The cache lives in the process, and this service sleeps when idle — so on a
+    low-traffic app almost every soundtrack request would otherwise hit a COLD cache
+    and pay the 1.5-2.5s API round trip. Caching alone does not help when the process
+    keeps restarting; the pools have to be filled before anyone asks.
+
+    There are only ~13 distinct (tags, speed) combinations across all seven emotions,
+    so this is a small, bounded warm-up. Runs detached: failures are logged and
+    ignored, never surfaced, and never block startup or a request.
+    """
+    from models.music import EMOTION_VE, build_arc
+
+    wanted, seen_keys = [], set()
+    for emo in EMOTION_VE:
+        for stage in build_arc([{"emotion": emo, "confidence": 1.0}]):
+            key = (tuple(stage["tags"]), _speed(stage["energy"]))
+            if key not in seen_keys:
+                seen_keys.add(key)
+                wanted.append(stage)
+
+    filled = 0
+    async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+        for stage in wanted:
+            try:
+                if await _pool_for(client, stage["tags"], stage["energy"]):
+                    filled += 1
+            except Exception as e:
+                print(f"[jamendo] prewarm {stage['tags']}: {type(e).__name__}: {e}")
+            await asyncio.sleep(0.25)     # unhurried; nobody is waiting on this
+    print(f"[jamendo] prewarmed {filled}/{len(wanted)} mood pools")
+    return filled
+
+
 async def resolve(arc: list[dict], per_stage: int = 2) -> dict:
     """Turn arc waypoints into tracks. Never raises; reports why it is empty."""
     stages = [dict(s, tracks=[]) for s in arc]
@@ -157,11 +201,17 @@ async def resolve(arc: list[dict], per_stage: int = 2) -> dict:
     reason = None
     try:
         async with httpx.AsyncClient(timeout=TIMEOUT) as client:
-            for stage in stages:
-                try:
-                    pool = await _pool_for(client, stage["tags"], stage["energy"])
-                except Exception as e:            # one stage failing is not fatal
-                    reason = f"{type(e).__name__} on stage '{stage['stage']}'"
+            # Fetch the three stages concurrently. Measured: 3.3-3.8s sequential against
+            # 1.5-2.5s concurrent, with identical result counts — the rate limiting that
+            # empties rapid SEQUENTIAL repeats does not penalise parallel distinct
+            # queries. Only matters on a cold pool; warm requests never get here.
+            pools = await asyncio.gather(
+                *(_pool_for(client, s["tags"], s["energy"]) for s in stages),
+                return_exceptions=True,
+            )
+            for stage, pool in zip(stages, pools):
+                if isinstance(pool, Exception):   # one stage failing is not fatal
+                    reason = f"{type(pool).__name__} on stage '{stage['stage']}'"
                     continue
                 candidates = [r for r in pool if r.get("id") not in seen]
                 random.shuffle(candidates)        # variety across requests

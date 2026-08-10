@@ -55,6 +55,11 @@ async def startup_event():
     arbiter = Arbiter()
     response_engine = ResponseEngine()
     db = MoodDatabase()
+    # Detached on purpose: filling the soundtrack caches takes a few seconds and
+    # nothing depends on it, so startup must not wait for it. Without this the first
+    # soundtrack after every cold start pays the full API round trip.
+    if jamendo.configured():
+        asyncio.create_task(jamendo.prewarm())
     print("Orchestrator ready. Face service:", FACE_SERVICE_URL, "| Text service:", TEXT_SERVICE_URL)
 
 _SERVICE_TIMEOUT = httpx.Timeout(75.0, connect=15.0)
