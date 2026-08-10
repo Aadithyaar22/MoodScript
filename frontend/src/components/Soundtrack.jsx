@@ -72,12 +72,15 @@ export default function Soundtrack({ data, color, lang = "en", big = false }) {
     <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: big ? 16 : 11 }}>
       <audio ref={audioRef} onEnded={() => setPlayingId(null)} preload="none"/>
 
-      <p style={{
-        fontSize: big ? 14 : 11.5, color: "var(--text-muted)", lineHeight: 1.55,
-        fontStyle: "italic", marginBottom: big ? 4 : 2,
-      }}>
-        {t(lang, "soundtrackIntro")}
-      </p>
+      {/* Explanation lives in the expanded view only. The sidebar is 248px wide and a
+          three-line preamble crowded out the thing it was explaining; someone who wants
+          to know what the stages mean can expand, and everyone else keeps a compact
+          list. */}
+      {big && (
+        <p style={{ fontSize: 14, color: "var(--text-muted)", lineHeight: 1.55, fontStyle: "italic", marginBottom: 4 }}>
+          {t(lang, "soundtrackIntro")}
+        </p>
+      )}
 
       {stages.map(stage => (
         <div key={stage.stage} style={{ display: "flex", flexDirection: "column", gap: big ? 8 : 5 }}>
@@ -86,9 +89,11 @@ export default function Soundtrack({ data, color, lang = "en", big = false }) {
             <p className="mono" style={{ fontSize: big ? 12 : 10, color: "var(--text-muted)", letterSpacing: "0.1em" }}>
               {t(lang, STAGE_LABEL[stage.stage] || "soundtrack")}
             </p>
-            <span style={{ fontSize: big ? 12.5 : 10.5, color: "var(--text-muted)", opacity: 0.75 }}>
-              — {t(lang, STAGE_SUB[stage.stage] || "soundtrack")}
-            </span>
+            {big && (
+              <span style={{ fontSize: 12.5, color: "var(--text-muted)", opacity: 0.75 }}>
+                — {t(lang, STAGE_SUB[stage.stage] || "soundtrack")}
+              </span>
+            )}
           </div>
 
           {stage.tracks.map(track => {
@@ -125,18 +130,17 @@ export default function Soundtrack({ data, color, lang = "en", big = false }) {
                     display: "block", fontSize: big ? 14.5 : 12.5, color: "var(--text-primary)",
                     whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
                   }}>{track.title}</span>
-                  {/* Wraps rather than shrinks. The right panel is 248px wide, leaving
-                      ~190px here, and letting the artist name shrink to fit two links
-                      beside it collapsed it to a single stray character. The links have
-                      a fixed size and the name keeps a floor, so on a narrow panel the
-                      links drop to their own line instead. */}
+                  {/* Links are expanded-view only. In the 248px sidebar they left the
+                      artist name ~190px to share with two labels, which crushed it to a
+                      single stray character. Keeping the compact row to title + artist
+                      is both the original design and the one that fits. */}
                   <span style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0, flexWrap: "wrap" }}>
                     <span className="mono" style={{
                       fontSize: big ? 12 : 10.5, color: "var(--text-muted)",
-                      minWidth: big ? 120 : 84, flex: "1 1 auto",
+                      minWidth: big ? 120 : 0, flex: "1 1 auto",
                       whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
                     }}>{track.artist}</span>
-                    {track.youtube && (
+                    {big && track.youtube && (
                       <a href={track.youtube} target="_blank" rel="noopener noreferrer"
                          title={`${t(lang, "findOnYoutube")}: ${track.artist} — ${track.title}`}
                          className="mono"
@@ -144,7 +148,7 @@ export default function Soundtrack({ data, color, lang = "en", big = false }) {
                         ↗{t(lang, "findOnYoutube")}
                       </a>
                     )}
-                    {track.share_url && (
+                    {big && track.share_url && (
                       <a href={track.share_url} target="_blank" rel="noopener noreferrer"
                          title={`${t(lang, "openOnJamendo")}: ${track.artist} — ${track.title}`}
                          className="mono"
