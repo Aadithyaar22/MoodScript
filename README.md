@@ -1,13 +1,3 @@
----
-title: MoodScript Backend
-emoji: 🧠
-colorFrom: purple
-colorTo: blue
-sdk: docker
-app_port: 7860
-pinned: false
----
-
 <div align="center">
 
 <img src="https://readme-typing-svg.demolab.com?font=Georgia&size=32&duration=3000&pause=1000&color=9D7FD4&center=true&vCenter=true&width=600&lines=MoodScript;Your+mood%2C+understood.;Text+%2B+face+emotion+detection;A+therapist+who+remembers+you." alt="Typing SVG" />
