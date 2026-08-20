@@ -35,87 +35,152 @@ pinned: false
 MoodScript is a full-stack emotional journaling app. You write (or speak, or show your face) how you're feeling, and it:
 
 1. **Detects your emotion** — from your words, and optionally from a photo/webcam frame
-2. **Fuses both signals** after calibrating each onto a common confidence scale, weighting each by its measured per-class reliability, and combining them multiplicatively rather than by averaging
+2. **Fuses both signals** after temperature-calibrating each onto a common confidence scale, weighting each by its measured per-class reliability, and combining them multiplicatively rather than by averaging
 3. **Responds as Aria** — a therapist-persona LLM companion that extracts the specific things you actually said before replying, and remembers your last conversation, your last week, and your long-term patterns
 4. **Watches for real crisis signals** — and only surfaces helpline resources when something is genuinely serious, never as a reflex
-5. **Tracks your wellbeing over time** — a recency-weighted score, trend direction, a weekly reflection letter, and a doctor-ready clinical summary you can export and bring to an appointment
-6. **Works in Hindi and Kannada**, and lets you talk to it instead of typing
+5. **Tracks your wellbeing over time** — a recency-weighted score, trend direction, a weekly reflection letter, and a doctor-ready clinical summary you can export
+6. **Scores your entry as a soundtrack** — a three-stage mood arc built on the iso-principle from music therapy
+7. **Works in Hindi and Kannada**, and lets you talk to it instead of typing
 
-It's not a chatbot wrapper. Every emotional read is a real model inference (text + vision), fused with confidence-aware logic, with LIME-based explainability behind a "why?" button on every response — and every model and architecture decision in this project was independently benchmarked before shipping, not taken on a vendor's word. See [Research & evaluation](#research--evaluation) below.
+It's not a chatbot wrapper. Every emotional read is a real model inference (text + vision), fused with calibration-aware logic, with LIME-based explainability behind a "why?" button on every response — and every model and architecture decision was independently benchmarked before shipping. See [Research & evaluation](#research--evaluation).
+
+**This project also produced a paper.** The research question it ended up answering is narrower and more interesting than the product: *when you combine two independently trained classifiers, does it matter more how you combine them, or how well calibrated they are?*
+
+---
+
+## The headline finding
+
+The original fusion rule was a confidence-weighted linear blend — the obvious design, and the one most tutorials show. It performed **worse than using the face model alone**: 83.36% against 88.39%. Fusion was destroying information.
+
+The cause was a calibration mismatch. Expected Calibration Error measures the gap between stated confidence and actual accuracy:
+
+| Modality | ECE before | ECE after temperature scaling |
+|---|---|---|
+| Text (DistilRoBERTa) | **0.235** — badly overconfident | 0.035 |
+| Face (ViT) | **0.029** — already well calibrated | 0.040 |
+
+A confidence-weighted rule treats "0.9 from the text model" and "0.9 from the face model" as equal evidence. They are not. The rule systematically over-trusted the worse-calibrated modality and dragged the better one down.
+
+Fixing it — temperature scaling before combination — lifted every classical combination rule tested, by between 1.67 and 7.11 percentage points.
+
+> **The honest version of the claim:** calibration improves every rule tested, on both benchmarks. An earlier draft claimed calibration mattered *more than* the choice of rule; a proper 2×4 factorial does not support that. On Set A the main effect of rule choice (4.42 pp) actually exceeds that of calibration (3.16 pp); on Set B calibration wins by 0.24 pp, which is noise. The claim that survives is the first one.
+
+---
 
 ## Features
 
 **Emotion intelligence**
-- Whole-entry text emotion classification, with a second per-sentence pass that drives the emotion-arc view. Both sentence-level aggregation and a syntax-aware negation rule were shipped earlier and later **removed**: measured on 1,056 held-out journal texts they cost 4.45 points combined, and the negation rule broke 20 correct predictions while fixing none (see [Research & evaluation](#research--evaluation))
+- Whole-entry text emotion classification, with a second per-sentence pass that drives the emotion-arc view and the soundtrack. Sentence-level aggregation and a syntax-aware negation rule were both shipped earlier and later **removed** on evidence — see [Research & evaluation](#research--evaluation)
 - Optional face-image emotion detection (photo upload or webcam), with the face located and cropped before classification — the classifier is trained on close-up faces, and feeding it a full frame with background measurably degrades it
-- Calibration-aware log-linear fusion — each modality is first calibrated onto a common confidence scale (the text model was measured to be badly over-confident, ECE 0.217, against 0.015 for the face model, so their raw confidences were never comparable), weighted by a per-class reliability estimate rather than one number, and combined by multiplying rather than averaging so a confident "definitely not this" can actually rule a class out. On a held-out paired benchmark this scores 92.83% against 85.83% for the previous confidence-weighted average — which was itself *below* using the face modality alone (88.69%)
-- LLM arbitration on unresolved conflicts — implemented, measured, and now **disabled by default**, because it did not improve accuracy (see [Research & evaluation](#research--evaluation)): it adjudicates by reading the text while never seeing the face image, and text is the weaker signal on exactly those cases. Re-enable with `MOODSCRIPT_ENABLE_ARBITER=1`
-- LIME explainability — see exactly which words drove the detected emotion, and a full text/face/fused confidence breakdown on every message
+- Calibration-aware log-linear fusion, weighted by a per-class reliability estimate rather than a single number, and combined by multiplying rather than averaging so a confident "definitely not this" can rule a class out
+- LLM arbitration on unresolved conflicts — implemented, measured, and **disabled by default** because it did not improve accuracy. Re-enable with `MOODSCRIPT_ENABLE_ARBITER=1`
+- LIME explainability — which words drove the detected emotion, plus a full text/face/fused confidence breakdown on every message
 
 **Conversation & memory**
-- Two-pass response generation: a fact-extraction pass pulls out the specific names, events, and details you mentioned first, so Aria's reply is required to engage with what actually happened — not just react to an emotion label
+- Two-pass response generation: a fact-extraction pass pulls out the specific names, events and details you mentioned first, so Aria's reply must engage with what actually happened rather than react to an emotion label. The extraction pass runs **concurrently** with the emotion pipeline, so it adds no sequential latency
 - Multi-turn chat with a consistent persona per conversation (4 distinct therapist voices)
-- Long-term pattern summarization injected into every reply — Aria references your actual history, not just the current message
-- Full conversation history, browsable per-thread from the sidebar
+- Long-term pattern summarization injected into every reply
+- Full conversation history, browsable per-thread
+
+**Soundtrack (iso-principle)**
+- Emotion → playlist is the obvious design and the harmful one: sad music can entrench rumination, cheerful music reads as dismissal. Music therapy's iso-principle says meet the listener where they are, then move gradually
+- Three stages — **MEET** (matches the entry's opening emotion) → **BRIDGE** (halfway) → **LIFT** (a gentler target state) — resolved to real tracks via the Jamendo API
+- Driven by the per-sentence `emotion_arc`, so an entry running anxious → resolved is scored as a trajectory, not a single label
+- **Anger calms before it lifts.** The naive mapping raises valence first, answering an angry entry with upbeat music; the anger path drops energy first, then moves valence
+- **Crisis suppresses it entirely.** Someone in crisis needs a helpline, not a playlist
 
 **Multilingual & voice**
-- Full UI and conversation support in English, Hindi, and Kannada — the backend pipeline (emotion detection, crisis checks, storage) always runs in English; your message is translated in and the reply translated back out, so nothing about the underlying analysis changes with language
-- Voice input via the Web Speech API — continuous listening with a live recording timer, so it doesn't cut off after one sentence
-- Voice output via Google Cloud Text-to-Speech (Neural2 for English/Hindi, WaveNet for Kannada), with speaking rate and pitch conditioned on the detected emotion, so a reply to a sad entry is delivered slower and lower than one to a happy entry. Falls back to the browser voice if the request fails
-- Stored content follows the language switch too — the weekly reflection, conversation previews and reopened threads are all translated on read, since journal text is stored canonically in English
+- Full UI and conversation support in English, Hindi and Kannada. The backend pipeline always runs in English — your message is translated in and the reply translated back out, so nothing about the analysis changes with language
+- Voice input via the Web Speech API, continuous listening with a live recording timer
+- Voice output via Google Cloud TTS (Neural2 for English/Hindi, WaveNet for Kannada), with rate and pitch conditioned on the detected emotion. Falls back to the browser voice on failure
+- Stored content follows the language switch — reflections, previews and reopened threads translate on read
 
 **Insight & reflection**
 - Recency-weighted wellbeing score (0–100) with trend detection (improving / steady / declining)
-- Auto-generated weekly reflection letter, cached per ISO week
-- Mood-over-time and emotion-distribution charts on the dashboard, each expandable to full screen; the same panels in the right rail (emotion radar, wellness tips, quote) expand too
-- The weekly reflection can be read aloud, and the doctor PDF embeds the mood-over-time graph using the same emotion ranking as the on-screen chart
-- Two export options: a full raw journal transcript, or a structured **doctor report** — mood score/trend, emotion distribution, language-pattern signals, safety flags with dates, and a chronological entry list, explicitly framed as a self-reported summary to bring to a healthcare provider, not a diagnosis
+- Auto-generated weekly reflection letter, cached per ISO week, readable aloud
+- Mood-over-time and emotion-distribution charts, each expandable to full screen
+- Two exports: a full raw journal transcript, or a structured **doctor report** — mood score/trend, emotion distribution, language-pattern signals, safety flags with dates, and a chronological entry list, explicitly framed as a self-reported summary, not a diagnosis
 
-**Safety, built deliberately conservative**
-- Two-tier crisis detection: explicit-language patterns vs. a 5-entry sustained-distress window
-- Crisis resources (India-specific helplines) are hard-coded, never LLM-generated, and only shown when actually triggered — not on every sad message
-- Response generation hedges toward neutral instead of committing to a confident narrative when the emotional signal is weak or conflicting — a low-confidence read produces a lighter, more tentative reply, not a fully-committed psychoanalysis of a two-word message
+**Safety, deliberately conservative**
+- Two-tier crisis detection: 11 explicit-language regex patterns, plus a sustained-distress window (five most recent entries all negative with confidence > 0.55)
+- Crisis resources (India-specific helplines) are **hard-coded, never LLM-generated**, and shown only when triggered. A generative model can hallucinate a helpline number; static text cannot
+- Response generation hedges toward neutral when the emotional signal is weak or conflicting, rather than committing to a confident narrative about a two-word message
 
 **Account & data**
 - JWT auth with PBKDF2-hashed passwords, plus optional Google OAuth
-- Light and dark theme, full UI parity in both, every text colour meeting WCAG AA (4.5:1) against its background in each theme
-- Responsive down to phone width: the right rail folds under at 1100px and the whole shell stacks with the journal first at 760px
-- Full journal export (plain text) and one-click account deletion, cascading through all tables
-- Per-user, persistent Postgres storage — not a demo toy that forgets you on restart
+- Fernet-encrypted message and reflection content at rest
+- Light and dark theme, every text colour meeting WCAG AA (4.5:1) in both
+- Responsive: right rail folds under at 1100px, full stack at 760px
+- Full journal export and one-click account deletion, cascading through all tables
+
+---
 
 ## Architecture
 
-The backend is split into three independently deployable services, so each piece can be sized, scaled, and hosted on its own — the orchestrator carries no ML dependencies at all and runs in under 100MB of RAM.
+The backend splits into three independently deployable services, so each can be sized and scaled on its own — the orchestrator carries no ML dependencies and runs in under 100 MB.
 
 ```mermaid
 flowchart TD
     U[User] -->|message + optional image, any of 3 languages| FE[React Frontend]
-    FE -->|POST /chat| API[Orchestrator<br/>auth · chat · DB · crisis · translation]
+    FE -->|POST /chat| API[Orchestrator<br/>auth · chat · DB · crisis · translation · TTS]
     API -->|POST /analyze| TXT[Text Service<br/>j-hartmann distilroberta + LIME]
-    API -->|POST /predict| FACE[Face Service<br/>dima806 ViT face-expression]
-    TXT --> FUSE[Fusion Layer<br/>confidence-weighted text/face blend]
+    API -->|POST /predict| FACE[Face Service<br/>Haar cascade + dima806 ViT]
+    TXT --> FUSE[Fusion Layer<br/>temperature calibration → class-conditional<br/>reliability → log-linear pooling]
     FACE --> FUSE
-    FUSE -->|genuine unresolved conflict| ARB[LLM Arbiter<br/>Groq · Llama 3.1 8B Instant]
+    FUSE -->|genuine unresolved conflict| ARB[LLM Arbiter<br/>disabled by default]
     ARB --> CRISIS
     FUSE -->|agreement / clear signal| CRISIS[Crisis Detector<br/>regex + sustained-distress window]
-    CRISIS -->|if triggered| LLM[Response Engine<br/>Groq · Llama 3.3 70B]
-    CRISIS -->|extract facts, then respond| EXTRACT[Fact Extraction<br/>Groq · Llama 3.1 8B Instant]
+    CRISIS --> LLM[Response Engine<br/>Groq · Llama 3.3 70B]
+    API -.->|runs concurrently| EXTRACT[Fact Extraction<br/>Groq · Llama 3.1 8B Instant]
     EXTRACT --> LLM
-    LLM --> DB[(Postgres · Neon)]
+    LLM --> DB[(Postgres · Neon<br/>encrypted at rest)]
     FUSE --> DB
     DB -->|long-term summary| LLM
     LLM -->|reply + emotion + rating| FE
 ```
 
-Each service has its own `requirements.txt` and `Dockerfile`:
+**Why split at all.** The two ML models need ~2 GiB each and take seconds to cold-start. The orchestrator must be small and always warm. Bundling would make every request pay for models it may not use, and a text-only request would still load the ViT. Splitting also lets the text and face calls run concurrently.
+
+**Why the orchestrator is on Render and everything else on Cloud Run.** Cloud Run scales to zero, which suits bursty, expensive, cold-start-tolerant ML services. The orchestrator holds auth state and must answer fast every time, so it runs always-on.
 
 | Service | Path | What it holds | Approx. RAM |
 |---|---|---|---|
-| Orchestrator | `main.py` (repo root) | Auth, chat routing, Postgres, Groq calls, crisis/rating logic, translation — zero ML deps | ~95 MB |
-| Text service | `services/text_service/` | Text emotion model, spaCy, LIME explainability | ~440 MB |
-| Face service | `services/face_service/` | Face-image emotion model | ~400 MB |
+| Orchestrator | `main.py` (repo root) | Auth, chat routing, Postgres, Groq, crisis/rating, translation, TTS — zero ML deps | ~95 MB |
+| Text service | `services/text_service/` | Text emotion model, spaCy, LIME | ~440 MB |
+| Face service | `services/face_service/` | Haar cascade + face emotion model | ~400 MB |
 
-The orchestrator talks to the other two over plain HTTP (`FACE_SERVICE_URL`, `TEXT_SERVICE_URL`), authenticated with a shared `INTERNAL_API_KEY` header. All three are deployed independently on Google Cloud Run; the orchestrator runs on Render. See [Deployment](#deployment) below.
+The orchestrator talks to the other two over plain HTTP (`FACE_SERVICE_URL`, `TEXT_SERVICE_URL`), authenticated with a shared `INTERNAL_API_KEY` header.
+
+### The fusion layer
+
+Production constants, fitted on a pooled calibration split of **1,831 examples**:
+
+```python
+TEXT_TEMPERATURE = 1.6990      # τ > 1 → softens overconfidence
+FACE_TEMPERATURE = 0.9171      # τ < 1 → slightly sharpens
+TEXT_WEIGHT, FACE_WEIGHT = 0.55, 0.45
+```
+
+Class-conditional reliability, with Laplace smoothing — one estimate per (modality, class) rather than one scalar per model:
+
+```
+r_m(c) = (hits_m(c) + λ·acc_m) / (n_m(c) + λ),   λ = 5
+```
+
+Per-sample weights, then log-linear (product-of-experts) pooling:
+
+```
+a_T = w_T · r_T(y_T) · max(T̃)        â_T = a_T / (a_T + a_F)
+a_F = w_F · r_F(y_F) · max(F̃)        â_F = a_F / (a_T + a_F)
+
+log P_fused(e) ∝ â_T·log T̃(e) + â_F·log F̃(e)
+```
+
+Log-linear rather than linear matters: linear pooling averages, so a confidently wrong model still drags the result. Log-linear is a product of experts — a class needs support from *both* modalities to survive. This is why the product rule beats the sum rule on both benchmarks, consistent with Kittler et al. (1998).
+
+Each fused result carries a `resolution_reason`: `agreement`, `dominant_confidence_text|face`, `text_override`, `face_override`, `conflict_resolved_to_X`, or `text_only`.
+
+---
 
 ## Tech stack
 
@@ -123,16 +188,20 @@ The orchestrator talks to the other two over plain HTTP (`FACE_SERVICE_URL`, `TE
 |---|---|
 | Frontend | React 19, Vite, Tailwind, Recharts, `react-webcam`, Web Speech API |
 | Backend | FastAPI, Uvicorn |
-| Text emotion | `j-hartmann/emotion-english-distilroberta-base` (HF Transformers), whole-entry classification |
-| Face emotion | `dima806/facial_emotions_image_detection` (HF Transformers) — see [Research & evaluation](#research--evaluation) for why this model, not the more obvious first pick |
-| Fusion arbitration & fact extraction | Groq — Llama 3.1 8B Instant (fast/cheap, one-word or short-list outputs only) |
+| Text emotion | `j-hartmann/emotion-english-distilroberta-base`, whole-entry classification |
+| Face detection | OpenCV Haar cascade (largest face, margin crop) |
+| Face emotion | `dima806/facial_emotions_image_detection` (ViT) |
+| Fact extraction & arbitration | Groq — Llama 3.1 8B Instant |
 | Conversational LLM | Groq — Llama 3.3 70B Versatile |
-| Translation | Google Cloud Translation API |
+| Music | Jamendo API, pool-cached (TTL 3600) with prewarm |
+| Translation / TTS | Google Cloud Translation, Google Cloud Text-to-Speech |
 | Explainability | LIME |
 | Auth | PyJWT + PBKDF2-HMAC-SHA256, optional Google OAuth |
-| Storage | PostgreSQL (Neon, serverless), Fernet-encrypted message content |
+| Storage | PostgreSQL (Neon), Fernet-encrypted message content |
 | Sentence segmentation | spaCy (`en_core_web_sm`) |
-| CI/CD | GitHub Actions (path-filtered auto-deploy to Cloud Run) + Render's native GitHub integration |
+| CI/CD | GitHub Actions (path-filtered auto-deploy) |
+
+---
 
 ## Project structure
 
@@ -140,32 +209,39 @@ The orchestrator talks to the other two over plain HTTP (`FACE_SERVICE_URL`, `TE
 .                               # repo root = backend
 ├── main.py                     # Orchestrator — auth, chat routing, translation, no ML deps
 ├── auth.py                     # JWT + password hashing + Google OAuth
-├── database/db.py              # Postgres access layer (encrypted message content)
+├── database/db.py              # Postgres access layer (Fernet-encrypted content)
 ├── models/
-│   ├── fusion.py                # Confidence-weighted text + face blending
-│   ├── arbiter.py                # LLM arbitration for unresolved fusion conflicts
-│   ├── response.py               # Aria persona + two-pass fact-extraction/response prompting
-│   ├── crisis.py                  # Crisis detection + helpline resources
-│   ├── rating.py                   # Wellbeing score, trend, weekly reflection
-│   ├── report.py                    # Doctor-report export builder
-│   └── translate.py                  # Google Cloud Translation wrapper (single + batch)
+│   ├── fusion.py               # Calibration-aware log-linear fusion (production constants)
+│   ├── arbiter.py              # LLM arbitration — disabled by default
+│   ├── response.py             # Aria persona + two-pass extraction/response prompting
+│   ├── crisis.py               # Crisis detection + hard-coded helpline resources
+│   ├── music.py                # Iso-principle mood-arc soundtrack
+│   ├── jamendo.py              # Jamendo client, pool cache + prewarm
+│   ├── rating.py               # Wellbeing score, trend, weekly reflection
+│   ├── report.py               # Doctor-report PDF builder
+│   ├── translate.py            # Google Cloud Translation wrapper
+│   └── tts.py                  # Google Cloud Text-to-Speech
 ├── services/
-│   ├── text_service/             # Standalone: text emotion model + LIME
-│   │   └── main.py, text_model.py, explainer.py, requirements.txt, Dockerfile
-│   └── face_service/             # Standalone: face emotion model
-│       └── main.py, face_model.py, requirements.txt, Dockerfile
-├── research/                    # Benchmarking & evaluation harnesses (see below)
-│   ├── eval_face_models.py, eval_text_model.py, eval_text_candidates.py
-│   ├── eval_fusion.py, eval_arbiter.py, eval_two_pass.py, eval_llm_ab.py
-│   ├── compare_models.py         # Paired McNemar's significance testing
-│   └── results/                   # Raw predictions, confusion matrices, JSON reports
-├── .github/workflows/            # Path-filtered auto-deploy to Cloud Run
-├── Dockerfile                    # Orchestrator's own Dockerfile
-└── frontend/                     # React app (Vite) — the only frontend directory
+│   ├── text_service/           # Standalone: text emotion model + LIME
+│   └── face_service/           # Standalone: Haar cascade + face emotion model
+├── research/                   # Benchmarking & evaluation harnesses
+│   ├── build_paired_set.py, add_neutral_pairs.py     # benchmark construction
+│   ├── fit_fusion_constants.py                        # fits the production constants
+│   ├── eval_classical_rules.py                        # Kittler sum/product/max/min comparison
+│   ├── eval_reliability_subgroups.py                  # conflict-case + per-class analysis
+│   ├── eval_face_models.py, eval_text_candidates.py, eval_text_pipeline_ablation.py
+│   ├── eval_arbiter_v2.py, eval_two_pass.py, eval_llm_ab.py, eval_ablation.py
+│   ├── verify_production_fusion.py                    # runs the SHIPPED fusion.py
+│   └── results/                                       # raw predictions, JSON reports
+├── .github/workflows/          # Path-filtered auto-deploy (3× Cloud Run, 1× Render)
+├── Dockerfile
+└── frontend/                   # React app (Vite) — the only frontend directory
     └── src/
         ├── App.jsx, api.js, i18n.js, useSpeechRecognition.js
-        └── components/            # Sidebar, Dashboard, ChatInput, XAIDrawer, ThemeSwitcher, LanguageSwitcher, ...
+        └── components/
 ```
+
+---
 
 ## Running it locally
 
@@ -189,12 +265,24 @@ uvicorn main:app --reload --port 8001
 # Orchestrator (separate venv/shell, from repo root)
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
-# .env: GROQ_API_KEY=..., JWT_SECRET=..., DATABASE_URL=postgresql://...,
-#       MESSAGE_ENCRYPTION_KEY=..., FACE_SERVICE_URL=http://localhost:8001,
-#       TEXT_SERVICE_URL=http://localhost:8002, INTERNAL_API_KEY=...,
-#       GOOGLE_TRANSLATE_CREDENTIALS=... (optional, for multilingual),
-#       GOOGLE_CLIENT_ID=... (optional, for Google sign-in)
 uvicorn main:app --reload --port 8000
+```
+
+`.env` for the orchestrator:
+
+```
+GROQ_API_KEY=...
+JWT_SECRET=...
+DATABASE_URL=postgresql://...
+MESSAGE_ENCRYPTION_KEY=...          # Fernet key
+FACE_SERVICE_URL=http://localhost:8001
+TEXT_SERVICE_URL=http://localhost:8002
+INTERNAL_API_KEY=...
+JAMENDO_CLIENT_ID=...               # optional, for the soundtrack
+GOOGLE_TRANSLATE_CREDENTIALS=...    # optional, for multilingual
+GOOGLE_CLIENT_ID=...                # optional, for Google sign-in
+MOODSCRIPT_ENABLE_ARBITER=1         # optional, re-enables LLM arbitration
+MOODSCRIPT_LEGACY_FUSION=1          # optional, restores the old linear rule
 ```
 
 **Frontend**
@@ -204,27 +292,35 @@ npm install
 npm run dev
 ```
 
+---
+
 ## API reference
 
 | Endpoint | Description |
 |---|---|
-| `POST /auth/signup`, `POST /auth/login`, `POST /auth/google` | Account auth, returns a JWT |
+| `POST /auth/signup`, `/auth/login`, `/auth/google` | Account auth, returns a JWT |
 | `POST /chat` | Send a message (+ optional image, + `lang`), get emotion + Aria's reply |
-| `POST /translate` | Batch-translate arbitrary UI/dynamic content (used for wellness tips, quotes) |
-| `POST /speak` | Synthesize speech for a reply (`text`, `lang`, `emotion`), returns MP3 with emotion-conditioned prosody |
-| `GET /conversations`, `GET /conversations/{id}/messages` | Past conversations |
-| `GET /history`, `GET /rating` | Mood log, wellbeing score + trend |
+| `POST /translate` | Batch-translate arbitrary UI/dynamic content |
+| `POST /speak` | Synthesize speech (`text`, `lang`, `emotion`) → MP3 with emotion-conditioned prosody |
+| `POST /soundtrack` | Mood-arc soundtrack for an entry (MEET → BRIDGE → LIFT) |
+| `GET /soundtrack/weekly` | Soundtrack built from the week's emotion distribution |
+| `GET /conversations`, `/conversations/{id}/messages` | Past conversations |
+| `DELETE /conversations/{id}` | Delete a thread |
+| `GET /history`, `/rating` | Mood log, wellbeing score + trend |
 | `GET /reflection` | This week's auto-generated reflection letter |
-| `GET /export` | Download your full journal as text |
-| `GET /export/doctor-report` | Download a structured clinical-style summary for a healthcare provider |
-| `DELETE /account` | Delete your account and all associated data |
+| `GET /export` | Full journal as text |
+| `GET /export/doctor-report` | Structured clinical-style summary PDF |
+| `DELETE /account` | Delete account and all associated data |
+| `GET /health` | Health check — reports the running commit SHA |
+
+---
 
 ## Deployment
 
-Every part of the app deploys automatically on push to `main` — no manual `gcloud` or `render` commands required day-to-day:
+Everything deploys automatically on push to `main`.
 
-- **Frontend, face service, text service** (Cloud Run) — each has its own path-filtered GitHub Actions workflow (`.github/workflows/deploy-*.yml`) that only fires when that service's own directory changes, using a dedicated `github-actions-deployer` service account with least-privilege IAM roles. Credentials live only as GitHub secrets, never in the repo.
-- **Orchestrator** (Render) — deploys via Render's native GitHub integration, no workflow needed.
+- **Frontend, text service, face service** (Cloud Run) — each has a path-filtered GitHub Actions workflow that fires only when its own directory changes, using a least-privilege `github-actions-deployer` service account. Credentials live only as GitHub secrets.
+- **Orchestrator** (Render) — its workflow does three things in order: validate (byte-compile every module), deploy, then **prove the deploy landed** by polling `/health` until it reports the pushed commit SHA. A deploy that silently fails to roll out fails the build instead of passing quietly.
 
 | Service | Live URL |
 |---|---|
@@ -233,74 +329,141 @@ Every part of the app deploys automatically on push to `main` — no manual `gcl
 | Face service | https://moodscript-face-service-2wr445ogxq-uc.a.run.app |
 | Text service | https://moodscript-text-service-2wr445ogxq-uc.a.run.app |
 
+---
+
 ## Research & evaluation
 
-Every model swap and architecture change in this project was independently benchmarked before shipping — self-reported model-card numbers and vendor pricing claims are treated as claims to verify, not facts to build on. Full methodology, raw predictions, and confusion matrices are in `research/`.
+Every model swap and architecture change was independently benchmarked before shipping — self-reported model-card numbers are treated as claims to verify, not facts to build on. Full methodology, raw predictions and confusion matrices are in `research/`.
 
-**Face model: `dima806/facial_emotions_image_detection`, not the more obvious first pick.** Both candidates were evaluated on the real FER2013 test split (7,178 images, not either card's self-reported number):
+### Benchmarks
 
-| Model | Accuracy | Angry precision/recall |
+Two constructed paired sets — text and face examples drawn independently and matched by emotion label, so ground truth is unambiguous and disagreement arises from real model error rather than manufactured conflict:
+
+| | Set A | Set B |
 |---|---|---|
-| `trpakov/vit-face-expression` (original) | 71.15% (independently reproduced — matches its claimed 71.16%) | 62.7% / 64.3% |
-| `dima806/facial_emotions_image_detection` (current) | **88.35%** | **87.0% / 87.9%** |
+| Text source | GoEmotions | EmpatheticDialogues + DailyDialog (neutral) |
+| Face source | FER2013 test split | FER2013 test split |
+| Pairs | 1,153 | 2,511 |
+| Calibration / test | 576 / 577 | 1,255 / 1,256 |
 
-Paired McNemar's test: p = 8.5×10⁻²⁰⁶ — not remotely due to chance. The angry-class gap directly explains a real failure caught during manual testing (an exaggerated angry expression scoring 0% angry on the old model, split between happy and fearful instead).
+Set B originally had no neutral class (EmpatheticDialogues has none), so 400 neutral pairs were added from DailyDialog — 200 into calibration, 200 into test, which is why the test split went from 1,056 to 1,256.
 
-**Fusion: the previous rule was measurably worse than one modality alone.** Evaluated on a purpose-built paired benchmark — a GoEmotions or EmpatheticDialogues text labelled *X* paired with a FER2013 face labelled *X*, so ground truth is unambiguous and disagreement arises from real model error rather than manufactured conflict:
+### Fusion comparison
 
-| Strategy | Set A (n=577) | Set B (n=1,056) |
+Accuracy, with McNemar *p* against face-only prediction:
+
+| Method | Set A (n=577) | Set B (n=1,256) |
 |---|---|---|
-| Face only | 88.39% | 88.69% |
-| Confidence-weighted average (previous) | 83.36% | 85.83% |
-| **Calibration-aware log-linear (current)** | **91.51%** | **92.83%** |
+| Text only | 49.74% (<.001) | 64.57% (<.001) |
+| **Face only** | **88.39%** (ref.) | **88.69%** (ref.) |
+| Sum rule | 87.69% (.688) | 89.17% (.668) |
+| Product rule | 90.29% (.208) | 91.00% (.023) |
+| Max rule | 86.83% (.272) | 88.14% (.606) |
+| Min rule | 85.10% (.085) | 88.30% (.772) |
+| Sum + calibration | 89.77% (.061) | 92.12% (<.001) |
+| **Product + calibration** | **92.03%** (<.001) | 92.68% (<.001) |
+| Confidence-weighted linear (previous) | 83.36% (.002) | 85.83% (.011) |
+| Weighted calibrated log-linear (deployed) | 90.47% (.010) | **92.83%** (<.001) |
 
-Significant against the previous rule (p = 4.8×10⁻⁸ / 9.1×10⁻¹⁵) and against the stronger single modality (p = 5.2×10⁻⁴ / 7.7×10⁻⁹). These numbers come from running the shipped `models/fusion.py` itself (`research/verify_production_fusion.py`), not a research reimplementation. An ablation isolates text calibration as the dominant factor (+8.54 pp); face calibration contributes +0.39 pp because that model was already calibrated.
+After **Holm–Bonferroni correction** across all 18 comparisons, the calibrated product rule is the only fusion rule that remains significant on both sets. These numbers come from running the shipped `models/fusion.py` itself (`research/verify_production_fusion.py`), not a research reimplementation.
 
-**The neutral class was missing, and fixing it exposed a real bug.** Set B was built from EmpatheticDialogues, which has no neutral category — so every number measured on it excluded the class both models are worst at, and neutral is plausibly the most common label in real journaling. 400 neutral pairs were added (DailyDialog *no emotion* text ≥18 words + FER2013 neutral faces), taking Set B to 2,511 pairs across all 7 classes.
+**Component ablation** (all 16 on/off combinations, marginal effects):
 
-Two things fell out of it. First, neutral reliability had been fitted from only 100 calibration examples, all Reddit comments, giving 0.2356 for text and 0.6914 for face; with 300 examples including journal-domain neutral the real values are **0.5161** and **0.8674** — production had been under-trusting neutral by roughly half on the text side, which is a behaviour bug, not just a benchmark artefact. Second, adding the hardest class cost only 0.35 points of accuracy (93.18% → 92.83%) while macro-F1 rose from 80.66 to **93.39**, because neutral had previously been scoring zero by construction. Significance improved on both benchmarks despite the harder test.
-
-The caveat, stated rather than buried: DailyDialog is dialogue turns while the rest of Set B is first-person narrative, so the neutral subset sits under a mild domain shift the other six classes don't. Reproduce with `research/add_neutral_pairs.py`.
-
-**LLM arbitration: tested and does not help.** Four designs — direct classification, binary choice given the correct reliability prior, confidence-gated abstention, and meta-linguistic trust scoring — all scored below fusion without an LLM on the conflict cases where arbitration fires (best 75.40% against 76.98%). The arbiter reads the *text* and only ever receives the face model's label, never the image, and text is worth ~17% accuracy on exactly those cases. Its trust estimates were uncorrelated with whether the text was actually right (0.738 when right, 0.763 when wrong). Now disabled by default (`MOODSCRIPT_ENABLE_ARBITER=1` re-enables it); the code and the evaluation both remain in the repo. See `research/eval_arbiter_v2.py`.
-
-**Text model: kept, not swapped.** Two candidates were tested on GoEmotions *and* cross-checked against a 49-case journal-style benchmark, since a model's benchmark win doesn't necessarily generalize to the product's actual input distribution:
-
-| Model | GoEmotions | Journal-style (49 cases) |
+| Component | Δ Accuracy | Δ ECE |
 |---|---|---|
-| Current (`j-hartmann` distilroberta) | 43.75% | **78%** |
-| `SamLowe/roberta-base-go_emotions` (native GoEmotions model) | 69.65% | 71% |
-| `j-hartmann/emotion-english-roberta-large` | 47.34% | — |
+| **Text calibration** | **+8.54 pp** | +0.053 |
+| Confidence weighting | +2.64 pp | −0.039 |
+| Face calibration | +0.39 pp | −0.001 |
+| Post-fusion calibration | +0.00 pp | −0.163 |
 
-SamLowe wins big on GoEmotions (expected — it's trained directly on it) but loses on the benchmark that resembles real usage. Kept the current model.
+Text calibration dominates because the text branch was the badly calibrated one. Face calibration barely moves accuracy, and its ECE actually got slightly worse (0.029 → 0.040) — the useful intervention is specifically calibrating the *text* branch.
 
-**Text pipeline: two of our own ideas, both removed on evidence.** The checkpoint above was the right choice; the hand-written wrapper around it was not. Re-measured on 1,256 held-out journal-domain texts — 25× the 49-case set the wrapper was tuned against:
+### Negative results
+
+**Class-conditional reliability weighting does not beat a plain calibrated product rule.** The intuition was sound — the text model is far more reliable on some classes than others — but it did not hold up:
+
+| | Weighted rule | Unweighted calibrated product | p |
+|---|---|---|---|
+| Set A | 90.47% | **92.03%** | 0.0265 (loses) |
+| Set B | 92.83% | 92.68% | 0.8231 (tie) |
+| Set A conflict cases (n=323) | 83.59% | **86.38%** | 0.0265 |
+| Set B conflict cases (n=528) | 84.66% | 84.28% | 0.8231 |
+
+Per-class it lost 5.0 pp of recall on neutral — the class with the *lowest* text reliability, which is the opposite of the intended effect. It remains the deployed configuration, which is an honest inconsistency: the deployment predates the evaluation that showed a simpler rule is as good. `research/eval_reliability_subgroups.py`.
+
+**LLM arbitration does not help.** Four designs — direct classification, binary choice given the correct reliability prior, confidence-gated abstention, and meta-linguistic trust scoring — all scored below deterministic fusion on the 126 conflict cases where arbitration fires:
+
+| Approach | Accuracy on conflicts |
+|---|---|
+| **Deterministic fusion, no LLM** | **76.98%** |
+| Best LLM design (trust-weighted) | 75.40% |
+| Face-only | 71.43% |
+| Previous numeric fusion | 48.41% |
+| LLM arbiter (7-way classify) | 46.83% |
+
+The diagnostic: the arbiter's trust estimate was 0.738 when the text was right and 0.763 when it was wrong — **no signal at all**. The arbiter reads the text and only ever receives the face model's *label*, never the image, and text is the weaker signal on exactly those cases. Disabled by default. `research/eval_arbiter_v2.py`.
+
+**Two of our own text-pipeline ideas, both removed on evidence.** Measured on 1,256 held-out journal-domain texts:
 
 | Variant | Accuracy |
 |---|---|
-| Whole entry, no wrapper | **64.57%** |
-| Sentence-split + position/length/confidence-weighted aggregation | 62.98% |
+| **Whole entry, no wrapper** | **64.57%** |
+| Sentence-split + weighted aggregation | 62.98% |
 | The above + syntax-aware negation dampening (previously shipped) | 62.58% |
 
-Removing both is worth 1.99 points (p = 0.0265) and cuts latency from 174 ms to 40 ms per entry, since the whole-entry pass replaces the per-sentence work rather than adding to it. Sentence splitting discards the context the classifier needs — these entries average ~22 words — and then recombines the fragments with coefficients never fitted to anything.
+Removing both is worth 1.99 points and cuts latency from 174 ms to 40 ms per entry. Sentence splitting discards the context the classifier needs — entries average ~22 words — then recombines fragments with coefficients never fitted to anything.
 
-**A caveat I'd rather state than have someone find.** These numbers are weaker than the ones this README carried earlier. The first version of this ablation ran before Set B had a neutral class, and reported the negation rule as breaking 20 correct predictions while fixing zero. That was inflated: a rule whose whole mechanism is pushing probability toward neutral can only ever score as damage on a benchmark with no neutral examples. Re-measured with neutral present, it breaks 8 and fixes 3, and neither component is individually significant any more (sentence splitting p = 0.065, negation p = 0.228) — only their combined effect is. The conclusion to remove them stands; the strength of the evidence does not. Re-runnable via `research/eval_text_pipeline_ablation.py` and `research/eval_text_model_v2.py`.
+*A caveat worth stating rather than burying:* an earlier version of this ablation reported the negation rule as breaking 20 correct predictions while fixing none. That was inflated — a rule whose whole mechanism pushes probability toward neutral can only score as damage on a benchmark with no neutral examples. Re-measured with neutral present it breaks 8 and fixes 3, and neither component is individually significant (p = 0.065 and 0.228); only their combined effect is. The decision to remove them stands; the strength of the evidence does not.
 
-A larger checkpoint (`j-hartmann/emotion-english-roberta-large`) reaches 67.33% on the same split but peaks at 1.82 GB resident against the text service's 2 GiB Cloud Run cap, so it was measured and rejected on memory grounds rather than quietly ignored.
+### Model selection
 
-The 49 journal-style cases are checked into the repo at `research/data/journal_tests_49.json` (labelled by category: clear, negation, sarcasm, mixed, short, long-arc), and both sides of that comparison are re-runnable — `research/eval_deployed_journal.py` for the shipped pipeline and `research/eval_samlowe_journal.py` for the candidate. Neither model handles sarcasm at all (0/2 for both), which is the clearest known limitation of the text stage and part of why LLM arbitration exists downstream.
+**Face: `dima806/facial_emotions_image_detection`.** Both candidates evaluated on the real FER2013 test split (7,178 images, not either card's self-reported number):
 
-**LLM choice: kept Llama 3.3 70B, not `gpt-oss-120b`.** A/B tested on the real production prompt: `gpt-oss-120b`'s cheaper headline per-token price was misleading once measured — it's a reasoning model that burns hidden tokens before answering, making it ~2.8x more expensive per response in practice (415.75 avg completion tokens vs. 113.5) and ~57% slower.
+| Model | Accuracy | Macro-F1 | Angry F1 | Inference |
+|---|---|---|---|---|
+| `trpakov/vit-face-expression` | 71.15% | 69.90% | 63.5% | 459 s |
+| **`dima806/...`** | **88.35%** | **88.90%** | **87.4%** | 630 s |
 
-**Fusion & response-generation improvements, both shipped:**
-- Confidence-weighted fusion improves calibration over the original fixed 55/45 split without hurting top-1 accuracy on constructed conflict cases — but doesn't fix a confidently-wrong prediction from a weak model class, which is why the face-model swap above still mattered separately.
-- The two-pass fact-extraction response split measurably improves content-specificity: entity-hit-rate (does the reply reference concrete details from the input) went from 0.35 to 0.60 on the same test cases.
++17.20 pp, McNemar χ² = 937.08, p = 8.53×10⁻²⁰⁶. The angry-class gap explains a real failure caught in manual testing — an exaggerated angry expression scoring 0% angry on the old model. The new model is ~37% slower, which is irrelevant at one image per entry.
+
+**Text: kept `j-hartmann`, not swapped.**
+
+| Model | GoEmotions (n=4,590) | Journal (n=49) | Journal (n=1,056) |
+|---|---|---|---|
+| **`j-hartmann` distilroberta (current)** | 43.75% | **77.6%** | **64.49%** |
+| `SamLowe/roberta-base-go_emotions` | **69.65%** | 71.4% | 52.65% |
+| `j-hartmann/emotion-english-roberta-large` | 47.34% | — | 67.33% |
+
+SamLowe wins the public benchmark by 26 points and loses on journal text. **Caveat:** SamLowe is fine-tuned on GoEmotions alone, and the deployed model saw GoEmotions as one of six training corpora — so that column is not an independent comparison, which is exactly why the journal result is the informative one.
+
+The larger checkpoint reaches 67.33% but peaks at 1.82 GB resident against the text service's 2 GiB cap, so it was measured and rejected on memory grounds rather than quietly ignored.
+
+The 49 journal cases are checked in at `research/data/journal_tests_49.json`, labelled by category (clear, negation, sarcasm, mixed, short, long-arc). Neither model handles sarcasm at all (0/2 for both) — the clearest known limitation of the text stage.
+
+**LLM: kept Llama 3.3 70B over `gpt-oss-120b`.** A/B tested on the real production prompt. The cheaper headline per-token price was misleading — `gpt-oss-120b` is a reasoning model that burns hidden tokens before answering, making it ~2.8× more expensive per response in practice (415.75 vs 113.5 average completion tokens) and ~57% slower (1.29 s vs 0.82 s, n=4 per model — an engineering observation, not a controlled experiment).
+
+**Two-pass response generation, shipped.** Splitting fact extraction from response generation raised the entity-hit rate — does the reply reference concrete details from the input — from **0.35 to 0.60** on the same test cases.
+
+### Known limitations
+
+Stated rather than buried:
+
+1. **The paired benchmarks are constructed.** Text and face examples come from different datasets, matched by emotion label; they are never simultaneous observations of the same person. This cannot test real cross-modal disagreement, temporal alignment or speaker consistency. Proper validation needs a genuinely paired corpus such as IEMOCAP or CMU-MOSEI.
+2. **Both benchmarks share FER2013 faces**, so they are less independent than "two benchmarks" suggests.
+3. **The GoEmotions comparison is confounded** by both checkpoints' training exposure.
+4. **n=49** for the headline journal comparison; the 1,056-entry version is the stronger evidence.
+5. **Production runs a fusion rule the evaluation shows is not better** than a simpler one.
+6. **No user study or clinical validation.** No claim about therapeutic effectiveness is supported. The system is positioned as supportive and documentation-oriented, explicitly not diagnostic.
+7. **The DailyDialog neutral subset** is dialogue turns while the rest of Set B is first-person narrative — a mild domain shift the other six classes don't carry.
+
+---
 
 ## Team
 
-| Name |
-|---|
-| Aadithya A R |
-| Kenisha P |
-| Shreya V |
-| Pranathi N |
+| Name | Role |
+|---|---|
+| Aadithya A R | Dept. of CSE (AI & ML), Global Academy of Technology |
+| Kenisha P | Dept. of CSE (AI & ML), Global Academy of Technology |
+| Shreya V | Dept. of CSE (AI & ML), Global Academy of Technology |
+| Pranathi N | Dept. of CSE (AI & ML), Global Academy of Technology |
+| Saranya Babu | Guide, Dept. of CSE (AI & ML), Global Academy of Technology |

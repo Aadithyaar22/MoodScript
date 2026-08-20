@@ -1,0 +1,136 @@
+{
+  "paired_set": "paired_set.json",
+  "n_test": 577,
+  "temperature": {
+    "text": 2.00308976416403,
+    "face": 0.9001609624252959
+  },
+  "rows": [
+    {
+      "method": "Text only",
+      "note": "single modality",
+      "accuracy": 0.49740034662045063,
+      "macro_f1": 0.5204681719598369,
+      "ece": 0.23495574335303138
+    },
+    {
+      "method": "Face only",
+      "note": "single modality",
+      "accuracy": 0.8838821490467937,
+      "macro_f1": 0.878982384577199,
+      "ece": 0.02926624073964662
+    },
+    {
+      "method": "Sum rule [Kittler et al.]",
+      "note": "raw posteriors",
+      "accuracy": 0.8769497400346621,
+      "macro_f1": 0.8672314354766247,
+      "ece": 0.2173013288148695
+    },
+    {
+      "method": "Product rule [Kittler et al.]",
+      "note": "raw posteriors",
+      "accuracy": 0.902946273830156,
+      "macro_f1": 0.9041334999476849,
+      "ece": 0.026480650348573928
+    },
+    {
+      "method": "Max rule [Kittler et al.]",
+      "note": "raw posteriors",
+      "accuracy": 0.8682842287694974,
+      "macro_f1": 0.8536220992138875,
+      "ece": 0.24654954584799016
+    },
+    {
+      "method": "Min rule [Kittler et al.]",
+      "note": "raw posteriors",
+      "accuracy": 0.8509532062391681,
+      "macro_f1": 0.8556543257308942,
+      "ece": 0.06393191407080744
+    },
+    {
+      "method": "Sum rule + calibration",
+      "note": "calibrated",
+      "accuracy": 0.8977469670710572,
+      "macro_f1": 0.8909675605570396,
+      "ece": 0.28517909706381933
+    },
+    {
+      "method": "Product rule + calibration",
+      "note": "calibrated",
+      "accuracy": 0.9202772963604853,
+      "macro_f1": 0.915984871973793,
+      "ece": 0.022784613657056474
+    },
+    {
+      "method": "Confidence-weighted linear (legacy)",
+      "note": "baseline",
+      "accuracy": 0.8336221837088388,
+      "macro_f1": 0.8237384895863752,
+      "ece": 0.13864061730768382
+    },
+    {
+      "method": "PROPOSED: calibrated log-linear",
+      "note": "this work",
+      "accuracy": 0.9046793760831889,
+      "macro_f1": 0.8990705008217847,
+      "ece": 0.03677305030147603
+    }
+  ],
+  "significance": {
+    "Text only": {
+      "p": 2.7625007821907673e-44,
+      "verdict": "proposed better",
+      "proposed_only": 258,
+      "baseline_only": 23
+    },
+    "Face only": {
+      "p": 0.009521891184098834,
+      "verdict": "proposed better",
+      "proposed_only": 15,
+      "baseline_only": 3
+    },
+    "Sum rule [Kittler et al.]": {
+      "p": 0.023738515250054566,
+      "verdict": "proposed better",
+      "proposed_only": 30,
+      "baseline_only": 14
+    },
+    "Product rule [Kittler et al.]": {
+      "p": 1.0,
+      "verdict": "no significant difference",
+      "proposed_only": 24,
+      "baseline_only": 23
+    },
+    "Max rule [Kittler et al.]": {
+      "p": 0.0017872890369872707,
+      "verdict": "proposed better",
+      "proposed_only": 31,
+      "baseline_only": 10
+    },
+    "Min rule [Kittler et al.]": {
+      "p": 0.001661694457983511,
+      "verdict": "proposed better",
+      "proposed_only": 61,
+      "baseline_only": 30
+    },
+    "Sum rule + calibration": {
+      "p": 0.22067136191984327,
+      "verdict": "no significant difference",
+      "proposed_only": 5,
+      "baseline_only": 1
+    },
+    "Product rule + calibration": {
+      "p": 0.026500280602491884,
+      "verdict": "baseline better",
+      "proposed_only": 2,
+      "baseline_only": 11
+    },
+    "Confidence-weighted linear (legacy)": {
+      "p": 2.845807615754724e-06,
+      "verdict": "proposed better",
+      "proposed_only": 57,
+      "baseline_only": 16
+    }
+  }
+}
