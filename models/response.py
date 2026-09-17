@@ -4,6 +4,7 @@ from typing import Optional
 from groq import AsyncGroq
 from dotenv import load_dotenv
 from models.crisis import CRISIS_RESOURCES_ACUTE, CRISIS_RESOURCES_SUPPORTIVE
+from models.prompt_safety import UNTRUSTED_DATA_RULE, defang, untrusted
 
 load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env"))
 
@@ -100,6 +101,8 @@ def _pick_angle(emotion: str, confidence: float) -> str:
     return random.choice(angles)
 
 def _long_term_block(long_term_context: str) -> str:
+    # The raw entry text inside arrives already wrapped by summarize_history(); the counts
+    # and trend around it are computed, so they are left as operator text.
     return f"\n\n{long_term_context}\n" if long_term_context else ""
 
 EXTRACTION_MODEL = "llama-3.1-8b-instant"  # cheap/fast — a short extraction task, not creative writing
@@ -141,8 +144,11 @@ class ResponseEngine:
     def _facts_block(self, key_facts: str) -> str:
         if not key_facts:
             return ""
+        # A model's paraphrase of the user's message, so an instruction in the message can
+        # survive extraction -- and generate_reply() puts this block in the system prompt.
         return (f"\n\nSpecific things they mentioned — your response must clearly engage "
-                f"with at least one of these, not just react to the emotion label: {key_facts}\n")
+                f"with at least one of these, not just react to the emotion label:\n"
+                f"{untrusted('mentioned facts', key_facts, max_chars=400)}\n")
 
     async def generate(self, emotion, confidence, user_text, clinical_tone, conflict_note, persona_id=None, long_term_context: str = "", key_facts: Optional[str] = None) -> tuple:
         """First turn of a conversation. Returns (response_text, persona_id) so the
@@ -160,8 +166,10 @@ class ResponseEngine:
         if key_facts is None:
             key_facts = await self._extract_key_facts(user_text)
 
-        system_prompt = f"{persona}{_long_term_block(long_term_context)}\n\n{RULES}"
+        system_prompt = f"{persona}{_long_term_block(long_term_context)}\n\n{RULES}\n\n{UNTRUSTED_DATA_RULE}"
 
+        # The entry sits inside an instruction template here, not in its own user turn, so
+        # the old triple quotes were the only boundary -- and a user can type triple quotes.
         user_prompt = f"""Someone shared how they're feeling. Emotion: {emotion} ({confidence:.0%}).
 {clinical}
 
@@ -172,7 +180,7 @@ Opening instruction (critical — follow this exactly):
 {opening}
 
 They wrote:
-\"\"\"{user_text[:800]}\"\"\"
+{untrusted("journal entry", user_text, max_chars=800)}
 {self._facts_block(key_facts)}
 Write your response as Aria. One person, one moment, one message. Make it feel completely unrepeatable."""
 
@@ -251,13 +259,17 @@ the whole conversation.
 Their latest message reads as: {emotion} ({confidence:.0%}). {clinical}
 How to approach this reply: {angle}
 {self._facts_block(key_facts)}
-{RULES}"""
+{RULES}
 
+{UNTRUSTED_DATA_RULE}"""
+
+        # Turns stay in their own roles rather than being wrapped, which would break the
+        # conversation format -- but they are defanged, so a user can't forge a marker here.
         messages = [{"role": "system", "content": system_prompt}]
         for turn in history:
             role = "assistant" if turn.get("role") == "assistant" else "user"
-            messages.append({"role": role, "content": turn.get("content", "")[:800]})
-        messages.append({"role": "user", "content": user_text[:800]})
+            messages.append({"role": role, "content": defang(turn.get("content", "")[:800])})
+        messages.append({"role": "user", "content": defang(user_text[:800])})
 
         try:
             print(f"[Groq] Reply for: {emotion} | history turns: {len(history)}")
@@ -318,13 +330,15 @@ Rules:
 - Do NOT minimise, panic, or lecture.
 - Do NOT ask clarifying questions about method or details.
 - 2-4 sentences maximum. Calm, human, direct.
-- Take them seriously. Let them know their life matters and they don't have to go through this alone."""
+- Take them seriously. Let them know their life matters and they don't have to go through this alone.
+
+{UNTRUSTED_DATA_RULE}"""
 
         messages = [{"role": "system", "content": system_prompt}]
         for turn in (history or [])[-6:]:
             role = "assistant" if turn.get("role") == "assistant" else "user"
-            messages.append({"role": role, "content": turn.get("content", "")[:800]})
-        messages.append({"role": "user", "content": user_text[:800]})
+            messages.append({"role": role, "content": defang(turn.get("content", "")[:800])})
+        messages.append({"role": "user", "content": defang(user_text[:800])})
 
         try:
             completion = await self.client.chat.completions.create(
@@ -371,15 +385,19 @@ Reference concrete patterns from what they actually wrote, not just emotion labe
 diagnose, do not use clinical disorder labels (no "depression", "anxiety disorder", etc. as
 if confirmed), do not speculate beyond what the entries actually show — this is self-reported
 journal data with AI-assisted sentiment analysis, not a clinical assessment. 4-6 sentences,
-no bullet points."""
+no bullet points.
 
-        user_prompt = f"""Patient: {username}
+""" + UNTRUSTED_DATA_RULE
+
+        # This paragraph goes to a clinician, so an injection here would put a false
+        # statement in front of someone treating the user. The username is user-chosen too.
+        user_prompt = f"""Patient: {untrusted("username", username, max_chars=80)}
 {len(entries)} journal entries on record. Most common recorded emotions: {top_str or 'not enough data'}.
 Overall mood score: {rating.get('score')}/100 ({rating.get('label')}). Recent trend: {rating.get('trend')}.
 {crisis_note}
 
 Some of what they actually wrote (most recent first):
-{snippets}
+{untrusted("journal excerpts", snippets)}
 
 Write the clinical overview paragraph."""
 
@@ -425,14 +443,16 @@ What you know about their week:
 - {len(entries)} entries. Most common feelings: {top_str or 'not enough data'}.
 - Overall mood trend: {rating.get('trend', 'steady')} (score {rating.get('score')}/100 — {rating.get('label', '')}).
 - Some of what they actually wrote:
-{snippets}
+{untrusted("journal excerpts", snippets)}
 
 Rules:
 - 4-6 sentences. Warm, specific, real — reference the actual things they mentioned, not just the emotion words.
 - Notice a real pattern if there is one — don't invent one if the week was mixed or unclear.
 - Do NOT just list their stats back at them. Do NOT use bullet points.
 - End on something grounded — not necessarily a question, a genuine note of encouragement or perspective is fine.
-- Do not open with "This week" or "Looking back" — start like a person, not a report."""
+- Do not open with "This week" or "Looking back" — start like a person, not a report.
+
+{UNTRUSTED_DATA_RULE}"""
 
         try:
             completion = await self.client.chat.completions.create(

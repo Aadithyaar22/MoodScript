@@ -1,3 +1,5 @@
+from models.prompt_safety import untrusted
+
 EMOTION_VALENCE = {
     "happy": 1.0, "surprised": 0.4, "neutral": 0.0,
     "disgusted": -0.4, "fearful": -0.7, "sad": -0.8, "angry": -0.6,
@@ -67,7 +69,11 @@ def summarize_history(entries: list) -> str:
     recent_snippets = [e["content"][:120] for e in entries[:3] if e.get("content")]
     snippet_block = "\n".join(f'- "{s}"' for s in recent_snippets)
 
+    # This whole string is injected into the system prompt of later turns, so the raw entry
+    # text is wrapped here -- where it is known which part is raw. The counts and trend are
+    # computed from stored labels and stay as operator text, so the guidance above keeps
+    # its authority.
     return f"""LONG-TERM CONTEXT (from this person's past journal entries — use this to notice patterns, don't just repeat it back):
 They have {len(entries)} prior entries. Most common feelings: {top_str}. Overall, {trend_phrase}.
 A few recent things they've shared:
-{snippet_block}"""
+{untrusted("past entries", snippet_block)}"""

@@ -3,6 +3,8 @@ import os
 from groq import AsyncGroq
 from dotenv import load_dotenv
 
+from models.prompt_safety import UNTRUSTED_DATA_RULE, untrusted
+
 load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env"))
 
 UNIFIED_EMOTIONS = ["angry", "disgusted", "fearful", "happy", "neutral", "sad", "surprised"]
@@ -12,13 +14,18 @@ UNIFIED_EMOTIONS = ["angry", "disgusted", "fearful", "happy", "neutral", "sad", 
 # of genuinely ambiguous cases small.
 ARBITER_MODEL = "llama-3.1-8b-instant"
 
-SYSTEM_PROMPT = """You resolve disagreements between two automated emotion readings of the
+_TASK = """You resolve disagreements between two automated emotion readings of the
 same message: a text-sentiment classifier and a facial-expression classifier. They read
 different emotions with comparable confidence, so neither can be trusted blindly. Read the
 person's actual words and decide which single emotion most likely reflects what they're
 really feeling — accounting for things simple classifiers miss, like sarcasm, tone, and
-context. Respond with exactly one word from this list, nothing else: angry, disgusted,
-fearful, happy, neutral, sad, surprised."""
+context."""
+_FORMAT = ("Respond with exactly one word from this list, nothing else: angry, disgusted, "
+           "fearful, happy, neutral, sad, surprised.")
+# The format instruction stays last: this is a one-word classifier on a small model, and the
+# answer is checked against UNIFIED_EMOTIONS anyway, so an injection can at worst pick a
+# different valid label or fall back to the numeric fusion result.
+SYSTEM_PROMPT = f"{_TASK}\n\n{UNTRUSTED_DATA_RULE}\n\n{_FORMAT}"
 
 
 class Arbiter:
@@ -36,7 +43,8 @@ class Arbiter:
         if not self.should_arbitrate(fusion_result):
             return fusion_result
 
-        user_prompt = f"""Message: \"\"\"{text[:500]}\"\"\"
+        user_prompt = f"""Message:
+{untrusted("journal entry", text, max_chars=500)}
 Text-sentiment model reading: {text_result['dominant_emotion']} ({text_result['confidence']:.0%} confidence)
 Facial-expression model reading: {face_result['emotion']} ({face_result['confidence']:.0%} confidence)
 
