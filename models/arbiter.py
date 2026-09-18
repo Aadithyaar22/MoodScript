@@ -9,10 +9,11 @@ load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env
 
 UNIFIED_EMOTIONS = ["angry", "disgusted", "fearful", "happy", "neutral", "sad", "surprised"]
 
-# Cheap/fast model — this is a one-word classification decision, not response generation,
-# so it doesn't need the 70B model's depth. Keeps the added latency/cost on the minority
-# of genuinely ambiguous cases small.
-ARBITER_MODEL = "llama-3.1-8b-instant"
+# A one-word classification decision, not response generation, so it runs with a tiny
+# token budget to keep latency/cost low on the minority of genuinely ambiguous cases.
+# Must not be a reasoning model: with max_tokens=10, gpt-oss-20b spent the whole budget
+# reasoning and returned nothing.
+ARBITER_MODEL = os.getenv("MOODSCRIPT_ARBITER_MODEL", "qwen/qwen3.8-27b")
 
 _TASK = """You resolve disagreements between two automated emotion readings of the
 same message: a text-sentiment classifier and a facial-expression classifier. They read

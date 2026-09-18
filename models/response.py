@@ -100,12 +100,26 @@ def _pick_angle(emotion: str, confidence: float) -> str:
     angles = EMOTION_ANGLES.get(emotion, ["Be warm, present, and specific."])
     return random.choice(angles)
 
+def _plain(text: str) -> str:
+    # Qwen writes typographic apostrophes (’) in about half its replies. BANNED_OPENERS uses
+    # plain ones, so an unnormalised startswith("That's") never fired and six of the banned
+    # phrases slipped straight through.
+    return text.replace("’", "'").replace("‘", "'")
+
 def _long_term_block(long_term_context: str) -> str:
     # The raw entry text inside arrives already wrapped by summarize_history(); the counts
     # and trend around it are computed, so they are left as operator text.
     return f"\n\n{long_term_context}\n" if long_term_context else ""
 
-EXTRACTION_MODEL = "llama-3.1-8b-instant"  # cheap/fast — a short extraction task, not creative writing
+# Groq retires models without much warning, and both Llama models this app shipped with
+# now return 404 -- which ResponseEngine's fallbacks turned into a silent outage. Both are
+# env-configurable so the next retirement is a config change, not a code change.
+#
+# Neither may be a reasoning model (e.g. openai/gpt-oss-*): those spend hidden reasoning
+# tokens that count against max_tokens, and on the 80-token extraction budget they returned
+# empty output every time, which would quietly switch off two-pass generation.
+RESPONSE_MODEL = os.getenv("MOODSCRIPT_RESPONSE_MODEL", "qwen/qwen3.8-27b")
+EXTRACTION_MODEL = os.getenv("MOODSCRIPT_EXTRACTION_MODEL", "qwen/qwen3.8-27b")  # short extraction task, not creative writing
 
 class ResponseEngine:
     def __init__(self):
@@ -187,7 +201,7 @@ Write your response as Aria. One person, one moment, one message. Make it feel c
         try:
             print(f"[Groq] Generating for: {emotion} | opening: {opening[:40]}")
             completion = await self.client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
+                model=RESPONSE_MODEL,
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user",   "content": user_prompt},
@@ -202,10 +216,10 @@ Write your response as Aria. One person, one moment, one message. Make it feel c
 
             # Catch and retry if banned opener slips through
             for banned in BANNED_OPENERS:
-                if response.startswith(banned):
+                if _plain(response).startswith(banned):
                     print(f"[Groq] Banned opener detected: '{banned}' — retrying")
                     completion2 = await self.client.chat.completions.create(
-                        model="llama-3.3-70b-versatile",
+                        model=RESPONSE_MODEL,
                         messages=[
                             {"role": "system", "content": system_prompt},
                             {"role": "user",   "content": user_prompt + "\n\nIMPORTANT: Do NOT start with '" + banned + "'. Use a completely different opening."},
@@ -274,7 +288,7 @@ How to approach this reply: {angle}
         try:
             print(f"[Groq] Reply for: {emotion} | history turns: {len(history)}")
             completion = await self.client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
+                model=RESPONSE_MODEL,
                 messages=messages,
                 max_tokens=260,
                 temperature=1.05,
@@ -285,13 +299,13 @@ How to approach this reply: {angle}
             response = completion.choices[0].message.content.strip()
 
             for banned in BANNED_OPENERS:
-                if response.startswith(banned):
+                if _plain(response).startswith(banned):
                     print(f"[Groq] Banned opener detected: '{banned}' — retrying")
                     retry_messages = messages + [
                         {"role": "user", "content": f"(Do NOT start with '{banned}'. Use a completely different opening.)"}
                     ]
                     completion2 = await self.client.chat.completions.create(
-                        model="llama-3.3-70b-versatile",
+                        model=RESPONSE_MODEL,
                         messages=retry_messages,
                         max_tokens=260,
                         temperature=1.1,
@@ -342,7 +356,7 @@ Rules:
 
         try:
             completion = await self.client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
+                model=RESPONSE_MODEL,
                 messages=messages,
                 max_tokens=150,
                 temperature=0.8,
@@ -403,7 +417,7 @@ Write the clinical overview paragraph."""
 
         try:
             completion = await self.client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
+                model=RESPONSE_MODEL,
                 messages=[{"role": "system", "content": system_prompt},
                           {"role": "user", "content": user_prompt}],
                 max_tokens=280,
@@ -456,7 +470,7 @@ Rules:
 
         try:
             completion = await self.client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
+                model=RESPONSE_MODEL,
                 messages=[{"role": "system", "content": system_prompt},
                           {"role": "user", "content": "Write my weekly reflection."}],
                 max_tokens=280,

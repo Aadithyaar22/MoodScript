@@ -8,7 +8,7 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
 ![PostgreSQL](https://img.shields.io/badge/Postgres-Neon-4169E1?logo=postgresql&logoColor=white)
-![Groq](https://img.shields.io/badge/LLM-Groq%20Llama%203.3-F55036?logo=meta&logoColor=white)
+![Groq](https://img.shields.io/badge/LLM-Groq%20Qwen%203.8-F55036)
 ![HuggingFace](https://img.shields.io/badge/Models-HuggingFace-FFD21E?logo=huggingface&logoColor=black)
 ![Cloud Run](https://img.shields.io/badge/Deploy-Cloud%20Run%20%2B%20Render-4285F4?logo=googlecloud&logoColor=white)
 ![CI](https://img.shields.io/badge/CI-GitHub%20Actions-2088FF?logo=githubactions&logoColor=white)
@@ -120,8 +120,8 @@ flowchart TD
     FUSE -->|genuine unresolved conflict| ARB[LLM Arbiter<br/>disabled by default]
     ARB --> CRISIS
     FUSE -->|agreement / clear signal| CRISIS[Crisis Detector<br/>regex + sustained-distress window]
-    CRISIS --> LLM[Response Engine<br/>Groq · Llama 3.3 70B]
-    API -.->|runs concurrently| EXTRACT[Fact Extraction<br/>Groq · Llama 3.1 8B Instant]
+    CRISIS --> LLM[Response Engine<br/>Groq · Qwen 3.8 27B]
+    API -.->|runs concurrently| EXTRACT[Fact Extraction<br/>Groq · Qwen 3.8 27B]
     EXTRACT --> LLM
     LLM --> DB[(Postgres · Neon<br/>encrypted at rest)]
     FUSE --> DB
@@ -181,8 +181,8 @@ Each fused result carries a `resolution_reason`: `agreement`, `dominant_confiden
 | Text emotion | `j-hartmann/emotion-english-distilroberta-base`, whole-entry classification |
 | Face detection | OpenCV Haar cascade (largest face, margin crop) |
 | Face emotion | `dima806/facial_emotions_image_detection` (ViT) |
-| Fact extraction & arbitration | Groq — Llama 3.1 8B Instant |
-| Conversational LLM | Groq — Llama 3.3 70B Versatile |
+| Fact extraction & arbitration | Groq — `qwen/qwen3.8-27b` (env: `MOODSCRIPT_EXTRACTION_MODEL`, `MOODSCRIPT_ARBITER_MODEL`) |
+| Conversational LLM | Groq — `qwen/qwen3.8-27b` (env: `MOODSCRIPT_RESPONSE_MODEL`) |
 | Music | Jamendo API, pool-cached (TTL 3600) with prewarm |
 | Translation / TTS | Google Cloud Translation, Google Cloud Text-to-Speech |
 | Explainability | LIME |
@@ -430,7 +430,18 @@ The larger checkpoint reaches 67.33% but peaks at 1.82 GB resident against the t
 
 The 49 journal cases are checked in at `research/data/journal_tests_49.json`, labelled by category (clear, negation, sarcasm, mixed, short, long-arc). Neither model handles sarcasm at all (0/2 for both) — the clearest known limitation of the text stage.
 
-**LLM: kept Llama 3.3 70B over `gpt-oss-120b`.** A/B tested on the real production prompt. The cheaper headline per-token price was misleading — `gpt-oss-120b` is a reasoning model that burns hidden tokens before answering, making it ~2.8× more expensive per response in practice (415.75 vs 113.5 average completion tokens) and ~57% slower (1.29 s vs 0.82 s, n=4 per model — an engineering observation, not a controlled experiment).
+**LLM: Groq retired Llama, so the models were re-selected by measurement.** Both Llama models the app shipped with (`llama-3.3-70b-versatile`, `llama-3.1-8b-instant`) now return 404. Because `ResponseEngine` falls back to canned text on any error, this surfaced not as a crash but as Aria repeating the same line on every message — a silent outage. The replacement was chosen on the production `generate()` path, using the four A/B cases below with two-pass extraction live (n=12 per model):
+
+| | `qwen/qwen3.8-27b` | `openai/gpt-oss-120b` |
+|---|---|---|
+| Empty or truncated replies | 0 / 0 | 8 / 12 |
+| Hidden reasoning tokens per reply | 0 | 240 of a 260 budget |
+| Median latency, full two-pass | 0.69 s | 1.38 s |
+| Entity-hit rate | 0.37 | 0.13 |
+
+The `gpt-oss` models are reasoning models whose hidden tokens count against `max_tokens`: they left most replies blank, and returned empty output on every run of the 80-token extraction pass, which would have silently switched off two-pass generation. Qwen has no hidden reasoning. Two costs of the switch, stated plainly: entity-hit rate is 0.37 against the 0.60 Llama reached with two-pass — Qwen paraphrases specifics rather than naming them, which a substring metric counts as a miss — and Qwen's typographic apostrophes (`’`) had been defeating six of the banned-opener checks until they were normalised. All three model names are now env-configurable, so the next retirement is a config change.
+
+*Earlier comparison, kept for the record:* Llama 3.3 70B was preferred over `gpt-oss-120b` when both were available. A/B tested on the real production prompt. The cheaper headline per-token price was misleading — `gpt-oss-120b` is a reasoning model that burns hidden tokens before answering, making it ~2.8× more expensive per response in practice (415.75 vs 113.5 average completion tokens) and ~57% slower (1.29 s vs 0.82 s, n=4 per model — an engineering observation, not a controlled experiment).
 
 **Two-pass response generation, shipped.** Splitting fact extraction from response generation raised the entity-hit rate — does the reply reference concrete details from the input — from **0.35 to 0.60** on the same test cases.
 
