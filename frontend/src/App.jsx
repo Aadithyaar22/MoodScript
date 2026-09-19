@@ -317,7 +317,9 @@ export default function App() {
                       </div>
                     </div>
                   ) : (
-                    <ChatReply result={m.analysis} onShowXAI={() => setXaiTargetId(m.id)} lang={lang}/>
+                    // Reopened conversations carry no explanation data (only emotion and
+                    // confidence are stored), so the "why" drawer would open empty.
+                    <ChatReply result={m.analysis} onShowXAI={m.analysis?.xai ? () => setXaiTargetId(m.id) : undefined} lang={lang}/>
                   )}
                 </div>
               ))}
