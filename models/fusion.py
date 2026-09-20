@@ -18,22 +18,34 @@ measured problems with that (see research/ for the full evaluation):
    term. Under conditional independence of the modalities given the label, the
    product is the Bayesian combination; the sum is not.
 
-So each modality is now temperature-calibrated onto a common scale, weighted by a
-class-conditional reliability estimate rather than one scalar, and combined by
-log-linear (product-of-experts) pooling.
+So each modality is temperature-calibrated onto a common scale and the two calibrated
+distributions are multiplied and renormalised: the plain calibrated product rule
+(log-linear / product-of-experts pooling with equal weights).
+
+An earlier deployed version also weighted each modality by a class-conditional
+reliability estimate. That was evaluated against the plain rule and did not beat it
+(research/eval_reliability_subgroups.py, per-set fitted: 90.47 vs 92.03 on set A, a tie on
+set B, and 5.0 points of neutral recall lost), so the deployed rule is now the plain one. The
+weighted variant remains available with MOODSCRIPT_FUSION=weighted so that its numbers
+can still be reproduced.
 
 Measured on held-out test splits of two independent paired benchmarks, by running
 THIS module (research/verify_production_fusion.py) — not a research reimplementation,
-and using the frozen pooled constants below rather than per-set fitted ones:
+and using the frozen pooled temperatures below rather than per-set fitted ones:
 
     strategy                          set A     set B
     text only                         49.74     64.57
     face only                         88.39     88.69
     linear + confidence (previous)    83.36     85.83
-    this method                       91.51     92.83
+    calibrated product (deployed)     92.37     92.91
+    reliability-weighted variant      91.51     92.83
 
-Significant against both the previous rule and the stronger single modality
-(p = 4.8e-8 and p = 5.2e-4 on set A; p = 9.1e-15 and p = 7.7e-9 on set B).
+The plain-product figures in the paper (92.03 / 92.68) fit the temperatures separately on
+each set's own calibration split; this module uses one frozen pair fitted on both pooled.
+
+The calibrated product is significantly better than face-only on both sets
+(McNemar p < 0.001 on each) and, after Holm-Bonferroni correction over 18 comparisons, is the
+only fusion rule that stays significant on both.
 
 Set B now includes 400 neutral pairs (DailyDialog "no emotion" text + FER2013
 neutral faces), added because the EmpatheticDialogues source has no neutral
@@ -45,7 +57,8 @@ construction.
 Beating face-only is the result that matters: the face model is the stronger
 modality, so a fusion rule that cannot outperform it is not earning its complexity.
 
-Set MOODSCRIPT_LEGACY_FUSION=1 to fall back to the previous linear rule.
+Set MOODSCRIPT_LEGACY_FUSION=1 to fall back to the previous linear rule, or
+MOODSCRIPT_FUSION=weighted for the reliability-weighted variant.
 """
 import math
 import os
@@ -85,6 +98,7 @@ FACE_RELIABILITY = {
 }
 
 _LEGACY = os.getenv("MOODSCRIPT_LEGACY_FUSION", "").lower() in ("1", "true", "yes")
+_WEIGHTED = os.getenv("MOODSCRIPT_FUSION", "product").lower() == "weighted"
 
 
 def _normalise(scores: dict) -> dict:
@@ -124,8 +138,10 @@ class FusionLayer:
             fused, text_w, face_w = self._fuse_linear(
                 text_scores, face_scores,
                 text_result["confidence"], face_result["confidence"])
-        else:
+        elif _WEIGHTED:
             fused, text_w, face_w = self._fuse_loglinear(text_scores, face_scores)
+        else:
+            fused, text_w, face_w = self._fuse_product(text_scores, face_scores)
 
         unified_emotion = max(fused, key=fused.get)
         resolution_reason = self._resolve(
@@ -142,8 +158,21 @@ class FusionLayer:
             "face_weight": float(face_w),
         }
 
+    def _fuse_product(self, text_scores, face_scores):
+        """Calibrate each modality, then multiply the two distributions and renormalise.
+        Equal weights in log space, so the reported modality weights are 0.5 / 0.5."""
+        t_cal = _temperature_scale(text_scores, TEXT_TEMPERATURE)
+        f_cal = _temperature_scale(face_scores, FACE_TEMPERATURE)
+        log_fused = {e: math.log(max(t_cal[e], _EPS)) + math.log(max(f_cal[e], _EPS))
+                     for e in UNIFIED_EMOTIONS}
+        top = max(log_fused.values())
+        exp = {e: math.exp(v - top) for e, v in log_fused.items()}
+        norm = sum(exp.values()) or 1.0
+        return {e: v / norm for e, v in exp.items()}, 0.5, 0.5
+
     def _fuse_loglinear(self, text_scores, face_scores):
-        """Calibrate, weight by class-conditional reliability, pool in log space."""
+        """Reliability-weighted variant (MOODSCRIPT_FUSION=weighted): calibrate, weight by
+        class-conditional reliability, pool in log space."""
         t_cal = _temperature_scale(text_scores, TEXT_TEMPERATURE)
         f_cal = _temperature_scale(face_scores, FACE_TEMPERATURE)
 

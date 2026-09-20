@@ -25,7 +25,7 @@
 MoodScript is a full-stack emotional journaling app. You write (or speak, or show your face) how you're feeling, and it:
 
 1. **Detects your emotion** — from your words, and optionally from a photo/webcam frame
-2. **Fuses both signals** after temperature-calibrating each onto a common confidence scale, weighting each by its measured per-class reliability, and combining them multiplicatively rather than by averaging
+2. **Fuses both signals** after temperature-calibrating each onto a common confidence scale and combining them multiplicatively (the calibrated product rule) rather than by averaging
 3. **Responds as Aria** — a therapist-persona LLM companion that extracts the specific things you actually said before replying, and remembers your last conversation, your last week, and your long-term patterns
 4. **Watches for real crisis signals** — and only surfaces helpline resources when something is genuinely serious, never as a reflex
 5. **Tracks your wellbeing over time** — a recency-weighted score, trend direction, a weekly reflection letter, and a doctor-ready clinical summary you can export
@@ -62,7 +62,7 @@ Fixing it — temperature scaling before combination — lifted every classical 
 **Emotion intelligence**
 - Whole-entry text emotion classification, with a second per-sentence pass that drives the emotion-arc view and the soundtrack. Sentence-level aggregation and a syntax-aware negation rule were both shipped earlier and later **removed** on evidence — see [Research & evaluation](#research--evaluation)
 - Optional face-image emotion detection (photo upload or webcam), with the face located and cropped before classification — the classifier is trained on close-up faces, and feeding it a full frame with background measurably degrades it
-- Calibration-aware log-linear fusion, weighted by a per-class reliability estimate rather than a single number, and combined by multiplying rather than averaging so a confident "definitely not this" can rule a class out
+- Calibration-aware fusion: each model is temperature-calibrated, then the two distributions are multiplied rather than averaged, so a confident "definitely not this" can rule a class out
 - LLM arbitration on unresolved conflicts — implemented, measured, and **disabled by default** because it did not improve accuracy. Re-enable with `MOODSCRIPT_ENABLE_ARBITER=1`
 - LIME explainability — which words drove the detected emotion, plus a full text/face/fused confidence breakdown on every message
 
@@ -115,7 +115,7 @@ flowchart TD
     FE -->|POST /chat| API[Orchestrator<br/>auth · chat · DB · crisis · translation · TTS]
     API -->|POST /analyze| TXT[Text Service<br/>j-hartmann distilroberta + LIME]
     API -->|POST /predict| FACE[Face Service<br/>Haar cascade + dima806 ViT]
-    TXT --> FUSE[Fusion Layer<br/>temperature calibration → class-conditional<br/>reliability → log-linear pooling]
+    TXT --> FUSE[Fusion Layer<br/>temperature calibration →<br/>product (log-linear) pooling]
     FACE --> FUSE
     FUSE -->|genuine unresolved conflict| ARB[LLM Arbiter<br/>disabled by default]
     ARB --> CRISIS
@@ -148,23 +148,15 @@ Production constants, fitted on a pooled calibration split of **1,831 examples**
 ```python
 TEXT_TEMPERATURE = 1.6990      # τ > 1 → softens overconfidence
 FACE_TEMPERATURE = 0.9171      # τ < 1 → slightly sharpens
-TEXT_WEIGHT, FACE_WEIGHT = 0.55, 0.45
 ```
 
-Class-conditional reliability, with Laplace smoothing — one estimate per (modality, class) rather than one scalar per model:
+The two calibrated distributions are then multiplied and renormalised (log-linear pooling with equal weights):
 
 ```
-r_m(c) = (hits_m(c) + λ·acc_m) / (n_m(c) + λ),   λ = 5
+log P_fused(e) ∝ log T̃(e) + log F̃(e)
 ```
 
-Per-sample weights, then log-linear (product-of-experts) pooling:
-
-```
-a_T = w_T · r_T(y_T) · max(T̃)        â_T = a_T / (a_T + a_F)
-a_F = w_F · r_F(y_F) · max(F̃)        â_F = a_F / (a_T + a_F)
-
-log P_fused(e) ∝ â_T·log T̃(e) + â_F·log F̃(e)
-```
+A reliability-weighted variant (one reliability estimate per modality and class, used to weight the two terms) was built and evaluated first, and is still available with `MOODSCRIPT_FUSION=weighted`; see *Negative results* below for why it is not the default.
 
 Log-linear rather than linear matters: linear pooling averages, so a confidently wrong model still drags the result. Log-linear is a product of experts — a class needs support from *both* modalities to survive. This is why the product rule beats the sum rule on both benchmarks, consistent with Kittler et al. (1998).
 
@@ -201,7 +193,7 @@ Each fused result carries a `resolution_reason`: `agreement`, `dominant_confiden
 ├── auth.py                     # JWT + password hashing + Google OAuth
 ├── database/db.py              # Postgres access layer (Fernet-encrypted content)
 ├── models/
-│   ├── fusion.py               # Calibration-aware log-linear fusion (production constants)
+│   ├── fusion.py               # Calibrated product fusion (production temperatures)
 │   ├── arbiter.py              # LLM arbitration — disabled by default
 │   ├── response.py             # Aria persona + two-pass extraction/response prompting
 │   ├── crisis.py               # Crisis detection + hard-coded helpline resources
@@ -353,9 +345,10 @@ Accuracy, with McNemar *p* against face-only prediction:
 | Sum + calibration | 89.77% (.061) | 92.12% (<.001) |
 | **Product + calibration** | **92.03%** (<.001) | 92.68% (<.001) |
 | Confidence-weighted linear (previous) | 83.36% (.002) | 85.83% (.011) |
-| Weighted calibrated log-linear (deployed) | 90.47% (.010) | **92.83%** (<.001) |
+| Weighted calibrated log-linear (previously deployed) | 90.47% (.010) | 92.83% (<.001) |
+| **Product + calibration, one frozen pair of temperatures (deployed)** | **92.37%** (<.001) | **92.91%** (<.001) |
 
-After **Holm–Bonferroni correction** across all 18 comparisons, the calibrated product rule is the only fusion rule that remains significant on both sets. These numbers come from running the shipped `models/fusion.py` itself (`research/verify_production_fusion.py`), not a research reimplementation.
+After **Holm–Bonferroni correction** across all 18 comparisons, the calibrated product rule is the only fusion rule that remains significant on both sets. The "Product + calibration" row fits its temperatures separately on each set's own calibration split (the research experiment). The "deployed" row is the shipped `models/fusion.py` run directly (`research/verify_production_fusion.py`), which uses one frozen pair of temperatures fitted on both calibration splits pooled, so it is a slightly different experiment. On the same shipped code the weighted variant scores 91.51% on Set A and 92.83% on Set B.
 
 **Component ablation** (all 16 on/off combinations, marginal effects):
 
@@ -379,7 +372,7 @@ Text calibration dominates because the text branch was the badly calibrated one.
 | Set A conflict cases (n=323) | 83.59% | **86.38%** | 0.0265 |
 | Set B conflict cases (n=528) | 84.66% | 84.28% | 0.8231 |
 
-Per-class it lost 5.0 pp of recall on neutral — the class with the *lowest* text reliability, which is the opposite of the intended effect. It remains the deployed configuration, which is an honest inconsistency: the deployment predates the evaluation that showed a simpler rule is as good. `research/eval_reliability_subgroups.py`.
+Per-class it lost 5.0 pp of recall on neutral — the class with the *lowest* text reliability, which is the opposite of the intended effect. The deployment originally used the weighted rule, since it predated this evaluation; on 2026-09-21 the deployed rule was switched to the plain calibrated product, and the weighted variant is kept behind `MOODSCRIPT_FUSION=weighted`. `research/eval_reliability_subgroups.py`.
 
 **LLM arbitration does not help.** Four designs — direct classification, binary choice given the correct reliability prior, confidence-gated abstention, and meta-linguistic trust scoring — all scored below deterministic fusion on the 126 conflict cases where arbitration fires:
 
@@ -453,7 +446,7 @@ Stated rather than buried:
 2. **Both benchmarks share FER2013 faces**, so they are less independent than "two benchmarks" suggests.
 3. **The GoEmotions comparison is confounded** by both checkpoints' training exposure.
 4. **n=49** for the headline journal comparison; the 1,056-entry version is the stronger evidence.
-5. **Production runs a fusion rule the evaluation shows is not better** than a simpler one.
+5. **The deployed temperatures are one frozen pair fitted on both calibration splits pooled**, whereas the paper's plain-product figures fit per set, so the two differ slightly (92.37 / 92.91 against 92.03 / 92.68).
 6. **No user study or clinical validation.** No claim about therapeutic effectiveness is supported. The system is positioned as supportive and documentation-oriented, explicitly not diagnostic.
 7. **The DailyDialog neutral subset** is dialogue turns while the rest of Set B is first-person narrative — a mild domain shift the other six classes don't carry.
 

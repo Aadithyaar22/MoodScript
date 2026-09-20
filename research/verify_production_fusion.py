@@ -10,7 +10,8 @@ only this one is a claim about the deployed system. It imports models.fusion its
 and calls the real entry point, so it also catches the mundane failure where the
 constants in the file do not match the ones that were fitted.
 
-Also reports the legacy linear rule (MOODSCRIPT_LEGACY_FUSION=1) on the same split.
+Also reports the reliability-weighted variant (MOODSCRIPT_FUSION=weighted) and the legacy
+linear rule (MOODSCRIPT_LEGACY_FUSION=1) on the same split.
 """
 import json
 import os
@@ -65,10 +66,15 @@ def main():
 
         preds = {"text only": [p["text_pred"] for p in tst],
                  "face only": [p["face_pred"] for p in tst],
-                 "PRODUCTION log-linear": run(fusion.FusionLayer(), tst)}
+                 "PRODUCTION calibrated product": run(fusion.FusionLayer(), tst)}
+
+        import importlib
+        os.environ["MOODSCRIPT_FUSION"] = "weighted"
+        importlib.reload(fusion)
+        preds["reliability-weighted (env flag)"] = run(fusion.FusionLayer(), tst)
+        del os.environ["MOODSCRIPT_FUSION"]
 
         os.environ["MOODSCRIPT_LEGACY_FUSION"] = "1"
-        import importlib
         importlib.reload(fusion)
         preds["legacy linear (env flag)"] = run(fusion.FusionLayer(), tst)
         del os.environ["MOODSCRIPT_LEGACY_FUSION"]
@@ -79,8 +85,8 @@ def main():
             print(f"{k:<28}{np.mean([a == b for a, b in zip(p, y)])*100:>8.2f}"
                   f"{f1_score(y, p, average='macro', zero_division=0)*100:>10.2f}")
 
-        for other in ("face only", "legacy linear (env flag)"):
-            a = np.array([x == t for x, t in zip(preds["PRODUCTION log-linear"], y)])
+        for other in ("face only", "reliability-weighted (env flag)", "legacy linear (env flag)"):
+            a = np.array([x == t for x, t in zip(preds["PRODUCTION calibrated product"], y)])
             b = np.array([x == t for x, t in zip(preds[other], y)])
             n10, n01 = int((a & ~b).sum()), int((~a & b).sum())
             r = mcnemar([[int((a & b).sum()), n10], [n01, int((~a & ~b).sum())]],
