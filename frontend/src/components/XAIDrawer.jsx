@@ -177,30 +177,6 @@ export default function XAIDrawer({ xai, textResult, faceResult, fusionResult, o
           </div>
         )}
 
-        {/* Fusion weights */}
-        {fusionResult?.modalities_used?.length > 1 && (
-          <div>
-            <p className="mono" style={{ fontSize:11, color:'var(--text-muted)', letterSpacing:'0.1em', marginBottom:12 }}>
-              FUSION WEIGHTS
-            </p>
-            <div style={{ display:'flex', gap:10 }}>
-              {[
-                { label:'Text', weight: fusionResult.text_weight, color:'var(--violet-bright)' },
-                { label:'Face', weight: fusionResult.face_weight, color:'var(--cyan)' },
-              ].map(m => (
-                <div key={m.label} style={{
-                  flex:1, padding:'12px', borderRadius:12,
-                  background:`${m.color}12`, border:`1px solid ${m.color}35`,
-                  textAlign:'center',
-                }}>
-                  <p className="serif" style={{ fontSize:24, fontWeight:700, color:m.color }}>{(m.weight*100).toFixed(0)}%</p>
-                  <p className="mono" style={{ fontSize:11, color:'var(--text-muted)', marginTop:4, letterSpacing:'0.08em' }}>{m.label.toUpperCase()} MODEL</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Text model emotion cards */}
         <div>
           <p className="mono" style={{ fontSize:11, color:'var(--text-muted)', letterSpacing:'0.1em', marginBottom:12 }}>
