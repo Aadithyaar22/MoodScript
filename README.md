@@ -276,6 +276,35 @@ npm run dev
 
 ---
 
+## Testing
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest tests --ignore=tests/e2e          # ~180 tests, about 2 seconds, fully offline
+python research/test_prompt_safety.py              # 85 prompt-injection checks
+python research/test_music_arc.py                  # mood-arc soundtrack checks
+
+pip install -r requirements-e2e.txt && python -m playwright install chromium
+(cd frontend && npm ci)
+python -m pytest tests/e2e                         # real browser, real frontend, ~30 seconds
+```
+
+Nothing here touches Neon, Groq, Jamendo or the model services: the API tests swap in an
+in-memory database and stub the text and face services, and a dummy `DATABASE_URL` makes any
+accidental real database access fail immediately.
+
+| Layer | What it covers |
+|---|---|
+| `tests/test_auth.py` | sign-up, login, JWT validity (expired, forged, `alg: none`), every private endpoint rejects anonymous calls, Google sign-in paths |
+| `tests/test_chat.py` | `/chat` with and without a photo, fusion in the request path, face/text service outages, crisis handling (explicit language and the five-entry pattern), conversation ownership, Hindi/Kannada round trip |
+| `tests/test_data_endpoints.py` | history, rating, conversations, export, doctor report (txt and a real PDF), weekly reflection caching, account deletion, isolation between users |
+| `tests/test_fusion.py` | temperature scaling, the product rule, the frozen constants, and a **reproduction of the paper's accuracy** by running the shipped `FusionLayer` over the committed benchmark pairs (92.37% / 92.91%, significantly above the face model alone) |
+| `tests/test_crisis_rating.py` | crisis phrasing (22 positives, 10 everyday negatives), the five-entry window and its confidence threshold, wellbeing score and trend |
+| `tests/e2e/` | a person in a browser: sign up, log in/out, journal, upload a photo, "why?", dashboard, reopen a past conversation, language switch, a phone-sized screen, account deletion, and what the page does when a service is down |
+
+Not automated: the live webcam (it needs a real camera; the photo-upload path that feeds the same
+face model is covered), and model accuracy on new data (see the evaluation scripts in `research/`).
+
 ## API reference
 
 | Endpoint | Description |

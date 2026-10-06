@@ -46,6 +46,13 @@ jobs:
       - name: Byte-compile every module
         run: python -m compileall -q main.py auth.py models database
 
+      - name: Test suite (API, fusion, crisis, headline-accuracy reproduction)
+        # Runs before any deploy step, so a failing test stops a broken build from reaching
+        # Render. Offline by design: in-memory database, stubbed model services.
+        run: |
+          pip install pytest
+          python -m pytest tests --ignore=tests/e2e -q
+
       - name: Import the app
         # Catches the failure mode that actually bites here -- a syntax error or bad
         # import in a module only touched by the request path, which a compile check
