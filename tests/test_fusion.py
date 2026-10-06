@@ -94,6 +94,20 @@ class TestFuse:
         out = self.layer.fuse(text("happy", 0.2), face("sad", 0.95))
         assert out["unified_emotion"] == "sad"
 
+    def test_worked_calibration_example_from_the_report(self):
+        """The example printed in the report (Chapter 7) and the prep guide: text says sad at 80%,
+        face says neutral at 45%. Calibration softens the text to 53%, the product gives sad 72%,
+        and the same product on uncalibrated numbers would have claimed 89% (89.5%)."""
+        t_scores = dict(zip(UNIFIED_EMOTIONS, [0.02, 0.01, 0.03, 0.05, 0.04, 0.80, 0.05]))
+        f_scores = dict(zip(UNIFIED_EMOTIONS, [0.03, 0.01, 0.05, 0.10, 0.45, 0.30, 0.06]))
+        assert _temperature_scale(t_scores, fusion_mod.TEXT_TEMPERATURE)["sad"] == pytest.approx(0.53, abs=0.005)
+        out = self.layer.fuse({"dominant_emotion": "sad", "confidence": 0.80, "all_scores": t_scores},
+                              {"emotion": "neutral", "confidence": 0.45, "all_scores": f_scores})
+        assert out["unified_emotion"] == "sad"
+        assert out["unified_confidence"] == pytest.approx(0.72, abs=0.005)
+        raw = {e: t_scores[e] * f_scores[e] for e in UNIFIED_EMOTIONS}
+        assert round(100 * raw["sad"] / sum(raw.values())) == 89
+
     def test_inputs_are_not_mutated(self):
         t, f = text("sad"), face("angry")
         before = (json.dumps(t, sort_keys=True), json.dumps(f, sort_keys=True))
